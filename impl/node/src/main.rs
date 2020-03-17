@@ -1,10 +1,10 @@
-use protobuf::MickierServer;
+use protobuf::DataManagementServer;
 use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
 mod rpc;
-use rpc::MickierImpl;
+use rpc::DataManagementImpl;
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
@@ -61,10 +61,10 @@ fn main() {
 #[tokio::main]
 async fn start_rpc_server(addr: SocketAddr)
         -> Result<(), Box<dyn std::error::Error>> {
-    let mickier = MickierImpl::new();
+    let mickier = DataManagementImpl::new();
 
     Server::builder()
-        .add_service(MickierServer::new(mickier))
+        .add_service(DataManagementServer::new(mickier))
         .serve(addr).await?;
 
     Ok(())

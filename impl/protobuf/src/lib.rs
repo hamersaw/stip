@@ -1,10 +1,10 @@
-pub mod mickey {
+mod mickey {
     tonic::include_proto!("mickey");
 }
 
 pub use mickey::{InitDatasetRequest, InitDatasetReply};
-pub use mickey::mickier_client::MickierClient;
-pub use mickey::mickier_server::{Mickier, MickierServer};
+pub use mickey::data_management_client::DataManagementClient;
+pub use mickey::data_management_server::{DataManagement, DataManagementServer};
 
 #[cfg(test)]
 mod tests {
