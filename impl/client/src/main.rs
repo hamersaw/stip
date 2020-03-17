@@ -1,17 +1,17 @@
-use protobuf::{InitDatasetRequest, DataManagementClient};
-use tonic::Request;
+#[macro_use]
+extern crate clap;
+use clap::App;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = DataManagementClient::connect("http://127.0.0.1:15606").await?;
+mod dataset;
 
-    let request = Request::new(InitDatasetRequest {
-        id: "Tonic".into(),
-    });
+fn main() {
+    let yaml = load_yaml!("clap.yaml");
+    let matches = App::from_yaml(yaml).get_matches();
 
-    let response = client.init_dataset(request).await?;
-
-    println!("RESPONSE={:?}", response);
-
-    Ok(())
+    // parse subcommands
+    match matches.subcommand() {
+        ("dataset", Some(dataset_matches)) =>
+            dataset::process(&matches, &dataset_matches),
+        (cmd, _) => println!("unknown subcommand '{}'", cmd),
+    }
 }

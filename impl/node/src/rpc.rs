@@ -16,7 +16,7 @@ impl DataManagementImpl {
 impl DataManagement for DataManagementImpl {
     async fn init_dataset(&self, request: Request<InitDatasetRequest>)
             -> Result<Response<InitDatasetReply>, Status> {
-        println!("Got a request: {:?}", request);
+        println!("InitDatasetRequest: {:?}", request);
 
         let reply = InitDatasetReply {
             //message: format!("Hello {}!", request.into_inner().name).into(), // We must use .into_inner() as the fields of gRPC requests and responses are private

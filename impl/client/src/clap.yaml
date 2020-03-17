@@ -1,0 +1,27 @@
+name: client
+author: "Daniel Rammer <hamersaw@protonmail.com>"
+about: TODO
+args:
+    - ip_address:
+        default_value: "127.0.0.1"
+        help: ip address of application node
+        long: ip_address
+        short: i
+        takes_value: true
+    - port:
+        default_value: "15606"
+        help: rpc port of application node
+        long: port
+        short: p
+        takes_value: true
+subcommands:
+    - dataset:
+        about: TODO
+        subcommands:
+            - init:
+                about: TODO
+                args:
+                    - ID:
+                        index: 1
+                        required: true
+                        help: dataset idenitifier
