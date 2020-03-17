@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package mickey;
+
+service Mickier {
+    rpc InitDataset (InitDatasetRequest) returns (InitDatasetReply);
+}
+
+message InitDatasetRequest {
+    string id = 1;
+}
+
+message InitDatasetReply {
+}
