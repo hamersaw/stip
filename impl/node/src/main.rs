@@ -1,5 +1,10 @@
+use protobuf::MickierServer;
 use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
+use tonic::transport::Server;
+
+mod rpc;
+use rpc::MickierImpl;
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
@@ -11,10 +16,6 @@ fn main() {
 
     // parse arguments
     let opt = Opt::from_args();
-
-    // TODO - start GRPC server
-
-    // TODO - start xfer server
 
     // build swarm config
     let swarm_config = SwarmConfigBuilder::new()
@@ -45,8 +46,28 @@ fn main() {
         let _ = dht.get(0);
     }*/
 
+    // TODO - start xfer server
+
+    // start GRPC server
+    let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
+    if let Err(e) = start_rpc_server(addr) {
+        panic!("failed to start rpc server: {}", e);
+    }
+
     // wait indefinitely
-    thread::park();
+    //thread::park();
+}
+
+#[tokio::main]
+async fn start_rpc_server(addr: SocketAddr)
+        -> Result<(), Box<dyn std::error::Error>> {
+    let mickier = MickierImpl::new();
+
+    Server::builder()
+        .add_service(MickierServer::new(mickier))
+        .serve(addr).await?;
+
+    Ok(())
 }
 
 #[derive(Debug, StructOpt)]
