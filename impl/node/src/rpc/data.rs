@@ -1,4 +1,4 @@
-use protobuf::{LoadDirectoryRequest, LoadDirectoryReply, ProcessListRequest, ProcessListReply, ProcessShowRequest, ProcessShowReply, DataManagement};
+use protobuf::{LoadDirectoryRequest, LoadDirectoryReply, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
 use tonic::{Request, Response, Status};
 
 pub struct DataManagementImpl {
@@ -24,21 +24,21 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
-    async fn process_list(&self, request: Request<ProcessListRequest>)
-            -> Result<Response<ProcessListReply>, Status> {
-        trace!("ProcessListRequest: {:?}", request);
+    async fn task_list(&self, request: Request<TaskListRequest>)
+            -> Result<Response<TaskListReply>, Status> {
+        trace!("TaskListRequest: {:?}", request);
 
-        let reply = ProcessListReply {
+        let reply = TaskListReply {
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn process_show(&self, request: Request<ProcessShowRequest>)
-            -> Result<Response<ProcessShowReply>, Status> {
-        trace!("ProcessShowRequest: {:?}", request);
+    async fn task_show(&self, request: Request<TaskShowRequest>)
+            -> Result<Response<TaskShowReply>, Status> {
+        trace!("TaskShowRequest: {:?}", request);
 
-        let reply = ProcessShowReply {
+        let reply = TaskShowReply {
             completion_percentage: 0.0, // TODO - fix
         };
 

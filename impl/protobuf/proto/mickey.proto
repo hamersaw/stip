@@ -37,8 +37,8 @@ message NodeShowReply {
  */
 service DataManagement {
     rpc LoadDirectory (LoadDirectoryRequest) returns (LoadDirectoryReply);
-    rpc ProcessList (ProcessListRequest) returns (ProcessListReply);
-    rpc ProcessShow (ProcessShowRequest) returns (ProcessShowReply);
+    rpc TaskList (TaskListRequest) returns (TaskListReply);
+    rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
 }
 
 // Load Messages
@@ -52,17 +52,17 @@ message LoadDirectoryReply {
     uint32 id = 1;
 }
 
-// Process Messages
-message ProcessShowRequest {
+// Task Messages
+message TaskShowRequest {
     uint32 id = 1;
 }
 
-message ProcessShowReply {
+message TaskShowReply {
     float completion_percentage = 1;
 }
 
-message ProcessListRequest {
+message TaskListRequest {
 }
 
-message ProcessListReply {
+message TaskListReply {
 }

@@ -6,6 +6,7 @@ use structopt::StructOpt;
 use swarm::prelude::{Dht, DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
+mod task;
 mod rpc;
 use rpc::cluster::ClusterManagementImpl;
 use rpc::data::DataManagementImpl;
@@ -13,7 +14,7 @@ use rpc::data::DataManagementImpl;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use std::thread;
+//use std::thread;
 
 fn main() {
     // initilaize logger
