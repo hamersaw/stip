@@ -15,13 +15,15 @@ args:
         short: p
         takes_value: true
 subcommands:
-    - dataset:
-        about: TODO
+    - cluster:
+        about: manage application cluster
         subcommands:
-            - init:
-                about: TODO
+            - list:
+                about: list all cluster nodes
+            - show:
+                about: display information about a node
                 args:
                     - ID:
                         index: 1
                         required: true
-                        help: dataset idenitifier
+                        help: dht node id

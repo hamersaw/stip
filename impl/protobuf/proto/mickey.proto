@@ -2,13 +2,67 @@ syntax = "proto3";
 
 package mickey;
 
+/*
+ * ClusterManagement Service
+ */
+service ClusterManagement {
+    rpc NodeList (NodeListRequest) returns (NodeListReply);
+    rpc NodeShow (NodeShowRequest) returns (NodeShowReply);
+}
+
+message Node {
+    uint32 id = 1;
+    string rpcAddr = 2;
+    string xferAddr = 3;
+}
+
+// Node Messages
+message NodeListRequest {
+}
+
+message NodeListReply {
+    repeated Node nodes = 1;
+}
+
+message NodeShowRequest {
+    uint32 id = 1;
+}
+
+message NodeShowReply {
+    Node node = 1;
+}
+
+/*
+ * DataManagement Service
+ */
 service DataManagement {
-    rpc InitDataset (InitDatasetRequest) returns (InitDatasetReply);
+    rpc LoadDirectory (LoadDirectoryRequest) returns (LoadDirectoryReply);
+    rpc ProcessList (ProcessListRequest) returns (ProcessListReply);
+    rpc ProcessShow (ProcessShowRequest) returns (ProcessShowReply);
 }
 
-message InitDatasetRequest {
-    string id = 1;
+// Load Messages
+message LoadDirectoryRequest {
+    string directory = 1;
+    string satellite = 2;
+    repeated string channels = 3;
 }
 
-message InitDatasetReply {
+message LoadDirectoryReply {
+    uint32 id = 1;
+}
+
+// Process Messages
+message ProcessShowRequest {
+    uint32 id = 1;
+}
+
+message ProcessShowReply {
+    float completion_percentage = 1;
+}
+
+message ProcessListRequest {
+}
+
+message ProcessListReply {
 }

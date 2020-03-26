@@ -1,13 +1,18 @@
-use protobuf::DataManagementServer;
+#[macro_use]
+extern crate log;
+
+use protobuf::{ClusterManagementServer, DataManagementServer};
 use structopt::StructOpt;
-use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
+use swarm::prelude::{Dht, DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
 mod rpc;
-use rpc::DataManagementImpl;
+use rpc::cluster::ClusterManagementImpl;
+use rpc::data::DataManagementImpl;
 
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use std::thread;
 
 fn main() {
@@ -50,7 +55,7 @@ fn main() {
 
     // start GRPC server
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
-    if let Err(e) = start_rpc_server(addr) {
+    if let Err(e) = start_rpc_server(addr, dht) {
         panic!("failed to start rpc server: {}", e);
     }
 
@@ -59,12 +64,14 @@ fn main() {
 }
 
 #[tokio::main]
-async fn start_rpc_server(addr: SocketAddr)
+async fn start_rpc_server(addr: SocketAddr, dht: Arc<RwLock<Dht>>)
         -> Result<(), Box<dyn std::error::Error>> {
-    let mickier = DataManagementImpl::new();
+    let cluster_management = ClusterManagementImpl::new(dht);
+    let data_management = DataManagementImpl::new();
 
     Server::builder()
-        .add_service(DataManagementServer::new(mickier))
+        .add_service(ClusterManagementServer::new(cluster_management))
+        .add_service(DataManagementServer::new(data_management))
         .serve(addr).await?;
 
     Ok(())

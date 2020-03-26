@@ -2,7 +2,7 @@
 extern crate clap;
 use clap::App;
 
-mod dataset;
+mod cluster;
 
 fn main() {
     let yaml = load_yaml!("clap.yaml");
@@ -10,8 +10,8 @@ fn main() {
 
     // parse subcommands
     match matches.subcommand() {
-        ("dataset", Some(dataset_matches)) =>
-            dataset::process(&matches, &dataset_matches),
+        ("cluster", Some(cluster_matches)) =>
+            cluster::process(&matches, &cluster_matches),
         (cmd, _) => println!("unknown subcommand '{}'", cmd),
     }
 }
