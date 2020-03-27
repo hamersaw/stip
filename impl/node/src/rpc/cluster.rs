@@ -2,6 +2,7 @@ use protobuf::{Node, NodeListRequest, NodeListReply, NodeShowRequest, NodeShowRe
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
+use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 
 pub struct ClusterManagementImpl {
@@ -26,13 +27,11 @@ impl ClusterManagement for ClusterManagementImpl {
         let mut nodes = Vec::new();
         {
             let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.list() {
-                let node = Node {
-                    id: *node_id as u32,
-                    rpc_addr: format!("{}", addrs.1.unwrap()),
-                    xfer_addr: format!("{}", addrs.2.unwrap()),
-                };
+            for (node_id, addrs) in dht.iter() {
+                // convert Node to protobuf
+                let node = to_protobuf(*node_id as u32, &addrs.1, &addrs.2);
 
+                // add to nodes
                 nodes.push(node);
             }
         }
@@ -55,13 +54,8 @@ impl ClusterManagement for ClusterManagementImpl {
             let dht = self.dht.read().unwrap();
             match dht.get(request.id as u16) {
                 None => None,
-                Some(addrs) => {
-                    Some(Node {
-                        id: request.id,
-                        rpc_addr: format!("{}", addrs.0.unwrap()),
-                        xfer_addr: format!("{}", addrs.1.unwrap()),
-                    })
-                },
+                Some(addrs) =>
+                    Some(to_protobuf(request.id, addrs.0, addrs.1)),
             }
         };
 
@@ -71,5 +65,15 @@ impl ClusterManagement for ClusterManagementImpl {
         };
 
         Ok(Response::new(reply))
+    }
+}
+
+fn to_protobuf(node_id: u32, rpc_addr: &Option<SocketAddr>,
+        xfer_addr: &Option<SocketAddr>) -> Node {
+    // initialize node protobuf
+    Node {
+        id: node_id,
+        rpc_addr: format!("{}", rpc_addr.unwrap()),
+        xfer_addr: format!("{}", xfer_addr.unwrap()),
     }
 }

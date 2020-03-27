@@ -1,7 +1,6 @@
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::error::Error;
-use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -63,7 +62,7 @@ impl Task for LoadEarthExplorerTask {
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
-                        TaskStatus::Failed(format!("{:?}", e)));
+                        TaskStatus::Failure(format!("{:?}", e)));
 
                     return;
                 }
@@ -71,7 +70,7 @@ impl Task for LoadEarthExplorerTask {
 
             // set TaskHandle status to 'completed'
             let mut task_handle = task_handle_clone.write().unwrap();
-            task_handle.set_status(TaskStatus::Completed);
+            task_handle.set_status(TaskStatus::Complete);
         });
 
         // return task handle

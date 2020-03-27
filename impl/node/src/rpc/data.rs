@@ -1,7 +1,7 @@
-use protobuf::{LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
+use protobuf::{self, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
 use tonic::{Request, Response, Status};
 
-use crate::task::TaskManager;
+use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::load::LoadEarthExplorerTask;
 
 use std::sync::{Arc, RwLock};
@@ -50,11 +50,10 @@ impl DataManagement for DataManagementImpl {
         {
             let task_manager = self.task_manager.read().unwrap();
             for (task_id, task_handle) in task_manager.iter() {
-                let task_handle = task_handle.read().unwrap();
-                let task = Task {
-                    id: *task_id,
-                };
+                // convert TaskHandle to protobuf
+                let task = to_protobuf(*task_id, task_handle);
 
+                // add to tasks
                 tasks.push(task);
             }
         }
@@ -77,12 +76,8 @@ impl DataManagement for DataManagementImpl {
             let task_manager = self.task_manager.read().unwrap();
             match task_manager.get(&request.id) {
                 None => None,
-                Some(task_handle) => {
-                    let task_handle = task_handle.read().unwrap();
-                    Some(Task {
-                        id: request.id,
-                    })
-                },
+                Some(task_handle) =>
+                    Some(to_protobuf(request.id, task_handle)),
             }
         };
 
@@ -92,5 +87,25 @@ impl DataManagement for DataManagementImpl {
         };
 
         Ok(Response::new(reply))
+    }
+}
+
+fn to_protobuf(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task {
+    // get read lock on TaskHandle
+    let task_handle = task_handle.read().unwrap();
+    
+    // compile task status
+    let status = match task_handle.get_status() {
+        TaskStatus::Complete => protobuf::TaskStatus::Complete,
+        TaskStatus::Failure(_) => protobuf::TaskStatus::Failure,
+        TaskStatus::Running => protobuf::TaskStatus::Running,
+    };
+
+    // initialize task protobuf
+    Task {
+        id: task_id,
+        completion_percent: task_handle
+            .get_completion_percent().unwrap_or(0.0),
+        status: status as i32,
     }
 }

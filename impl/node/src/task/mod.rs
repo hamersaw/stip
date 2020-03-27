@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 pub mod load;
 
@@ -24,6 +24,21 @@ impl TaskHandle {
             items_total: items_total,
             status: status,
         }
+    }
+
+    pub fn get_completion_percent(&self) -> Option<f32> {
+        match self.items_total {
+            0 => None,
+            x => {
+                let completed =
+                    self.items_completed.load(Ordering::SeqCst);
+                Some(completed as f32 / x as f32)
+            },
+        }
+    }
+
+    pub fn get_status(&self) -> &TaskStatus {
+        &self.status
     }
 
     pub fn set_status(&mut self, status: TaskStatus) {
@@ -67,7 +82,7 @@ impl TaskManager {
 }
 
 pub enum TaskStatus {
-    Completed,
-    Failed(String),
+    Complete,
+    Failure(String),
     Running,
 }

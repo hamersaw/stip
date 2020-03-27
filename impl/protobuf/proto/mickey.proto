@@ -55,6 +55,14 @@ message LoadReply {
 // Task Messages
 message Task {
     uint64 id = 1;    
+    float completion_percent = 2;
+    TaskStatus status = 3;
+}
+
+enum TaskStatus {
+    COMPLETE = 0;
+    FAILURE = 1;
+    RUNNING = 2;
 }
 
 message TaskListRequest {
