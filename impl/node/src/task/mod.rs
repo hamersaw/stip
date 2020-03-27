@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Iter;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::AtomicU32;
@@ -54,6 +55,14 @@ impl TaskManager {
 
         // return task id
         Ok(self.current_id)
+    }
+
+    pub fn get(&self, task_id: &u64) -> Option<&Arc<RwLock<TaskHandle>>> {
+        self.tasks.get(task_id)
+    }
+
+    pub fn iter(&self) -> Iter<u64, Arc<RwLock<TaskHandle>>> {
+        self.tasks.iter()
     }
 }
 

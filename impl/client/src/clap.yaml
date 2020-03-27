@@ -27,3 +27,20 @@ subcommands:
                         index: 1
                         required: true
                         help: dht node id
+    - data:
+        about: TODO
+        subcommands:
+            - load:
+                about: TODO
+    - task:
+        about: manage cluster tasks
+        subcommands:
+            - list:
+                about: list all cluster tasks
+            - show:
+                about: display information about a task
+                args:
+                    - ID:
+                        index: 1
+                        required: true
+                        help: task id

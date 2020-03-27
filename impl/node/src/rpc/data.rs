@@ -1,4 +1,4 @@
-use protobuf::{LoadRequest, LoadReply, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
+use protobuf::{LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
 use tonic::{Request, Response, Status};
 
 use crate::task::TaskManager;
@@ -45,7 +45,23 @@ impl DataManagement for DataManagementImpl {
             -> Result<Response<TaskListReply>, Status> {
         trace!("TaskListRequest: {:?}", request);
 
+        // populate tasks from task_manager
+        let mut tasks = Vec::new();
+        {
+            let task_manager = self.task_manager.read().unwrap();
+            for (task_id, task_handle) in task_manager.iter() {
+                let task_handle = task_handle.read().unwrap();
+                let task = Task {
+                    id: *task_id,
+                };
+
+                tasks.push(task);
+            }
+        }
+
+        // initialize reply
         let reply = TaskListReply {
+            tasks: tasks,
         };
 
         Ok(Response::new(reply))
@@ -54,9 +70,25 @@ impl DataManagement for DataManagementImpl {
     async fn task_show(&self, request: Request<TaskShowRequest>)
             -> Result<Response<TaskShowReply>, Status> {
         trace!("TaskShowRequest: {:?}", request);
+        let request = request.get_ref();
 
+        // populate task from task_manager
+        let task = {
+            let task_manager = self.task_manager.read().unwrap();
+            match task_manager.get(&request.id) {
+                None => None,
+                Some(task_handle) => {
+                    let task_handle = task_handle.read().unwrap();
+                    Some(Task {
+                        id: request.id,
+                    })
+                },
+            }
+        };
+
+        // initialize reply
         let reply = TaskShowReply {
-            completion_percentage: 0.0, // TODO - fix
+            task: task,
         };
 
         Ok(Response::new(reply))

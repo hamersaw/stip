@@ -9,8 +9,8 @@ A distributed spatiotemporal image management framework designed specifically fo
     cli data merge ?
     cli data search [-c channel] [-g geohash] [-s satellite]
     cli data split ?
-    cli process list
-    cli process show <load-id>
+    cli task list
+    cli task show <load-id>
 
 ## TODO
 - everything

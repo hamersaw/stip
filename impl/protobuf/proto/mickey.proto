@@ -54,19 +54,20 @@ message LoadReply {
 
 // Task Messages
 message Task {
-    
-}
-
-message TaskShowRequest {
-    uint32 id = 1;
-}
-
-message TaskShowReply {
-    float completion_percentage = 1;
+    uint64 id = 1;    
 }
 
 message TaskListRequest {
 }
 
 message TaskListReply {
+    repeated Task tasks = 1;
+}
+
+message TaskShowRequest {
+    uint64 id = 1;
+}
+
+message TaskShowReply {
+    Task task = 1;
 }
