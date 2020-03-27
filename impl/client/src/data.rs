@@ -29,12 +29,13 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
-    // TODO - fill out request
     let request = Request::new(LoadRequest {
-        channels: Vec::new(), 
-        directory: String::from(""),
+        directory: load_matches.value_of("DIRECTORY").unwrap().to_string(),
         file: load_matches.value_of("FILE").unwrap().to_string(),
-        satellite: String::from(""),
+        precision: load_matches.value_of("precision")
+            .unwrap().parse::<u32>()?,
+        thread_count: load_matches.value_of("thread_count")
+            .unwrap().parse::<u32>()?,
     });
 
     // retrieve reply

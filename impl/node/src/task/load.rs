@@ -1,5 +1,8 @@
 use csv::Reader;
+use image::ImageFormat;
+use image::io::Reader as ImageReader;
 use serde::Deserialize;
+use st_image::StImage;
 
 use crate::task::{Task, TaskHandle, TaskStatus};
 
@@ -9,21 +12,20 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct LoadEarthExplorerTask {
-    channels: Vec<String>,
     directory: String,
     file: String,
-    satellite: String,
+    precision: usize,
     thread_count: u8,
 }
 
 impl LoadEarthExplorerTask {
-    pub fn new(file: String) -> LoadEarthExplorerTask { // TODO - pass arguments
+    pub fn new(directory: String, file: String, precision: usize,
+            thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
-            channels: Vec::new(),
-            directory: String::from(""),
+            directory: directory,
             file: file,
-            satellite: String::from(""),
-            thread_count: 2,
+            precision: precision,
+            thread_count: thread_count,
         }
     }
 }
@@ -48,8 +50,11 @@ impl Task for LoadEarthExplorerTask {
         let items_completed = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
+            let directory_clone = self.directory.clone();
             let items_completed = items_completed.clone();
+            let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
+
             let join_handle = std::thread::spawn(move || {
                 // iterate over records
                 loop {
@@ -58,10 +63,41 @@ impl Task for LoadEarthExplorerTask {
                         break;
                     }
 
-                    // TODO - process record
-                    println!("TODO process {:?}", result.unwrap());
-                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    let record: Record = result.unwrap();
 
+                    // open image
+                    let filename = format!("{}/{}",
+                        directory_clone, record.product_id);
+                    let mut reader = match ImageReader::open(filename) {
+                        Ok(reader) => reader,
+                        Err(e) => panic!("{}", e),
+                    };
+
+                    reader.set_format(ImageFormat::Jpeg);
+
+                    let image = match reader.decode() {
+                        Ok(image) => image,
+                        Err(e) => panic!("{}", e),
+                    };
+
+                    // initialize spatiotemporal image
+                    let lat_min = record.ll_lat.min(record.lr_lat);
+                    let lat_max = record.ul_lat.max(record.ur_lat);
+                    let long_min = record.ll_long.min(record.ul_long);
+                    let long_max = record.lr_long.max(record.ur_long);
+
+                    let mut raw_image = StImage::new(image,
+                        lat_min, lat_max, long_min, long_max, None);
+
+                    // split image with geohash precision
+                    for _st_image in raw_image.split(precision_clone) {
+                        //println!("{:?} - {:?}", st_image.geohash(),
+                        //    st_image.geohash_coverage());
+
+                        // TODO - process image splits
+                    }
+
+                    // increment items completed counter
                     items_completed.fetch_add(1, Ordering::SeqCst);
                 }
             });
@@ -122,27 +158,21 @@ impl Task for LoadEarthExplorerTask {
 #[derive(Debug, Deserialize)]
 struct Record {
     #[serde(rename(deserialize = "Landsat Product Identifier"))]
-    landsat_product_identifier: String,
-    #[serde(rename(deserialize = "Landsat Scene Identifier"))]
-    landsat_scene_identifier: String,
-    #[serde(rename(deserialize = "Land Cloud Cover"))]
-    land_cloud_cover: f32,
-    #[serde(rename(deserialize = "Scene Cloud Cover"))]
-    scene_cloud_cover: f32,
+    product_id: String,
     #[serde(rename(deserialize = "LL Corner Lat dec"))]
-    ll_corner_lat_dec: f64,
+    ll_lat: f64,
     #[serde(rename(deserialize = "LL Corner Long dec"))]
-    ll_corner_long_dec: f64,
+    ll_long: f64,
     #[serde(rename(deserialize = "UL Corner Lat dec"))]
-    ul_corner_lat_dec: f64,
+    ul_lat: f64,
     #[serde(rename(deserialize = "UL Corner Long dec"))]
-    ul_corner_long_dec: f64,
+    ul_long: f64,
     #[serde(rename(deserialize = "LR Corner Lat dec"))]
-    lr_corner_lat_dec: f64,
+    lr_lat: f64,
     #[serde(rename(deserialize = "LR Corner Long dec"))]
-    lr_corner_long_dec: f64,
+    lr_long: f64,
     #[serde(rename(deserialize = "UR Corner Lat dec"))]
-    ur_corner_lat_dec: f64,
+    ur_lat: f64,
     #[serde(rename(deserialize = "UR Corner Long dec"))]
-    ur_corner_long_dec: f64,
+    ur_long: f64,
 }

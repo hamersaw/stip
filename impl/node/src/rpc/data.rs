@@ -26,7 +26,9 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = LoadEarthExplorerTask::new(request.file.clone());
+        let task = LoadEarthExplorerTask::new(
+            request.directory.clone(), request.file.clone(),
+            request.precision as usize, request.thread_count as u8);
 
         // execute task using task manager
         let task_id = {

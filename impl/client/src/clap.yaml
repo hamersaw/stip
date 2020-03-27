@@ -1,6 +1,6 @@
 name: client
 author: "Daniel Rammer <hamersaw@protonmail.com>"
-about: TODO
+about: client to interface with mickey distributed framework
 args:
     - ip_address:
         default_value: "127.0.0.1"
@@ -28,15 +28,31 @@ subcommands:
                         required: true
                         help: dht node id
     - data:
-        about: TODO
+        about: manage application data
         subcommands:
             - load:
-                about: TODO
+                about: initialize load data task
                 args:
                     - FILE:
                         index: 1
                         required: true
                         help: earth explorer export file
+                    - DIRECTORY:
+                        index: 2
+                        required: true
+                        help: image directory location
+                    - precision:
+                        default_value: "4"
+                        help: geohash precision
+                        long: precision
+                        short: p
+                        takes_value: true
+                    - thread_count:
+                        default_value: "4"
+                        help: thread count for processing task
+                        long: threads
+                        short: t
+                        takes_value: true
     - task:
         about: manage cluster tasks
         subcommands:

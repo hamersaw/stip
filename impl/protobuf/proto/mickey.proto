@@ -43,10 +43,10 @@ service DataManagement {
 
 // Load Messages
 message LoadRequest {
-    repeated string channels = 1;
-    string directory = 2;
-    string file = 3;
-    string satellite = 4;
+    string directory = 1;
+    string file = 2;
+    uint32 precision = 3;
+    uint32 threadCount = 4;
 }
 
 message LoadReply {
