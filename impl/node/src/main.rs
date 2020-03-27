@@ -3,7 +3,7 @@ extern crate log;
 
 use protobuf::{ClusterManagementServer, DataManagementServer};
 use structopt::StructOpt;
-use swarm::prelude::{Dht, DhtBuilder, SwarmConfigBuilder};
+use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
 mod task;

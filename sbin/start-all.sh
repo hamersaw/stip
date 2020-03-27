@@ -35,8 +35,8 @@ while read line; do
     echo "starting node $nodeid"
     if [ $host == "127.0.0.1" ]; then
         # start application locally
-        RUST_LOG=debug $application $nodeid -i $host -p $gossipport \
-            -r $rpcport -x $xferport $options \
+        RUST_LOG=debug,h2=info $application $nodeid -i $host \
+            -p $gossipport -r $rpcport -x $xferport $options \
             > $projectdir/log/node-$nodeid.log 2>&1 &
 
         echo $! > $projectdir/log/node-$nodeid.pid

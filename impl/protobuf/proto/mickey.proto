@@ -43,9 +43,10 @@ service DataManagement {
 
 // Load Messages
 message LoadRequest {
-    string directory = 1;
-    string satellite = 2;
-    repeated string channels = 3;
+    repeated string channels = 1;
+    string directory = 2;
+    string file = 3;
+    string satellite = 4;
 }
 
 message LoadReply {

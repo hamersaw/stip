@@ -23,9 +23,10 @@ impl DataManagement for DataManagementImpl {
     async fn load(&self, request: Request<LoadRequest>)
             -> Result<Response<LoadReply>, Status> {
         trace!("LoadDirectoryRequest: {:?}", request);
+        let request = request.get_ref();
 
         // initialize task
-        let task = LoadEarthExplorerTask::new();
+        let task = LoadEarthExplorerTask::new(request.file.clone());
 
         // execute task using task manager
         let task_id = {

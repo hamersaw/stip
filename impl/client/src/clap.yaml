@@ -32,6 +32,11 @@ subcommands:
         subcommands:
             - load:
                 about: TODO
+                args:
+                    - FILE:
+                        index: 1
+                        required: true
+                        help: earth explorer export file
     - task:
         about: manage cluster tasks
         subcommands:
