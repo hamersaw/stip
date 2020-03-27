@@ -7,6 +7,7 @@ use swarm::prelude::{Dht, DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
 mod task;
+use task::TaskManager;
 mod rpc;
 use rpc::cluster::ClusterManagementImpl;
 use rpc::data::DataManagementImpl;
@@ -19,6 +20,9 @@ use std::sync::{Arc, RwLock};
 fn main() {
     // initilaize logger
     env_logger::init();
+
+    // initialize TaskManager
+    let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
     // parse arguments
     let opt = Opt::from_args();
@@ -56,7 +60,11 @@ fn main() {
 
     // start GRPC server
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
-    if let Err(e) = start_rpc_server(addr, dht) {
+
+    let cluster_management = ClusterManagementImpl::new(dht);
+    let data_management = DataManagementImpl::new(task_manager);
+    if let Err(e) = start_rpc_server(addr,
+            cluster_management, data_management) {
         panic!("failed to start rpc server: {}", e);
     }
 
@@ -65,11 +73,10 @@ fn main() {
 }
 
 #[tokio::main]
-async fn start_rpc_server(addr: SocketAddr, dht: Arc<RwLock<Dht>>)
+async fn start_rpc_server(addr: SocketAddr, 
+        cluster_management: ClusterManagementImpl,
+        data_management: DataManagementImpl)
         -> Result<(), Box<dyn std::error::Error>> {
-    let cluster_management = ClusterManagementImpl::new(dht);
-    let data_management = DataManagementImpl::new();
-
     Server::builder()
         .add_service(ClusterManagementServer::new(cluster_management))
         .add_service(DataManagementServer::new(data_management))

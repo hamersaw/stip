@@ -10,13 +10,13 @@ service ClusterManagement {
     rpc NodeShow (NodeShowRequest) returns (NodeShowReply);
 }
 
+// Node Messages
 message Node {
     uint32 id = 1;
     string rpcAddr = 2;
     string xferAddr = 3;
 }
 
-// Node Messages
 message NodeListRequest {
 }
 
@@ -36,23 +36,27 @@ message NodeShowReply {
  * DataManagement Service
  */
 service DataManagement {
-    rpc LoadDirectory (LoadDirectoryRequest) returns (LoadDirectoryReply);
+    rpc Load (LoadRequest) returns (LoadReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
 }
 
 // Load Messages
-message LoadDirectoryRequest {
+message LoadRequest {
     string directory = 1;
     string satellite = 2;
     repeated string channels = 3;
 }
 
-message LoadDirectoryReply {
-    uint32 id = 1;
+message LoadReply {
+    uint64 task_id = 1;
 }
 
 // Task Messages
+message Task {
+    
+}
+
 message TaskShowRequest {
     uint32 id = 1;
 }

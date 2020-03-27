@@ -50,7 +50,7 @@ impl ClusterManagement for ClusterManagementImpl {
         trace!("NodeShowRequest: {:?}", request);
         let request = request.get_ref();
 
-        // populate cluster nodes from dht
+        // populate cluster node from dht
         let node = {
             let dht = self.dht.read().unwrap();
             match dht.get(request.id as u16) {

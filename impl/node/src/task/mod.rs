@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::AtomicU32;
-use std::thread::JoinHandle;
 
 pub mod load;
 
@@ -11,9 +10,24 @@ pub trait Task {
 }
 
 pub struct TaskHandle {
-    items_completed: AtomicU32,
+    items_completed: Arc<AtomicU32>,
     items_total: u32,
     status: TaskStatus,
+}
+
+impl TaskHandle {
+    pub fn new(items_completed: Arc<AtomicU32>,
+            items_total: u32, status: TaskStatus) -> TaskHandle {
+        TaskHandle {
+            items_completed: items_completed,
+            items_total: items_total,
+            status: status,
+        }
+    }
+
+    pub fn set_status(&mut self, status: TaskStatus) {
+        self.status = status;
+    }
 }
 
 pub struct TaskManager {
@@ -45,6 +59,6 @@ impl TaskManager {
 
 pub enum TaskStatus {
     Completed,
-    Failed(Box<dyn Error>),
+    Failed(String),
     Running,
 }
