@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate log;
 
+use comm::Server as CommServer;
 use protobuf::{ClusterManagementServer, DataManagementServer};
 use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
@@ -11,8 +12,10 @@ use task::TaskManager;
 mod rpc;
 use rpc::cluster::ClusterManagementImpl;
 use rpc::data::DataManagementImpl;
+mod transfer;
+use transfer::TransferStreamHandler;
 
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, SocketAddr, TcpListener};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 //use std::thread;
@@ -56,7 +59,15 @@ fn main() {
         let _ = dht.get(0);
     }*/
 
-    // TODO - start xfer server
+    // start transfer server
+    let listener = TcpListener::bind(format!("{}:{}",
+        opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
+    let transfer_stream_handler =
+        Arc::new(TransferStreamHandler::new());
+    let mut server = CommServer::new(listener,
+        50, transfer_stream_handler);
+
+    server.start().expect("transfer server start");
 
     // start GRPC server
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
@@ -86,7 +97,7 @@ async fn start_rpc_server(addr: SocketAddr,
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "bos-node", about="Node in the bold-orion framework.")]
+#[structopt(name = "mnode", about="Node in the mickey framework.")]
 struct Opt {
     #[structopt(name="NODE_ID", help="Integer node identifier.")]
     node_id: u16,
