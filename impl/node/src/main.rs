@@ -7,6 +7,8 @@ use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
+mod data;
+use data::DataManager;
 mod task;
 use task::TaskManager;
 mod rpc;
@@ -24,11 +26,12 @@ fn main() {
     // initilaize logger
     env_logger::init();
 
-    // initialize TaskManager
-    let task_manager = Arc::new(RwLock::new(TaskManager::new()));
-
     // parse arguments
     let opt = Opt::from_args();
+
+    // initialize DataManager and TaskManager
+    let data_manager = Arc::new(DataManager::new(opt.directory));
+    let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
     // build swarm config
     let swarm_config = SwarmConfigBuilder::new()
@@ -54,16 +57,11 @@ fn main() {
     // start swarm
     swarm.start().expect("swarm start");
 
-    /*{
-        let dht = dht.read().unwrap();
-        let _ = dht.get(0);
-    }*/
-
     // start transfer server
     let listener = TcpListener::bind(format!("{}:{}",
         opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
     let transfer_stream_handler =
-        Arc::new(TransferStreamHandler::new());
+        Arc::new(TransferStreamHandler::new(data_manager));
     let mut server = CommServer::new(listener,
         50, transfer_stream_handler);
 
@@ -103,7 +101,7 @@ struct Opt {
     node_id: u16,
 
     #[structopt(short="d", long="directory", help="data storage directory.")]
-    directory: Option<PathBuf>,
+    directory: PathBuf,
 
     #[structopt(short="i", long="ip-address",
         help="gossip ip address.", default_value="127.0.0.1")]

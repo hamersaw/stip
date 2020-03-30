@@ -127,6 +127,8 @@ impl Task for LoadEarthExplorerTask {
 struct Record {
     #[serde(rename(deserialize = "Landsat Product Identifier"))]
     product_id: String,
+    #[serde(rename(deserialize = "Spacecraft Identifier"))]
+    spacecraft_id: String,
     #[serde(rename(deserialize = "LL Corner Lat dec"))]
     ll_lat: f64,
     #[serde(rename(deserialize = "LL Corner Long dec"))]
@@ -200,7 +202,8 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
 
             // send image to new host
             // TODO - include some metadata - satellite, bands, etc
-            if let Err(e) = crate::transfer::send_image(&st_image, &addr) {
+            if let Err(e) = crate::transfer::send_image(&record.spacecraft_id, 
+                    &record.product_id, &st_image, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }
