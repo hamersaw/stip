@@ -1,17 +1,22 @@
 use csv::Reader;
+use crossbeam_channel::Receiver;
 use image::ImageFormat;
 use image::io::Reader as ImageReader;
 use serde::Deserialize;
 use st_image::StImage;
+use swarm::prelude::Dht;
 
 use crate::task::{Task, TaskHandle, TaskStatus};
 
+use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
+use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct LoadEarthExplorerTask {
+    dht: Arc<RwLock<Dht>>,
     directory: String,
     file: String,
     precision: usize,
@@ -19,9 +24,10 @@ pub struct LoadEarthExplorerTask {
 }
 
 impl LoadEarthExplorerTask {
-    pub fn new(directory: String, file: String, precision: usize,
-            thread_count: u8) -> LoadEarthExplorerTask {
+    pub fn new(dht: Arc<RwLock<Dht>>, directory: String, file: String,
+            precision: usize, thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
+            dht: dht,
             directory: directory,
             file: file,
             precision: precision,
@@ -50,55 +56,17 @@ impl Task for LoadEarthExplorerTask {
         let items_completed = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
+            let dht_clone = self.dht.clone();
             let directory_clone = self.directory.clone();
             let items_completed = items_completed.clone();
             let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
 
             let join_handle = std::thread::spawn(move || {
-                // iterate over records
-                loop {
-                    let result = receiver_clone.recv();
-                    if let Err(_) = result {
-                        break;
-                    }
-
-                    let record: Record = result.unwrap();
-
-                    // open image
-                    let filename = format!("{}/{}",
-                        directory_clone, record.product_id);
-                    let mut reader = match ImageReader::open(filename) {
-                        Ok(reader) => reader,
-                        Err(e) => panic!("{}", e),
-                    };
-
-                    reader.set_format(ImageFormat::Jpeg);
-
-                    let image = match reader.decode() {
-                        Ok(image) => image,
-                        Err(e) => panic!("{}", e),
-                    };
-
-                    // initialize spatiotemporal image
-                    let lat_min = record.ll_lat.min(record.lr_lat);
-                    let lat_max = record.ul_lat.max(record.ur_lat);
-                    let long_min = record.ll_long.min(record.ul_long);
-                    let long_max = record.lr_long.max(record.ur_long);
-
-                    let mut raw_image = StImage::new(image,
-                        lat_min, lat_max, long_min, long_max, None);
-
-                    // split image with geohash precision
-                    for _st_image in raw_image.split(precision_clone) {
-                        //println!("{:?} - {:?}", st_image.geohash(),
-                        //    st_image.geohash_coverage());
-
-                        // TODO - process image splits
-                    }
-
-                    // increment items completed counter
-                    items_completed.fetch_add(1, Ordering::SeqCst);
+                if let Err(e) = worker_thread(dht_clone,
+                        directory_clone, items_completed,
+                        precision_clone, receiver_clone) {
+                    panic!("worker thread failure: {}", e);
                 }
             });
 
@@ -175,4 +143,71 @@ struct Record {
     ur_lat: f64,
     #[serde(rename(deserialize = "UR Corner Long dec"))]
     ur_long: f64,
+}
+
+fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
+    items_completed: Arc<AtomicU32>, precision: usize,
+    receiver: Receiver<Record>) -> Result<(), Box<dyn Error>> {
+    // iterate over records
+    loop {
+        let record: Record = match receiver.recv() {
+            Ok(record) => record,
+            Err(_) => break,
+        };
+
+        // open image
+        let filename = format!("{}/{}", directory, record.product_id);
+        let mut reader = ImageReader::open(filename)?;
+        reader.set_format(ImageFormat::Jpeg);
+
+        let image = reader.decode()?;
+
+        // initialize spatiotemporal image
+        let lat_min = record.ll_lat.min(record.lr_lat);
+        let lat_max = record.ul_lat.max(record.ur_lat);
+        let long_min = record.ll_long.min(record.ul_long);
+        let long_max = record.lr_long.max(record.ur_long);
+
+        let mut raw_image = StImage::new(image,
+            lat_min, lat_max, long_min, long_max, None);
+
+        // split image with geohash precision
+        for st_image in raw_image.split(precision) {
+            // compute geohash hash
+            let mut hasher = DefaultHasher::new();
+            hasher.write(st_image.geohash().unwrap().as_bytes());
+            let hash = hasher.finish();
+
+            // discover hash location
+            let addr = {
+                let dht = dht.read().unwrap(); 
+                let (node_id, addrs) = match dht.locate(hash) {
+                    Some(node) => node,
+                    None => {
+                        warn!("no dht location for hash {}", hash);
+                        continue;
+                    },
+                };
+
+                match addrs.1 {
+                    Some(addr) => addr.clone(),
+                    None => {
+                        warn!("dht node {} has no xfer_addr", node_id);
+                        continue;
+                    },
+                }
+            };
+
+            // send image to new host
+            // TODO - include some metadata - satellite, bands, etc
+            if let Err(e) = crate::transfer::send_image(&st_image, &addr) {
+                warn!("failed to write image to node {}: {}", addr, e);
+            }
+        }
+
+        // increment items completed counter
+        items_completed.fetch_add(1, Ordering::SeqCst);
+    }
+
+    Ok(())
 }

@@ -1,4 +1,5 @@
 use protobuf::{self, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
+use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
@@ -7,12 +8,15 @@ use crate::task::load::LoadEarthExplorerTask;
 use std::sync::{Arc, RwLock};
 
 pub struct DataManagementImpl {
+    dht: Arc<RwLock<Dht>>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl DataManagementImpl {
-    pub fn new(task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
+    pub fn new(dht: Arc<RwLock<Dht>>,
+            task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
         DataManagementImpl {
+            dht: dht,
             task_manager: task_manager,
         }
     }
@@ -26,7 +30,7 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = LoadEarthExplorerTask::new(
+        let task = LoadEarthExplorerTask::new(self.dht.clone(),
             request.directory.clone(), request.file.clone(),
             request.precision as usize, request.thread_count as u8);
 

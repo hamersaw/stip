@@ -72,8 +72,8 @@ fn main() {
     // start GRPC server
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
 
-    let cluster_management = ClusterManagementImpl::new(dht);
-    let data_management = DataManagementImpl::new(task_manager);
+    let cluster_management = ClusterManagementImpl::new(dht.clone());
+    let data_management = DataManagementImpl::new(dht, task_manager);
     if let Err(e) = start_rpc_server(addr,
             cluster_management, data_management) {
         panic!("failed to start rpc server: {}", e);
