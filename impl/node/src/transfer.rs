@@ -67,6 +67,7 @@ pub fn send_image(spacecraft_id: &str, product_id: &str, st_image: &StImage,
         addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
+    stream.write_u8(TransferOp::Write as u8)?;
 
     // write metadata
     stream.write_u8(spacecraft_id.len() as u8)?;
@@ -76,6 +77,5 @@ pub fn send_image(spacecraft_id: &str, product_id: &str, st_image: &StImage,
     stream.write(product_id.as_bytes())?;
 
     // write image
-    stream.write_u8(TransferOp::Write as u8)?;
     st_image.write(&mut stream)
 }

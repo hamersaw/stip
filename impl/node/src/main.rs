@@ -29,6 +29,12 @@ fn main() {
     // parse arguments
     let opt = Opt::from_args();
 
+    // create storage directory
+    if let Err(e) = std::fs::create_dir_all(&opt.directory) {
+        panic!("failed to create storage directory '{:?}': {}",
+            opt.directory, e);
+    }
+
     // initialize DataManager and TaskManager
     let data_manager = Arc::new(DataManager::new(opt.directory));
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
