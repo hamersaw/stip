@@ -13,4 +13,7 @@ A distributed spatiotemporal image management framework designed specifically fo
     cli task show <load-id>
 
 ## TODO
-- everything
+- abstract LoadEarthExplorerTask
+    - input csv file format
+    - split file format
+- metadata data structures for querying data

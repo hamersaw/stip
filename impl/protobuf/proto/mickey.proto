@@ -42,11 +42,17 @@ service DataManagement {
 }
 
 // Load Messages
+enum LoadFormat {
+    LANDSAT = 0;
+    SENTINEL = 1;
+}
+
 message LoadRequest {
     string directory = 1;
     string file = 2;
-    uint32 precision = 3;
-    uint32 threadCount = 4;
+    LoadFormat format = 3;
+    uint32 precision = 4;
+    uint32 threadCount = 5;
 }
 
 message LoadReply {

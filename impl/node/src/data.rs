@@ -45,6 +45,8 @@ impl DataManager {
 
         st_image.write_metadata(&mut metadata_file)?;
 
+        // TODO - write geohash_coverage 
+
         // TODO - add metadata to in-memory structure
 
         Ok(())

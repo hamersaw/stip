@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{LoadRequest, DataManagementClient};
+use protobuf::{LoadFormat, LoadRequest, DataManagementClient};
 use tonic::Request;
 
 use std::{error, io};
@@ -28,10 +28,18 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
+    // parse format
+    let format = match load_matches.value_of("FORMAT") {
+        Some("landsat") => LoadFormat::Landsat as i32,
+        Some("sentinel") => LoadFormat::Sentinel as i32,
+        _ => unimplemented!(),
+    };
+
     // initialize request
     let request = Request::new(LoadRequest {
         directory: load_matches.value_of("DIRECTORY").unwrap().to_string(),
         file: load_matches.value_of("FILE").unwrap().to_string(),
+        format: format,
         precision: load_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
         thread_count: load_matches.value_of("thread_count")

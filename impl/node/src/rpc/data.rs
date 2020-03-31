@@ -1,9 +1,9 @@
-use protobuf::{self, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
+use protobuf::{self, LoadFormat as ProtoFormat, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
-use crate::task::load::LoadEarthExplorerTask;
+use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 
 use std::sync::{Arc, RwLock};
 
@@ -30,8 +30,13 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
+        let format = match ProtoFormat::from_i32(request.format).unwrap() {
+            ProtoFormat::Landsat => LoadFormat::Landsat,
+            ProtoFormat::Sentinel => LoadFormat::Sentinel,
+        };
+
         let task = LoadEarthExplorerTask::new(self.dht.clone(),
-            request.directory.clone(), request.file.clone(),
+            request.directory.clone(), request.file.clone(), format,
             request.precision as usize, request.thread_count as u8);
 
         // execute task using task manager

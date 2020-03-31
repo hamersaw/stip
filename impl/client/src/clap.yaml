@@ -37,8 +37,15 @@ subcommands:
                         index: 1
                         required: true
                         help: earth explorer export file
-                    - DIRECTORY:
+                    - FORMAT:
                         index: 2
+                        required: true
+                        possible_values: 
+                            - landsat
+                            - sentinel
+                        help: earth explorer export file format
+                    - DIRECTORY:
+                        index: 3
                         required: true
                         help: image directory location
                     - precision:
