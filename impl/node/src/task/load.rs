@@ -201,7 +201,6 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
             };
 
             // send image to new host
-            // TODO - include some metadata - satellite, bands, etc
             if let Err(e) = crate::transfer::send_image(&record.spacecraft_id, 
                     &record.product_id, &st_image, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);

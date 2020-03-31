@@ -2,6 +2,7 @@ use image::ImageFormat;
 use st_image::StImage;
 
 use std::error::Error;
+use std::fs::File;
 use std::path::PathBuf;
 
 pub struct DataManager {
@@ -10,6 +11,9 @@ pub struct DataManager {
 
 impl DataManager {
     pub fn new(directory: PathBuf) -> DataManager {
+        // TODO - iterate over .meta files and 
+        //   add data to in-memory structure
+
         DataManager {
             directory: directory,
         }
@@ -27,14 +31,21 @@ impl DataManager {
         std::fs::create_dir_all(&path)?;
 
         // save image file
-        {
-            path.push(product_id);
+        path.push(product_id);
+        path.set_extension("png");
 
+        {
             let image = st_image.get_image();
             image.save_with_format(&path, ImageFormat::Png)?;
         }
 
-        // TODO - write metadata file
+        // write metadata file
+        path.set_extension("meta");
+        let mut metadata_file = File::create(&path)?;
+
+        st_image.write_metadata(&mut metadata_file)?;
+
+        // TODO - add metadata to in-memory structure
 
         Ok(())
     }
