@@ -25,7 +25,7 @@ pub fn process(matches: &ArgMatches, cluster_matches: &ArgMatches) {
 #[tokio::main]
 async fn list(matches: &ArgMatches, _: &ArgMatches,
         _list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // listialize grpc client
+    // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
     let mut client = ClusterManagementClient::connect(
@@ -52,7 +52,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
 #[tokio::main]
 async fn show(matches: &ArgMatches, _: &ArgMatches,
         show_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // listialize grpc client
+    // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
     let mut client = ClusterManagementClient::connect(

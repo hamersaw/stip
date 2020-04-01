@@ -64,9 +64,11 @@ subcommands:
         about: manage cluster tasks
         subcommands:
             - list:
-                about: list all cluster tasks
+                about: list tasks from the contact node
+            - list-all:
+                about: list tasks from all cluster nodes
             - show:
-                about: display information about a task
+                about: display task information from the contact node
                 args:
                     - ID:
                         index: 1

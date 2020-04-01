@@ -8,9 +8,11 @@ A distributed spatiotemporal image management framework designed specifically fo
     cli data load <FILE> <FORMAT> <DIRECTORY> [-p precision] [-t threads]
     cli data search <GEOHASH>
     cli task list
+    cli task list-all
     cli task show <load-id>
 
 ## TODO
 - implement data queries
 - data split / merge command
 - stop task functionality?
+- node logging

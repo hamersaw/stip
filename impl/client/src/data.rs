@@ -22,7 +22,7 @@ pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
 #[tokio::main]
 async fn load(matches: &ArgMatches, _: &ArgMatches,
         load_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // listialize grpc client
+    // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
     let mut client = DataManagementClient::connect(
