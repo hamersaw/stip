@@ -1,3 +1,4 @@
+use byteorder::{BigEndian, WriteBytesExt};
 use image::ImageFormat;
 use st_image::StImage;
 
@@ -11,9 +12,6 @@ pub struct DataManager {
 
 impl DataManager {
     pub fn new(directory: PathBuf) -> DataManager {
-        // TODO - iterate over .meta files and 
-        //   add data to in-memory structure
-
         DataManager {
             directory: directory,
         }
@@ -45,9 +43,14 @@ impl DataManager {
 
         st_image.write_metadata(&mut metadata_file)?;
 
-        // TODO - write geohash_coverage 
-
-        // TODO - add metadata to in-memory structure
+        // write image 'coverage'
+        match st_image.coverage() {
+            Some(coverage) => {
+                metadata_file.write_u8(1)?;
+                metadata_file.write_f64::<BigEndian>(coverage)?;
+            },
+            None => metadata_file.write_u8(0)?,
+        }
 
         Ok(())
     }
