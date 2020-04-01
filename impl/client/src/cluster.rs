@@ -36,7 +36,15 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
 
     // retrieve reply
     let reply = client.node_list(request).await?;
-    println!("REPLY={:?}", reply);
+    let reply = reply.get_ref();
+
+    // print information
+    println!("{:<8}{:<20}{:<20}", "id", "rpc_addr", "xfer_addr");
+    println!("------------------------------------------------");
+    for node in reply.nodes.iter() {
+        println!("{:<8}{:<20}{:<20}", node.id,
+            node.rpc_addr, node.xfer_addr);
+    }
 
     Ok(())
 }
@@ -51,13 +59,24 @@ async fn show(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
+    let node_id = show_matches.value_of("ID").unwrap().parse::<u32>()?;
     let request = Request::new(NodeShowRequest {
-        id: show_matches.value_of("ID").unwrap().parse::<u32>()?,
+        id: node_id,
     });
 
     // retrieve reply
     let reply = client.node_show(request).await?;
-    println!("REPLY={:?}", reply);
+    let reply = reply.get_ref();
+
+    // print information
+    match &reply.node {
+        Some(node) => {
+            println!("node_id: {}", node.id);
+            println!("rpc_addr: {}", node.rpc_addr);
+            println!("xfer_addr: {}", node.xfer_addr);
+        },
+        None => println!("node with id '{}' does not exist", node_id),
+    }
 
     Ok(())
 }

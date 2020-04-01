@@ -48,7 +48,10 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 
     // retrieve reply
     let reply = client.load(request).await?;
-    println!("REPLY={:?}", reply);
+    let reply = reply.get_ref();
+
+    // print information
+    println!("task starting with id '{}'", reply.task_id);
 
     Ok(())
 }

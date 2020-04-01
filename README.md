@@ -5,15 +5,12 @@ A distributed spatiotemporal image management framework designed specifically fo
 ## COMMANDS
     cli cluster list
     cli cluster show <node-id>
-    cli data load <file> <directory> [-c channels...] [-s satellite] [-t threads]
-    cli data merge ?
-    cli data search [-c channel] [-g geohash] [-s satellite]
-    cli data split ?
+    cli data load <FILE> <FORMAT> <DIRECTORY> [-p precision] [-t threads]
+    cli data search <GEOHASH>
     cli task list
     cli task show <load-id>
 
 ## TODO
-- abstract LoadEarthExplorerTask
-    - input csv file format
-    - split file format
-- metadata data structures for querying data
+- implement data queries
+- data split / merge command
+- stop task functionality?
