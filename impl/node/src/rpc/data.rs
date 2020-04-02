@@ -1,4 +1,5 @@
-use protobuf::{self, LoadFormat as ProtoFormat, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
+use image::ImageFormat;
+use protobuf::{self, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -30,14 +31,22 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let format = match ProtoFormat::from_i32(request.format).unwrap() {
-            ProtoFormat::Landsat => LoadFormat::Landsat,
-            ProtoFormat::Sentinel => LoadFormat::Sentinel,
+        let image_format = match ProtoImageFormat
+                ::from_i32(request.image_format).unwrap() {
+            ProtoImageFormat::Jpeg => ImageFormat::Jpeg,
+            ProtoImageFormat::Tiff => ImageFormat::Tiff,
+        };
+
+        let load_format = match ProtoLoadFormat
+                ::from_i32(request.load_format).unwrap() {
+            ProtoLoadFormat::Landsat => LoadFormat::Landsat,
+            ProtoLoadFormat::Sentinel => LoadFormat::Sentinel,
         };
 
         let task = LoadEarthExplorerTask::new(self.dht.clone(),
-            request.directory.clone(), request.file.clone(), format,
-            request.precision as usize, request.thread_count as u8);
+            request.directory.clone(), request.file.clone(),
+            image_format, load_format, request.precision as usize,
+            request.thread_count as u8);
 
         // execute task using task manager
         let task_id = {

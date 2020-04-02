@@ -20,20 +20,22 @@ pub struct LoadEarthExplorerTask {
     dht: Arc<RwLock<Dht>>,
     directory: String,
     file: String,
-    format: LoadFormat,
+    image_format: ImageFormat,
+    load_format: LoadFormat,
     precision: usize,
     thread_count: u8,
 }
 
 impl LoadEarthExplorerTask {
     pub fn new(dht: Arc<RwLock<Dht>>, directory: String,
-            file: String, format: LoadFormat, precision: usize,
-            thread_count: u8) -> LoadEarthExplorerTask {
+            file: String, image_format: ImageFormat, load_format: LoadFormat,
+            precision: usize, thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
             dht: dht,
             directory: directory,
             file: file,
-            format: format,
+            image_format: image_format,
+            load_format: load_format,
             precision: precision,
             thread_count: thread_count,
         }
@@ -45,7 +47,7 @@ impl Task for LoadEarthExplorerTask {
         // read file records
         let path = Path::new(&self.file);
         let mut reader = Reader::from_path(path)?;
-        let records = self.format.records(&mut reader)?;
+        let records = self.load_format.records(&mut reader)?;
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -57,14 +59,15 @@ impl Task for LoadEarthExplorerTask {
         for _ in 0..self.thread_count {
             let dht_clone = self.dht.clone();
             let directory_clone = self.directory.clone();
+            let image_format = self.image_format.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
 
             let join_handle = std::thread::spawn(move || {
-                if let Err(e) = worker_thread(dht_clone,
-                        directory_clone, items_completed, items_skipped,
+                if let Err(e) = worker_thread(dht_clone, directory_clone, 
+                        image_format, items_completed, items_skipped,
                         precision_clone, receiver_clone) {
                     panic!("worker thread failure: {}", e);
                 }
@@ -125,9 +128,9 @@ impl Task for LoadEarthExplorerTask {
 }
 
 fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
-        items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
-        precision: usize, receiver: Receiver<Record>)
-        -> Result<(), Box<dyn Error>> {
+        image_format: ImageFormat, items_completed: Arc<AtomicU32>,
+        items_skipped: Arc<AtomicU32>, precision: usize, 
+        receiver: Receiver<Record>) -> Result<(), Box<dyn Error>> {
     // iterate over records
     loop {
         let record: Record = match receiver.recv() {
@@ -146,7 +149,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
 
         // open image
         let mut reader = ImageReader::open(path)?;
-        reader.set_format(ImageFormat::Tiff); // TODO - parameterize
+        reader.set_format(image_format);
 
         let image = reader.decode()?;
 

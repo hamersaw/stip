@@ -42,6 +42,11 @@ service DataManagement {
 }
 
 // Load Messages
+enum ImageFormat {
+    JPEG = 0;
+    TIFF = 1;
+}
+
 enum LoadFormat {
     LANDSAT = 0;
     SENTINEL = 1;
@@ -50,9 +55,10 @@ enum LoadFormat {
 message LoadRequest {
     string directory = 1;
     string file = 2;
-    LoadFormat format = 3;
-    uint32 precision = 4;
-    uint32 threadCount = 5;
+    ImageFormat imageFormat = 3;
+    LoadFormat loadFormat = 4;
+    uint32 precision = 5;
+    uint32 threadCount = 6;
 }
 
 message LoadReply {
