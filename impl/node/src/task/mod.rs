@@ -12,15 +12,17 @@ pub trait Task {
 
 pub struct TaskHandle {
     items_completed: Arc<AtomicU32>,
+    items_skipped: Arc<AtomicU32>,
     items_total: u32,
     status: TaskStatus,
 }
 
 impl TaskHandle {
-    pub fn new(items_completed: Arc<AtomicU32>,
+    pub fn new(items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
             items_total: u32, status: TaskStatus) -> TaskHandle {
         TaskHandle {
             items_completed: items_completed,
+            items_skipped: items_skipped,
             items_total: items_total,
             status: status,
         }
@@ -30,9 +32,10 @@ impl TaskHandle {
         match self.items_total {
             0 => None,
             x => {
-                let completed =
-                    self.items_completed.load(Ordering::SeqCst);
-                Some(completed as f32 / x as f32)
+                let done_count =
+                    self.items_completed.load(Ordering::SeqCst) 
+                        + self.items_skipped.load(Ordering::SeqCst);
+                Some(done_count as f32 / x as f32)
             },
         }
     }

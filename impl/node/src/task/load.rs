@@ -52,17 +52,19 @@ impl Task for LoadEarthExplorerTask {
 
         // start worker threads
         let items_completed = Arc::new(AtomicU32::new(0));
+        let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
             let dht_clone = self.dht.clone();
             let directory_clone = self.directory.clone();
             let items_completed = items_completed.clone();
+            let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
 
             let join_handle = std::thread::spawn(move || {
                 if let Err(e) = worker_thread(dht_clone,
-                        directory_clone, items_completed,
+                        directory_clone, items_completed, items_skipped,
                         precision_clone, receiver_clone) {
                     panic!("worker thread failure: {}", e);
                 }
@@ -75,6 +77,7 @@ impl Task for LoadEarthExplorerTask {
         let task_handle = Arc::new( RwLock::new(
             TaskHandle::new(
                 items_completed,
+                items_skipped,
                 records.len() as u32,
                 TaskStatus::Running
             )));
@@ -122,8 +125,9 @@ impl Task for LoadEarthExplorerTask {
 }
 
 fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
-    items_completed: Arc<AtomicU32>, precision: usize,
-    receiver: Receiver<Record>) -> Result<(), Box<dyn Error>> {
+        items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
+        precision: usize, receiver: Receiver<Record>)
+        -> Result<(), Box<dyn Error>> {
     // iterate over records
     loop {
         let record: Record = match receiver.recv() {
@@ -131,10 +135,18 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
             Err(_) => break,
         };
 
-        // open image
+        // check if path exists
         let filename = format!("{}/{}", directory, record.tile());
-        let mut reader = ImageReader::open(filename)?;
-        reader.set_format(ImageFormat::Jpeg);
+        let path = Path::new(&filename);
+        if !path.exists() {
+            // increment items skipped counter
+            items_skipped.fetch_add(1, Ordering::SeqCst);
+            continue;
+        }
+
+        // open image
+        let mut reader = ImageReader::open(path)?;
+        reader.set_format(ImageFormat::Tiff); // TODO - parameterize
 
         let image = reader.decode()?;
 
@@ -228,7 +240,7 @@ impl Record {
             },
             Record::Sentinel(r) => {
                 (r.se_lat.min(r.sw_lat), r.ne_lat.max(r.nw_lat),
-                    r.se_long.min(r.ne_long), r.sw_long.max(r.nw_long))
+                    r.sw_long.min(r.nw_long), r.se_long.max(r.ne_long))
             },
         }
     }
@@ -282,7 +294,7 @@ struct SentinelRecord {
     sw_lat: f64,
     #[serde(rename(deserialize = "SW Corner Long dec"))]
     sw_long: f64,
-    #[serde(rename(deserialize = "NW Corner Lat dec"))]
+    #[serde(rename(deserialize = "NW  Corner Lat dec"))]
     nw_lat: f64,
     #[serde(rename(deserialize = "NW Corner Long dec"))]
     nw_long: f64,
