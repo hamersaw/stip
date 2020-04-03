@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{ClusterManagementClient, DataManagementClient, NodeListRequest, TaskListRequest, TaskShowRequest, TaskStatus};
+use protobuf::{DataManagementClient, TaskListAllRequest, TaskShowRequest, TaskStatus};
 use tonic::Request;
 
 use std::{error, io};
@@ -22,7 +22,7 @@ pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
     }
 }
 
-/*#[tokio::main]
+#[tokio::main]
 async fn list(matches: &ArgMatches, _: &ArgMatches,
         _list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     // initialize grpc client
@@ -32,58 +32,19 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
-    let request = Request::new(TaskListRequest {});
+    let request = Request::new(TaskListAllRequest { });
 
     // retrieve reply
-    let reply = client.task_list(request).await?;
+    let reply = client.task_list_all(request).await?;
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<8}{:<24}{:<8}", "id", "completion percent", "status");
-    println!("--------------------------------------------");
-    for task in reply.tasks.iter() {
-        println!("{:<8}{:<24}{:<8}", task.id,
-            task.completion_percent, convert_status(task.status));
-    }
-
-    Ok(())
-}*/
-
-#[tokio::main]
-async fn list(matches: &ArgMatches, _: &ArgMatches,
-        _list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initalize grpc client
-    let ip_address = matches.value_of("ip_address").unwrap();
-    let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = ClusterManagementClient::connect(
-        format!("http://{}:{}", ip_address, port)).await?;
-
-    // initialize request
-    let request = Request::new(NodeListRequest {});
-
-    // retrieve reply
-    let reply = client.node_list(request).await?;
-    let reply = reply.get_ref();
-
-    // process nodes
     println!("{:<12}{:<12}{:<24}{:<8}", "node_id",
         "task_id", "completion percent", "status");
     println!("------------------------------------------------------------");
-    for node in reply.nodes.iter() {
-        // initialize grpc client
-        let mut client = DataManagementClient::connect(
-            format!("http://{}", node.rpc_addr)).await?;
-
-        // initialize request
-        let request = Request::new(TaskListRequest {});
-
-        // retrieve reply
-        let reply = client.task_list(request).await?;
-        let reply = reply.get_ref();
-
-        // print information
-        for task in reply.tasks.iter() {
-            println!("{:<12}{:<12}{:<24}{:<8}", node.id, task.id,
+    for (node_id, task_list_reply) in reply.nodes.iter() {
+        for task in task_list_reply.tasks.iter() {
+            println!("{:<12}{:<12}{:<24}{:<8}", node_id, task.id,
                 task.completion_percent, convert_status(task.status));
         }
     }

@@ -39,6 +39,7 @@ service DataManagement {
     rpc Load (LoadRequest) returns (LoadReply);
     rpc SearchAll (SearchAllRequest) returns (SearchAllReply);
     rpc Search (SearchRequest) returns (SearchReply);
+    rpc TaskListAll (TaskListAllRequest) returns (TaskListAllReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
 }
@@ -109,6 +110,13 @@ enum TaskStatus {
     COMPLETE = 0;
     FAILURE = 1;
     RUNNING = 2;
+}
+
+message TaskListAllRequest {
+}
+
+message TaskListAllReply {
+    map<uint32, TaskListReply> nodes = 1;
 }
 
 message TaskListRequest {

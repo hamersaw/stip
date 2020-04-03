@@ -1,5 +1,5 @@
 use image::ImageFormat;
-use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -165,6 +165,52 @@ impl DataManagement for DataManagementImpl {
         // initialize reply
         let reply = TaskListReply {
             tasks: tasks,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn task_list_all(&self, request: Request<TaskListAllRequest>)
+            -> Result<Response<TaskListAllReply>, Status> {
+        trace!("TaskListAllRequest: {:?}", request);
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+            }
+        }
+
+        // send SearchRequest to each dht node
+        let mut nodes = HashMap::new();
+        for (node_id, addr) in dht_nodes {
+            // initialize grpc client
+            // TODO - unwrap on await
+            let mut client = DataManagementClient::connect(
+                format!("http://{}", addr)).await.unwrap();
+
+            // initialize request
+            let request = Request::new(TaskListRequest {});
+
+            // retrieve reply
+            // TODO - unwrap on await
+            let reply = client.task_list(request).await.unwrap();
+            let reply = reply.get_ref();
+
+            // add images
+            nodes.insert(node_id as u32, reply.to_owned());
+        }
+
+        // initialize reply
+        let reply = TaskListAllReply {
+            nodes: nodes,
         };
 
         Ok(Response::new(reply))

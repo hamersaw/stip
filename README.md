@@ -6,7 +6,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 - fix image path in 'data search' command - do not use metadata path
 - improve node logging
 - image replication?
-- broadcast client 'task list' command - execute on all nodes
 ## COMMANDS
 - data split / merge command
 - data summary
