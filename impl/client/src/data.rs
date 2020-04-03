@@ -77,8 +77,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize request
     let request = Request::new(SearchRequest {
-        geohash: search_matches.value_of("GEOHASH").unwrap().to_string(),
-        platform: search_matches.value_of("PLATFORM").unwrap().to_string(),
+        geohash: search_matches.value_of("geohash").unwrap().to_string(),
+        platform: search_matches.value_of("platform").unwrap().to_string(),
     });
 
     // retrieve reply
