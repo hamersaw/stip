@@ -85,9 +85,12 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let reply = client.search(request).await?;
     let reply = reply.get_ref();
 
-    // TODO - print information
-    //println!("task starting with id '{}'", reply.task_id);
-    println!("REPLY: {:?}", reply);
+    // print information
+    println!("{:<80}{:<16}{:<12}{:<8}", "path", "platform", "geohash", "coverage");
+    println!("--------------------------------------------------------------------------------------------------------------------");
+    for image in reply.images.iter() {
+        println!("{:<80}{:<16}{:<12}{:<8}", image.path, image.platform, image.geohash, image.coverage);
+    }
 
     Ok(())
 }

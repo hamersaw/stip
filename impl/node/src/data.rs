@@ -90,6 +90,7 @@ impl DataManager {
             };
  
             // parse platform and geohash from path
+            let path_str = path.to_string_lossy().to_string();
             let _ = path.pop();
             let geohash = path.file_name()
                 .ok_or("geohash not found in path")?
@@ -107,7 +108,7 @@ impl DataManager {
                 lat_max: lat_max,
                 long_min: long_min,
                 long_max: long_max,
-                path: path.to_string_lossy().to_string(),
+                path: path_str,
                 platform: platform,
                 precision: precision.unwrap_or(0),
             };
