@@ -10,9 +10,6 @@ pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
         ("list", Some(list_matches)) => {
             list(&matches, &task_matches, &list_matches)
         },
-        ("list-all", Some(list_matches)) => {
-            list_all(&matches, &task_matches, &list_matches)
-        },
         ("show", Some(show_matches)) => {
             show(&matches, &task_matches, &show_matches)
         },
@@ -25,7 +22,7 @@ pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
     }
 }
 
-#[tokio::main]
+/*#[tokio::main]
 async fn list(matches: &ArgMatches, _: &ArgMatches,
         _list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     // initialize grpc client
@@ -50,10 +47,10 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     }
 
     Ok(())
-}
+}*/
 
 #[tokio::main]
-async fn list_all(matches: &ArgMatches, _: &ArgMatches,
+async fn list(matches: &ArgMatches, _: &ArgMatches,
         _list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     // initalize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();

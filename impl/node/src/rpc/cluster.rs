@@ -1,4 +1,4 @@
-use protobuf::{Node, NodeListRequest, NodeListReply, NodeShowRequest, NodeShowReply, ClusterManagement};
+use protobuf::{Node, NodeListReply, NodeListRequest, NodeShowReply, NodeShowRequest, ClusterManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 

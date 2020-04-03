@@ -67,7 +67,7 @@ fn main() {
     let listener = TcpListener::bind(format!("{}:{}",
         opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
     let transfer_stream_handler =
-        Arc::new(TransferStreamHandler::new(data_manager));
+        Arc::new(TransferStreamHandler::new(data_manager.clone()));
     let mut server = CommServer::new(listener,
         50, transfer_stream_handler);
 
@@ -77,7 +77,8 @@ fn main() {
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
 
     let cluster_management = ClusterManagementImpl::new(dht.clone());
-    let data_management = DataManagementImpl::new(dht, task_manager);
+    let data_management =
+        DataManagementImpl::new(data_manager, dht, task_manager);
     if let Err(e) = start_rpc_server(addr,
             cluster_management, data_management) {
         panic!("failed to start rpc server: {}", e);

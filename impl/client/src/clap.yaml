@@ -67,13 +67,22 @@ subcommands:
                         long: threads
                         short: t
                         takes_value: true
+            - search:
+                about: search for images
+                args:
+                    - PLATFORM:
+                        index: 1
+                        required: true
+                        help: image platform (ex. SENTINEL-2B)
+                    - GEOHASH:
+                        index: 2
+                        required: true
+                        help: image geohash boundary
     - task:
         about: manage cluster tasks
         subcommands:
             - list:
                 about: list tasks from the contact node
-            - list-all:
-                about: list tasks from all cluster nodes
             - show:
                 about: display task information from the contact node
                 args:

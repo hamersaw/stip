@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{ImageFormat, LoadFormat, LoadRequest, DataManagementClient};
+use protobuf::{ImageFormat, SearchRequest, LoadFormat, LoadRequest, DataManagementClient};
 use tonic::Request;
 
 use std::{error, io};
@@ -9,6 +9,9 @@ pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
             = match data_matches.subcommand() {
         ("load", Some(load_matches)) => {
             load(&matches, &data_matches, &load_matches)
+        },
+        ("search", Some(search_matches)) => {
+            search(&matches, &data_matches, &search_matches)
         },
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
@@ -59,6 +62,32 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 
     // print information
     println!("task starting with id '{}'", reply.task_id);
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn search(matches: &ArgMatches, _: &ArgMatches,
+        search_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = DataManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize request
+    let request = Request::new(SearchRequest {
+        geohash: search_matches.value_of("GEOHASH").unwrap().to_string(),
+        platform: search_matches.value_of("PLATFORM").unwrap().to_string(),
+    });
+
+    // retrieve reply
+    let reply = client.search(request).await?;
+    let reply = reply.get_ref();
+
+    // TODO - print information
+    //println!("task starting with id '{}'", reply.task_id);
+    println!("REPLY: {:?}", reply);
 
     Ok(())
 }

@@ -1,22 +1,25 @@
 use image::ImageFormat;
-use protobuf::{self, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadRequest, LoadReply, Task, TaskListRequest, TaskListReply, TaskShowRequest, TaskShowReply, DataManagement};
+use protobuf::{self, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchReply, SearchRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
+use crate::data::DataManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 
 use std::sync::{Arc, RwLock};
 
 pub struct DataManagementImpl {
+    data_manager: Arc<DataManager>,
     dht: Arc<RwLock<Dht>>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl DataManagementImpl {
-    pub fn new(dht: Arc<RwLock<Dht>>,
+    pub fn new(data_manager: Arc<DataManager>, dht: Arc<RwLock<Dht>>,
             task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
         DataManagementImpl {
+            data_manager: data_manager,
             dht: dht,
             task_manager: task_manager,
         }
@@ -57,6 +60,35 @@ impl DataManagement for DataManagementImpl {
         // initialize reply
         let reply = LoadReply {
             task_id: task_id,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn search(&self, request: Request<SearchRequest>)
+            -> Result<Response<SearchReply>, Status> {
+        trace!("SearchRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // search for the requested images
+        // TODO - handle error on search_images
+        let images = self.data_manager.search_images(
+                &request.geohash, &request.platform).unwrap().iter()
+            .map(|x| Image {
+                coverage: x.coverage,
+                geohash: x.geohash.clone(),
+                lat_min: x.lat_min,
+                lat_max: x.lat_max,
+                long_min: x.long_min,
+                long_max: x.long_max,
+                path: x.path.clone(),
+                platform: x.platform.clone(),
+                precision: x.precision as u32,
+            }).collect();
+
+        // initialize reply
+        let reply = SearchReply {
+            images: images,
         };
 
         Ok(Response::new(reply))
