@@ -1,5 +1,5 @@
 use image::ImageFormat;
-use protobuf::{self, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchReply, SearchRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -7,6 +7,7 @@ use crate::data::DataManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 pub struct DataManagementImpl {
@@ -89,6 +90,56 @@ impl DataManagement for DataManagementImpl {
         // initialize reply
         let reply = SearchReply {
             images: images,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn search_all(&self, request: Request<SearchAllRequest>)
+            -> Result<Response<SearchAllReply>, Status> {
+        trace!("SearchAllRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+            }
+        }
+
+        // send SearchRequest to each dht node
+        let mut nodes = HashMap::new();
+        for (node_id, addr) in dht_nodes {
+            // initialize grpc client
+            // TODO - unwrap on await
+            let mut client = DataManagementClient::connect(
+                format!("http://{}", addr)).await.unwrap();
+
+            // initialize request
+            let request = Request::new(SearchRequest {
+                geohash: request.geohash.clone(),
+                platform: request.platform.clone(),
+            });
+
+            // retrieve reply
+            // TODO - unwrap on await
+            let reply = client.search(request).await.unwrap();
+            let reply = reply.get_ref();
+
+            // add images
+            nodes.insert(node_id as u32, reply.to_owned());
+        }
+
+        // initialize reply
+        let reply = SearchAllReply {
+            nodes: nodes,
         };
 
         Ok(Response::new(reply))

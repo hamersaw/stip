@@ -37,6 +37,7 @@ message NodeShowReply {
  */
 service DataManagement {
     rpc Load (LoadRequest) returns (LoadReply);
+    rpc SearchAll (SearchAllRequest) returns (SearchAllReply);
     rpc Search (SearchRequest) returns (SearchReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
@@ -77,6 +78,15 @@ message Image {
     string path = 7;
     string platform = 8;
     uint32 precision = 9;
+}
+
+message SearchAllRequest {
+    string geohash = 1;
+    string platform = 2;
+}
+
+message SearchAllReply {
+    map<uint32, SearchReply> nodes = 1;
 }
 
 message SearchRequest {

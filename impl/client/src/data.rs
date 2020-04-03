@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{ImageFormat, SearchRequest, LoadFormat, LoadRequest, DataManagementClient};
+use protobuf::{ImageFormat, SearchAllRequest, LoadFormat, LoadRequest, DataManagementClient};
 use tonic::Request;
 
 use std::{error, io};
@@ -76,20 +76,25 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
-    let request = Request::new(SearchRequest {
+    let request = Request::new(SearchAllRequest {
         geohash: search_matches.value_of("geohash").unwrap().to_string(),
         platform: search_matches.value_of("platform").unwrap().to_string(),
     });
 
     // retrieve reply
-    let reply = client.search(request).await?;
+    let reply = client.search_all(request).await?;
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<80}{:<16}{:<12}{:<8}", "path", "platform", "geohash", "coverage");
-    println!("--------------------------------------------------------------------------------------------------------------------");
-    for image in reply.images.iter() {
-        println!("{:<80}{:<16}{:<12}{:<8}", image.path, image.platform, image.geohash, image.coverage);
+    println!("{:<8}{:<80}{:<16}{:<12}{:<8}", "node_id",
+        "path", "platform", "geohash", "coverage");
+    println!("----------------------------------------------------------------------------------------------------------------------------");
+    for (node_id, search_reply) in reply.nodes.iter() {
+        for image in search_reply.images.iter() {
+            println!("{:<8}{:<80}{:<16}{:<12}{:<8}", node_id,
+                image.path, image.platform,
+                image.geohash, image.coverage);
+        }
     }
 
     Ok(())
