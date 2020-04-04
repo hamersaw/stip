@@ -3,7 +3,7 @@
 A distributed spatiotemporal image management framework designed specifically for training neural networks.
 
 ## TODO
-- fix image path in 'data search' command - do not use metadata path
+- fix st-image coverage - doesn't seem to handle black and white pixels
 - improve node logging
 - image replication?
 ## COMMANDS

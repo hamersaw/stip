@@ -86,12 +86,12 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<8}{:<80}{:<16}{:<12}{:<8}", "node_id",
+    println!("{:<12}{:<80}{:<16}{:<12}{:<8}", "node_id",
         "path", "platform", "geohash", "coverage");
-    println!("----------------------------------------------------------------------------------------------------------------------------");
+    println!("--------------------------------------------------------------------------------------------------------------------------------");
     for (node_id, search_reply) in reply.nodes.iter() {
         for image in search_reply.images.iter() {
-            println!("{:<8}{:<80}{:<16}{:<12}{:<8}", node_id,
+            println!("{:<12}{:<80}{:<16}{:<12}{:<8}", node_id,
                 image.path, image.platform,
                 image.geohash, image.coverage);
         }

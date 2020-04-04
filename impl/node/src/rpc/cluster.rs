@@ -29,7 +29,8 @@ impl ClusterManagement for ClusterManagementImpl {
             let dht = self.dht.read().unwrap();
             for (node_id, addrs) in dht.iter() {
                 // convert Node to protobuf
-                let node = to_protobuf(*node_id as u32, &addrs.1, &addrs.2);
+                let node = to_protobuf_node(*node_id as u32,
+                    &addrs.1, &addrs.2);
 
                 // add to nodes
                 nodes.push(node);
@@ -55,7 +56,7 @@ impl ClusterManagement for ClusterManagementImpl {
             match dht.get(request.id as u16) {
                 None => None,
                 Some(addrs) =>
-                    Some(to_protobuf(request.id, addrs.0, addrs.1)),
+                    Some(to_protobuf_node(request.id, addrs.0, addrs.1)),
             }
         };
 
@@ -68,7 +69,7 @@ impl ClusterManagement for ClusterManagementImpl {
     }
 }
 
-fn to_protobuf(node_id: u32, rpc_addr: &Option<SocketAddr>,
+fn to_protobuf_node(node_id: u32, rpc_addr: &Option<SocketAddr>,
         xfer_addr: &Option<SocketAddr>) -> Node {
     // initialize node protobuf
     Node {

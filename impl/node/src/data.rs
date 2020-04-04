@@ -42,11 +42,11 @@ impl DataManager {
 
         // save image file
         path.push(product_id);
-        path.set_extension("png");
+        path.set_extension("tif");
 
         {
             let image = st_image.get_image();
-            image.save_with_format(&path, ImageFormat::Png)?;
+            image.save_with_format(&path, ImageFormat::Tiff)?;
         }
 
         // write metadata file
@@ -90,6 +90,7 @@ impl DataManager {
             };
  
             // parse platform and geohash from path
+            path.set_extension("tif");
             let path_str = path.to_string_lossy().to_string();
             let _ = path.pop();
             let geohash = path.file_name()

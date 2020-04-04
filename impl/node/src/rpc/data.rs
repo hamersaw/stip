@@ -3,7 +3,7 @@ use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageForma
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
-use crate::data::DataManager;
+use crate::data::{DataManager, ImageMetadata};
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 
@@ -75,17 +75,7 @@ impl DataManagement for DataManagementImpl {
         // TODO - handle error on search_images
         let images = self.data_manager.search_images(
                 &request.geohash, &request.platform).unwrap().iter()
-            .map(|x| Image {
-                coverage: x.coverage,
-                geohash: x.geohash.clone(),
-                lat_min: x.lat_min,
-                lat_max: x.lat_max,
-                long_min: x.long_min,
-                long_max: x.long_max,
-                path: x.path.clone(),
-                platform: x.platform.clone(),
-                precision: x.precision as u32,
-            }).collect();
+            .map(|x| to_protobuf_image(x)).collect();
 
         // initialize reply
         let reply = SearchReply {
@@ -155,7 +145,7 @@ impl DataManagement for DataManagementImpl {
             let task_manager = self.task_manager.read().unwrap();
             for (task_id, task_handle) in task_manager.iter() {
                 // convert TaskHandle to protobuf
-                let task = to_protobuf(*task_id, task_handle);
+                let task = to_protobuf_task(*task_id, task_handle);
 
                 // add to tasks
                 tasks.push(task);
@@ -227,7 +217,7 @@ impl DataManagement for DataManagementImpl {
             match task_manager.get(&request.id) {
                 None => None,
                 Some(task_handle) =>
-                    Some(to_protobuf(request.id, task_handle)),
+                    Some(to_protobuf_task(request.id, task_handle)),
             }
         };
 
@@ -240,7 +230,21 @@ impl DataManagement for DataManagementImpl {
     }
 }
 
-fn to_protobuf(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task {
+fn to_protobuf_image(image_metadata: &ImageMetadata) -> Image {
+    Image {
+        coverage: image_metadata.coverage,
+        geohash: image_metadata.geohash.clone(),
+        lat_min: image_metadata.lat_min,
+        lat_max: image_metadata.lat_max,
+        long_min: image_metadata.long_min,
+        long_max: image_metadata.long_max,
+        path: image_metadata.path.clone(),
+        platform: image_metadata.platform.clone(),
+        precision: image_metadata.precision as u32,
+    }
+}
+
+fn to_protobuf_task(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task {
     // get read lock on TaskHandle
     let task_handle = task_handle.read().unwrap();
     
