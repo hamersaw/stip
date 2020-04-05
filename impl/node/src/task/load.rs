@@ -1,9 +1,7 @@
 use csv::Reader;
 use crossbeam_channel::Receiver;
-use image::ImageFormat;
-use image::io::Reader as ImageReader;
+use gdal::raster::Dataset;
 use serde::Deserialize;
-use st_image::StImage;
 use swarm::prelude::Dht;
 
 use crate::task::{Task, TaskHandle, TaskStatus};
@@ -20,7 +18,6 @@ pub struct LoadEarthExplorerTask {
     dht: Arc<RwLock<Dht>>,
     directory: String,
     file: String,
-    image_format: ImageFormat,
     load_format: LoadFormat,
     precision: usize,
     thread_count: u8,
@@ -28,13 +25,12 @@ pub struct LoadEarthExplorerTask {
 
 impl LoadEarthExplorerTask {
     pub fn new(dht: Arc<RwLock<Dht>>, directory: String,
-            file: String, image_format: ImageFormat, load_format: LoadFormat,
+            file: String, load_format: LoadFormat,
             precision: usize, thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
             dht: dht,
             directory: directory,
             file: file,
-            image_format: image_format,
             load_format: load_format,
             precision: precision,
             thread_count: thread_count,
@@ -59,15 +55,14 @@ impl Task for LoadEarthExplorerTask {
         for _ in 0..self.thread_count {
             let dht_clone = self.dht.clone();
             let directory_clone = self.directory.clone();
-            let image_format = self.image_format.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
 
             let join_handle = std::thread::spawn(move || {
-                if let Err(e) = worker_thread(dht_clone, directory_clone, 
-                        image_format, items_completed, items_skipped,
+                if let Err(e) = worker_thread(dht_clone,
+                        directory_clone, items_completed, items_skipped,
                         precision_clone, receiver_clone) {
                     panic!("worker thread failure: {}", e);
                 }
@@ -128,9 +123,9 @@ impl Task for LoadEarthExplorerTask {
 }
 
 fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
-        image_format: ImageFormat, items_completed: Arc<AtomicU32>,
-        items_skipped: Arc<AtomicU32>, precision: usize, 
-        receiver: Receiver<Record>) -> Result<(), Box<dyn Error>> {
+        items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
+        precision: usize, receiver: Receiver<Record>) 
+        -> Result<(), Box<dyn Error>> {
     // iterate over records
     loop {
         let record: Record = match receiver.recv() {
@@ -147,22 +142,16 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
             continue;
         }
 
-        // open image
-        let mut reader = ImageReader::open(path)?;
-        reader.set_format(image_format);
+        // open image - TODO error
+        let dataset = Dataset::open(&path).unwrap();
+        // TODO - process imageformat (when it exists)
 
-        let image = reader.decode()?;
-
-        // initialize spatiotemporal image
-        let (lat_min, lat_max, long_min, long_max) = record.bounds();
-        let mut raw_image = StImage::new(image,
-            lat_min, lat_max, long_min, long_max, None);
-
-        // split image with geohash precision
-        for st_image in raw_image.split(precision) {
+        // split image with geohash precision - TODO error
+        for (geohash, dataset) in
+                st_image::split(&dataset, precision).unwrap() {
             // compute geohash hash
             let mut hasher = DefaultHasher::new();
-            hasher.write(st_image.geohash().unwrap().as_bytes());
+            hasher.write(geohash.as_bytes());
             let hash = hasher.finish();
 
             // discover hash location
@@ -187,7 +176,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&record.platform(), 
-                    &record.tile(), &st_image, &addr) {
+                    &geohash, &record.tile(), &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }

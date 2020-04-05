@@ -1,9 +1,8 @@
-use image::ImageFormat;
 use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
-use crate::data::{DataManager, ImageMetadata};
+use crate::data::DataManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 
@@ -35,11 +34,11 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let image_format = match ProtoImageFormat
+        /*let image_format = match ProtoImageFormat
                 ::from_i32(request.image_format).unwrap() {
             ProtoImageFormat::Jpeg => ImageFormat::Jpeg,
             ProtoImageFormat::Tiff => ImageFormat::Tiff,
-        };
+        };*/
 
         let load_format = match ProtoLoadFormat
                 ::from_i32(request.load_format).unwrap() {
@@ -49,7 +48,7 @@ impl DataManagement for DataManagementImpl {
 
         let task = LoadEarthExplorerTask::new(self.dht.clone(),
             request.directory.clone(), request.file.clone(),
-            image_format, load_format, request.precision as usize,
+            load_format, request.precision as usize,
             request.thread_count as u8);
 
         // execute task using task manager
@@ -71,11 +70,15 @@ impl DataManagement for DataManagementImpl {
         trace!("SearchRequest: {:?}", request);
         let request = request.get_ref();
 
-        // search for the requested images
-        // TODO - handle error on search_images
+        // search for the requested images - TODO error
         let images = self.data_manager.search_images(
                 &request.geohash, &request.platform).unwrap().iter()
-            .map(|x| to_protobuf_image(x)).collect();
+            .map(|x| Image {
+                coverage: x.coverage,
+                geohash: x.geohash.clone(),
+                path: x.path.clone(),
+                platform: x.platform.clone(),
+            }).collect();
 
         // initialize reply
         let reply = SearchReply {
@@ -227,20 +230,6 @@ impl DataManagement for DataManagementImpl {
         };
 
         Ok(Response::new(reply))
-    }
-}
-
-fn to_protobuf_image(image_metadata: &ImageMetadata) -> Image {
-    Image {
-        coverage: image_metadata.coverage,
-        geohash: image_metadata.geohash.clone(),
-        lat_min: image_metadata.lat_min,
-        lat_max: image_metadata.lat_max,
-        long_min: image_metadata.long_min,
-        long_max: image_metadata.long_max,
-        path: image_metadata.path.clone(),
-        platform: image_metadata.platform.clone(),
-        precision: image_metadata.precision as u32,
     }
 }
 

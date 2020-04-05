@@ -1,8 +1,8 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use comm::StreamHandler;
+use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use st_image::StImage;
 
 use crate::data::DataManager;
 
@@ -37,22 +37,27 @@ impl StreamHandler for TransferStreamHandler {
             Some(TransferOp::Read) => unimplemented!(),
             Some(TransferOp::Write) => {
                 // read metadata
-                let spacecraft_len = stream.read_u8()?;
-                let mut spacecraft_buf = vec![0u8; spacecraft_len as usize];
-                stream.read_exact(&mut spacecraft_buf)?;
-                let spacecraft_id = String::from_utf8(spacecraft_buf)?;
+                let platform_len = stream.read_u8()?;
+                let mut platform_buf = vec![0u8; platform_len as usize];
+                stream.read_exact(&mut platform_buf)?;
+                let platform = String::from_utf8(platform_buf)?;
 
-                let product_len = stream.read_u8()?;
-                let mut product_buf = vec![0u8; product_len as usize];
-                stream.read_exact(&mut product_buf)?;
-                let product_id = String::from_utf8(product_buf)?;
+                let geohash_len = stream.read_u8()?;
+                let mut geohash_buf = vec![0u8; geohash_len as usize];
+                stream.read_exact(&mut geohash_buf)?;
+                let geohash = String::from_utf8(geohash_buf)?;
+
+                let tile_len = stream.read_u8()?;
+                let mut tile_buf = vec![0u8; tile_len as usize];
+                stream.read_exact(&mut tile_buf)?;
+                let tile = String::from_utf8(tile_buf)?;
 
                 // read image
-                let st_image = StImage::read(stream)?;
+                let dataset = st_image::read(stream)?;
 
                 // write image using DataManager
-                self.data_manager.write_image(&spacecraft_id,
-                    &product_id, &st_image)?;
+                self.data_manager.write_image(&platform,
+                    &geohash, &tile, &dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -63,19 +68,24 @@ impl StreamHandler for TransferStreamHandler {
     }
 }
 
-pub fn send_image(spacecraft_id: &str, product_id: &str, st_image: &StImage,
-        addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
+pub fn send_image(platform: &str, geohash: &str, tile: &str,
+        dataset: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::Write as u8)?;
 
     // write metadata
-    stream.write_u8(spacecraft_id.len() as u8)?;
-    stream.write(spacecraft_id.as_bytes())?;
+    stream.write_u8(platform.len() as u8)?;
+    stream.write(platform.as_bytes())?;
 
-    stream.write_u8(product_id.len() as u8)?;
-    stream.write(product_id.as_bytes())?;
+    stream.write_u8(geohash.len() as u8)?;
+    stream.write(geohash.as_bytes())?;
 
-    // write image
-    st_image.write(&mut stream)
+    stream.write_u8(tile.len() as u8)?;
+    stream.write(tile.as_bytes())?;
+
+    // write dataset
+    st_image::write(&dataset, &mut stream)?;
+
+    Ok(())
 }

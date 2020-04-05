@@ -72,13 +72,8 @@ message LoadReply {
 message Image {
     double coverage = 1;
     string geohash = 2;
-    double lat_min = 3;
-    double lat_max = 4;
-    double long_min = 5;
-    double long_max = 6;
     string path = 7;
     string platform = 8;
-    uint32 precision = 9;
 }
 
 message SearchAllRequest {
