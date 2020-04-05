@@ -1,4 +1,5 @@
 use csv::Reader;
+use chrono::prelude::{DateTime, Utc};
 use crossbeam_channel::Receiver;
 use gdal::raster::Dataset;
 use serde::Deserialize;
@@ -142,6 +143,12 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
             continue;
         }
 
+        // parse image timestamps
+        let start_date = record.start_date()
+            .parse::<DateTime<Utc>>()?.timestamp();
+        let end_date = record.end_date()
+            .parse::<DateTime<Utc>>()?.timestamp();
+
         // open image - TODO error
         let dataset = Dataset::open(&path).unwrap();
         // TODO - process imageformat (when it exists)
@@ -176,7 +183,8 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&record.platform(), 
-                    &geohash, &record.tile(), &dataset, &addr) {
+                    &geohash, &record.tile(), start_date,
+                    end_date,  &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }
@@ -237,10 +245,24 @@ impl Record {
         }
     }
 
+    fn end_date(&self) -> &str {
+        match self {
+            Record::Landsat(record) => unimplemented!(),
+            Record::Sentinel(record) => &record.acquisition_end_date,
+        }
+    }
+
     fn platform(&self) -> &str {
         match self {
             Record::Landsat(record) => &record.spacecraft_id,
             Record::Sentinel(record) => &record.platform,
+        }
+    }
+
+    fn start_date(&self) -> &str {
+        match self {
+            Record::Landsat(record) => unimplemented!(),
+            Record::Sentinel(record) => &record.acquisition_start_date,
         }
     }
 
@@ -278,6 +300,10 @@ struct LandsatRecord {
 
 #[derive(Debug, Deserialize)]
 struct SentinelRecord {
+    #[serde(rename(deserialize = "Acquisition Start Date"))]
+    acquisition_start_date: String,
+    #[serde(rename(deserialize = "Acquisition End Date"))]
+    acquisition_end_date: String,
     #[serde(rename(deserialize = "Vendor Tile ID"))]
     vendor_tile_id: String,
     #[serde(rename(deserialize = "Platform"))]

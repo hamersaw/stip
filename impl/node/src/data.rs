@@ -6,10 +6,12 @@ use std::fs::File;
 use std::path::PathBuf;
 
 pub struct ImageMetadata {
+    pub end_date: i64,
     pub coverage: f64,
     pub geohash: String,
     pub path: String,
     pub platform: String,
+    pub start_date: i64,
 }
 
 pub struct DataManager {
@@ -24,7 +26,8 @@ impl DataManager {
     }
 
     pub fn write_image(&self, platform: &str, geohash: &str, tile: &str,
-            dataset: &Dataset) -> Result<(), Box<dyn Error>> {
+            start_date: i64, end_date: i64, dataset: &Dataset)
+            -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash'
         let mut path = self.directory.clone();
         path.push(platform);
@@ -42,6 +45,9 @@ impl DataManager {
         // write metadata file
         path.set_extension("meta");
         let mut metadata_file = File::create(&path)?;
+
+        metadata_file.write_i64::<BigEndian>(start_date)?;
+        metadata_file.write_i64::<BigEndian>(end_date)?;
 
         // write image 'coverage' - TODO error
         let coverage = st_image::coverage(&dataset).unwrap();
@@ -62,6 +68,9 @@ impl DataManager {
             let mut path = entry?;
             let mut file = File::open(&path)?;
 
+            let start_date = file.read_i64::<BigEndian>()?;
+            let end_date = file.read_i64::<BigEndian>()?;
+
             // read 'coverage'
             let coverage = file.read_f64::<BigEndian>()?;
 
@@ -80,9 +89,11 @@ impl DataManager {
             // initialize ImageMetadata
             let image_metadata = ImageMetadata {
                 coverage: coverage,
+                end_date: end_date,
                 geohash: geohash,
                 path: path_str,
                 platform: platform,
+                start_date: start_date,
             };
 
             vec.push(image_metadata);

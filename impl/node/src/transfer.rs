@@ -1,4 +1,4 @@
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use comm::StreamHandler;
 use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
@@ -52,12 +52,15 @@ impl StreamHandler for TransferStreamHandler {
                 stream.read_exact(&mut tile_buf)?;
                 let tile = String::from_utf8(tile_buf)?;
 
+                let start_date = stream.read_i64::<BigEndian>()?;
+                let end_date = stream.read_i64::<BigEndian>()?;
+
                 // read image
                 let dataset = st_image::read(stream)?;
 
                 // write image using DataManager
-                self.data_manager.write_image(&platform,
-                    &geohash, &tile, &dataset)?;
+                self.data_manager.write_image(&platform, &geohash,
+                    &tile, start_date, end_date, &dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -69,7 +72,8 @@ impl StreamHandler for TransferStreamHandler {
 }
 
 pub fn send_image(platform: &str, geohash: &str, tile: &str,
-        dataset: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
+        start_date: i64, end_date: i64, dataset: &Dataset,
+        addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::Write as u8)?;
@@ -83,6 +87,9 @@ pub fn send_image(platform: &str, geohash: &str, tile: &str,
 
     stream.write_u8(tile.len() as u8)?;
     stream.write(tile.as_bytes())?;
+
+    stream.write_i64::<BigEndian>(start_date)?;
+    stream.write_i64::<BigEndian>(end_date)?;
 
     // write dataset
     st_image::write(&dataset, &mut stream)?;

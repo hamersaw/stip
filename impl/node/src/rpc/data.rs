@@ -74,10 +74,12 @@ impl DataManagement for DataManagementImpl {
         let images = self.data_manager.search_images(
                 &request.geohash, &request.platform).unwrap().iter()
             .map(|x| Image {
+                end_date: x.end_date,
                 coverage: x.coverage,
                 geohash: x.geohash.clone(),
                 path: x.path.clone(),
                 platform: x.platform.clone(),
+                start_date: x.start_date,
             }).collect();
 
         // initialize reply
