@@ -67,6 +67,21 @@ subcommands:
                         long: threads
                         short: t
                         takes_value: true
+            - fill:
+                about: initialize fill data task
+                args:
+                    - geohash:
+                        default_value: "*"
+                        help: image geohash boundary
+                        long: geohash
+                        short: g
+                        takes_value: true
+                    - platform:
+                        default_value: "*"
+                        help: image platform (ex. SENTINEL-2B)
+                        long: platform
+                        short: p
+                        takes_value: true
             - search:
                 about: search for images
                 args:

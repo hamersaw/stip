@@ -36,12 +36,33 @@ message NodeShowReply {
  * DataManagement Service
  */
 service DataManagement {
+    rpc FillAll (FillAllRequest) returns (FillAllReply);
+    rpc Fill (FillRequest) returns (FillReply);
     rpc Load (LoadRequest) returns (LoadReply);
     rpc SearchAll (SearchAllRequest) returns (SearchAllReply);
     rpc Search (SearchRequest) returns (SearchReply);
     rpc TaskListAll (TaskListAllRequest) returns (TaskListAllReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
+}
+
+// Fill Messages
+message FillAllRequest {
+    string geohash = 1;
+    string platform = 2;
+}
+
+message FillAllReply {
+    map<uint32, FillReply> nodes = 1;
+}
+
+message FillRequest {
+    string geohash = 1;
+    string platform = 2;
+}
+
+message FillReply {
+    uint64 taskId = 1;
 }
 
 // Load Messages

@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{ImageFormat, SearchAllRequest, LoadFormat, LoadRequest, DataManagementClient};
+use protobuf::{FillAllRequest, ImageFormat, SearchAllRequest, LoadFormat, LoadRequest, DataManagementClient};
 use tonic::Request;
 
 use std::{error, io};
@@ -20,6 +20,34 @@ pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
     if let Err(e) = result {
         println!("{}", e);
     }
+}
+
+#[tokio::main]
+async fn fill(matches: &ArgMatches, _: &ArgMatches,
+        fill_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = DataManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize request
+    let request = Request::new(FillAllRequest {
+        geohash: fill_matches.value_of("geohash").unwrap().to_string(),
+        platform: fill_matches.value_of("platform").unwrap().to_string(),
+    });
+
+    // retrieve reply
+    let reply = client.fill_all(request).await?;
+    let reply = reply.get_ref();
+
+    // print information
+    for (node_id, fill_reply) in reply.nodes.iter() {
+        println!("task starting on node '{}' with id '{}'",
+            node_id, fill_reply.task_id);
+    }
+
+    Ok(())
 }
 
 #[tokio::main]
