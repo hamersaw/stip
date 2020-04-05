@@ -26,8 +26,8 @@ impl DataManager {
     }
 
     pub fn write_image(&self, platform: &str, geohash: &str, tile: &str,
-            start_date: i64, end_date: i64, dataset: &Dataset)
-            -> Result<(), Box<dyn Error>> {
+            start_date: i64, end_date: i64, coverage: f64,
+            dataset: &Dataset) -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash'
         let mut path = self.directory.clone();
         path.push(platform);
@@ -48,9 +48,6 @@ impl DataManager {
 
         metadata_file.write_i64::<BigEndian>(start_date)?;
         metadata_file.write_i64::<BigEndian>(end_date)?;
-
-        // write image 'coverage' - TODO error
-        let coverage = st_image::coverage(&dataset).unwrap();
         metadata_file.write_f64::<BigEndian>(coverage)?;
 
         Ok(())
@@ -68,10 +65,9 @@ impl DataManager {
             let mut path = entry?;
             let mut file = File::open(&path)?;
 
+            // read metadata from file
             let start_date = file.read_i64::<BigEndian>()?;
             let end_date = file.read_i64::<BigEndian>()?;
-
-            // read 'coverage'
             let coverage = file.read_f64::<BigEndian>()?;
 
             // parse platform and geohash from path

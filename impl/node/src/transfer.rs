@@ -55,12 +55,14 @@ impl StreamHandler for TransferStreamHandler {
                 let start_date = stream.read_i64::<BigEndian>()?;
                 let end_date = stream.read_i64::<BigEndian>()?;
 
+                let coverage = stream.read_f64::<BigEndian>()?;
+
                 // read image
                 let dataset = st_image::read(stream)?;
 
                 // write image using DataManager
                 self.data_manager.write_image(&platform, &geohash,
-                    &tile, start_date, end_date, &dataset)?;
+                    &tile, start_date, end_date, coverage, &dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -72,7 +74,7 @@ impl StreamHandler for TransferStreamHandler {
 }
 
 pub fn send_image(platform: &str, geohash: &str, tile: &str,
-        start_date: i64, end_date: i64, dataset: &Dataset,
+        start_date: i64, end_date: i64, coverage: f64, dataset: &Dataset,
         addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
@@ -90,6 +92,8 @@ pub fn send_image(platform: &str, geohash: &str, tile: &str,
 
     stream.write_i64::<BigEndian>(start_date)?;
     stream.write_i64::<BigEndian>(end_date)?;
+
+    stream.write_f64::<BigEndian>(coverage)?;
 
     // write dataset
     st_image::write(&dataset, &mut stream)?;

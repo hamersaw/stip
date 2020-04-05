@@ -181,10 +181,16 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
                 }
             };
 
+            // if image has 0.0 coverage -> don't process - TODO error
+            let coverage = st_image::coverage(&dataset).unwrap();
+            if  coverage == 0.0 {
+                continue;
+            }
+
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&record.platform(), 
                     &geohash, &record.tile(), start_date,
-                    end_date,  &dataset, &addr) {
+                    end_date,  coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }
