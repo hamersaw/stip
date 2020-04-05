@@ -1,4 +1,3 @@
-use image::ImageFormat;
 use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
@@ -71,22 +70,15 @@ impl DataManagement for DataManagementImpl {
         trace!("SearchRequest: {:?}", request);
         let request = request.get_ref();
 
-        // search for the requested images
-        // TODO - handle error on search_images
-        let images = Vec::new();
-        /*let images = self.data_manager.search_images(
+        // search for the requested images - TODO error
+        let images = self.data_manager.search_images(
                 &request.geohash, &request.platform).unwrap().iter()
             .map(|x| Image {
                 coverage: x.coverage,
                 geohash: x.geohash.clone(),
-                lat_min: x.lat_min,
-                lat_max: x.lat_max,
-                long_min: x.long_min,
-                long_max: x.long_max,
                 path: x.path.clone(),
                 platform: x.platform.clone(),
-                precision: x.precision as u32,
-            }).collect();*/
+            }).collect();
 
         // initialize reply
         let reply = SearchReply {

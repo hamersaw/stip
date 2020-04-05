@@ -1,7 +1,6 @@
 use csv::Reader;
 use crossbeam_channel::Receiver;
 use gdal::raster::Dataset;
-use image::io::Reader as ImageReader;
 use serde::Deserialize;
 use swarm::prelude::Dht;
 

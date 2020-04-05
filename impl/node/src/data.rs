@@ -1,6 +1,5 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use gdal::raster::{Dataset, Driver};
-use image::ImageFormat;
 
 use std::error::Error;
 use std::fs::File;
@@ -9,13 +8,8 @@ use std::path::PathBuf;
 pub struct ImageMetadata {
     pub coverage: f64,
     pub geohash: String,
-    pub lat_min: f64,
-    pub lat_max: f64,
-    pub long_min: f64,
-    pub long_max: f64,
     pub path: String,
     pub platform: String,
-    pub precision: usize,
 }
 
 pub struct DataManager {
@@ -63,20 +57,13 @@ impl DataManager {
 
         // search for metadata files
         let mut vec = Vec::new();
-        /*for entry in glob::glob(&directory)? {
+        for entry in glob::glob(&directory)? {
             let mut path = entry?;
-
-            // read StImage metadata from file
             let mut file = File::open(&path)?;
-            let (lat_min, lat_max, long_min, long_max, precision) =
-                StImage::read_metadata(&mut file)?;
 
             // read 'coverage'
-            let coverage = match file.read_u8()? {
-                0 => -1.0,
-                _ => file.read_f64::<BigEndian>()?,
-            };
- 
+            let coverage = file.read_f64::<BigEndian>()?;
+
             // parse platform and geohash from path
             let path_str = path.to_string_lossy().to_string();
             let _ = path.pop();
@@ -97,7 +84,7 @@ impl DataManager {
             };
 
             vec.push(image_metadata);
-        }*/
+        }
 
         Ok(vec)
     }
