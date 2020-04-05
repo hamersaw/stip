@@ -35,11 +35,11 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let image_format = match ProtoImageFormat
+        /*let image_format = match ProtoImageFormat
                 ::from_i32(request.image_format).unwrap() {
             ProtoImageFormat::Jpeg => ImageFormat::Jpeg,
             ProtoImageFormat::Tiff => ImageFormat::Tiff,
-        };
+        };*/
 
         let load_format = match ProtoLoadFormat
                 ::from_i32(request.load_format).unwrap() {
@@ -49,7 +49,7 @@ impl DataManagement for DataManagementImpl {
 
         let task = LoadEarthExplorerTask::new(self.dht.clone(),
             request.directory.clone(), request.file.clone(),
-            image_format, load_format, request.precision as usize,
+            load_format, request.precision as usize,
             request.thread_count as u8);
 
         // execute task using task manager
@@ -73,7 +73,8 @@ impl DataManagement for DataManagementImpl {
 
         // search for the requested images
         // TODO - handle error on search_images
-        let images = self.data_manager.search_images(
+        let images = Vec::new();
+        /*let images = self.data_manager.search_images(
                 &request.geohash, &request.platform).unwrap().iter()
             .map(|x| Image {
                 coverage: x.coverage,
@@ -85,7 +86,7 @@ impl DataManagement for DataManagementImpl {
                 path: x.path.clone(),
                 platform: x.platform.clone(),
                 precision: x.precision as u32,
-            }).collect();
+            }).collect();*/
 
         // initialize reply
         let reply = SearchReply {

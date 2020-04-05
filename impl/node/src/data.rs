@@ -1,6 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use gdal::raster::{Dataset, Driver};
 use image::ImageFormat;
-use st_image::StImage;
 
 use std::error::Error;
 use std::fs::File;
@@ -29,27 +29,22 @@ impl DataManager {
         }
     }
 
-    pub fn write_image(&self, spacecraft_id: &str, product_id: &str,
-            st_image: &StImage) -> Result<(), Box<dyn Error>> {
-        // create directory 'self.directory/spacecraft_id/geohash'
+    pub fn write_image(&self, platform: &str, geohash: &str, tile: &str,
+            dataset: &Dataset) -> Result<(), Box<dyn Error>> {
+        // create directory 'self.directory/platform/geohash'
         let mut path = self.directory.clone();
-        path.push(spacecraft_id);
-        if let Some(geohash) = st_image.geohash() {
-            path.push(geohash);
-        }
+        path.push(platform);
+        path.push(geohash);
 
         std::fs::create_dir_all(&path)?;
 
-        // save image file
-        path.push(product_id);
-        path.set_extension("png");
+        // save image file 'self.directory/platform/geohash/tile' - TODO error
+        path.push(tile);
+        
+        let driver = Driver::get("GTiff").unwrap();
+        dataset.create_copy(&driver, &path.to_string_lossy()).unwrap();
 
-        {
-            let image = st_image.get_image();
-            image.save_with_format(&path, ImageFormat::Png)?;
-        }
-
-        // write metadata file
+        /*// TODO - write metadata file
         path.set_extension("meta");
         let mut metadata_file = File::create(&path)?;
 
@@ -62,7 +57,7 @@ impl DataManager {
                 metadata_file.write_f64::<BigEndian>(coverage)?;
             },
             None => metadata_file.write_u8(0)?,
-        }
+        }*/
 
         Ok(())
     }
@@ -75,7 +70,7 @@ impl DataManager {
 
         // search for metadata files
         let mut vec = Vec::new();
-        for entry in glob::glob(&directory)? {
+        /*for entry in glob::glob(&directory)? {
             let mut path = entry?;
 
             // read StImage metadata from file
@@ -114,7 +109,7 @@ impl DataManager {
             };
 
             vec.push(image_metadata);
-        }
+        }*/
 
         Ok(vec)
     }
