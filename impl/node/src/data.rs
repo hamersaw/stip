@@ -44,20 +44,13 @@ impl DataManager {
         let driver = Driver::get("GTiff").unwrap();
         dataset.create_copy(&driver, &path.to_string_lossy()).unwrap();
 
-        /*// TODO - write metadata file
+        // write metadata file
         path.set_extension("meta");
         let mut metadata_file = File::create(&path)?;
 
-        st_image.write_metadata(&mut metadata_file)?;
-
-        // write image 'coverage'
-        match st_image.coverage() {
-            Some(coverage) => {
-                metadata_file.write_u8(1)?;
-                metadata_file.write_f64::<BigEndian>(coverage)?;
-            },
-            None => metadata_file.write_u8(0)?,
-        }*/
+        // write image 'coverage' - TODO error
+        let coverage = st_image::coverage(&dataset).unwrap();
+        metadata_file.write_f64::<BigEndian>(coverage)?;
 
         Ok(())
     }
@@ -99,13 +92,8 @@ impl DataManager {
             let image_metadata = ImageMetadata {
                 coverage: coverage,
                 geohash: geohash,
-                lat_min: lat_min,
-                lat_max: lat_max,
-                long_min: long_min,
-                long_max: long_max,
                 path: path_str,
                 platform: platform,
-                precision: precision.unwrap_or(0),
             };
 
             vec.push(image_metadata);
