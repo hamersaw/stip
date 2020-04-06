@@ -183,7 +183,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
 
             // if image has 0.0 coverage -> don't process - TODO error
             let coverage = st_image::coverage(&dataset).unwrap();
-            if  coverage == 0.0 {
+            if coverage == 0f64 {
                 continue;
             }
 
@@ -238,22 +238,9 @@ enum Record {
 }
 
 impl Record {
-    fn bounds(&self) -> (f64, f64, f64, f64) {
-        match self {
-            Record::Landsat(r) => {
-                (r.ll_lat.min(r.lr_lat), r.ul_lat.max(r.ur_lat),
-                    r.ll_long.min(r.ul_long), r.lr_long.max(r.ur_long))
-            },
-            Record::Sentinel(r) => {
-                (r.se_lat.min(r.sw_lat), r.ne_lat.max(r.nw_lat),
-                    r.sw_long.min(r.nw_long), r.se_long.max(r.ne_long))
-            },
-        }
-    }
-
     fn end_date(&self) -> &str {
         match self {
-            Record::Landsat(record) => unimplemented!(),
+            Record::Landsat(_record) => unimplemented!(),
             Record::Sentinel(record) => &record.acquisition_end_date,
         }
     }
@@ -267,7 +254,7 @@ impl Record {
 
     fn start_date(&self) -> &str {
         match self {
-            Record::Landsat(record) => unimplemented!(),
+            Record::Landsat(_record) => unimplemented!(),
             Record::Sentinel(record) => &record.acquisition_start_date,
         }
     }
@@ -314,7 +301,7 @@ struct SentinelRecord {
     vendor_tile_id: String,
     #[serde(rename(deserialize = "Platform"))]
     platform: String,
-    #[serde(rename(deserialize = "SW Corner Lat dec"))]
+    /*#[serde(rename(deserialize = "SW Corner Lat dec"))]
     sw_lat: f64,
     #[serde(rename(deserialize = "SW Corner Long dec"))]
     sw_long: f64,
@@ -329,5 +316,5 @@ struct SentinelRecord {
     #[serde(rename(deserialize = "NE Corner Lat dec"))]
     ne_lat: f64,
     #[serde(rename(deserialize = "NE Corner Long dec"))]
-    ne_long: f64,
+    ne_long: f64,*/
 }

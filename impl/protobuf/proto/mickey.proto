@@ -50,6 +50,8 @@ service DataManagement {
 message FillAllRequest {
     string geohash = 1;
     string platform = 2;
+    uint32 threadCount = 3;
+    int64 windowSeconds = 4;
 }
 
 message FillAllReply {
@@ -59,6 +61,8 @@ message FillAllReply {
 message FillRequest {
     string geohash = 1;
     string platform = 2;
+    uint32 threadCount = 3;
+    int64 windowSeconds = 4;
 }
 
 message FillReply {

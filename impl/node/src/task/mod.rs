@@ -4,6 +4,7 @@ use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
+pub mod fill;
 pub mod load;
 
 pub trait Task {

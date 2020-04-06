@@ -82,6 +82,18 @@ subcommands:
                         long: platform
                         short: p
                         takes_value: true
+                    - thread_count:
+                        default_value: "4"
+                        help: thread count for processing task
+                        long: threads
+                        short: t
+                        takes_value: true
+                    - window_seconds:
+                        default_value: "86400"
+                        help: window for image combinations
+                        long: window
+                        short: w
+                        takes_value: true
             - search:
                 about: search for images
                 args:

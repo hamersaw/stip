@@ -5,6 +5,7 @@ use std::error::Error;
 use std::fs::File;
 use std::path::PathBuf;
 
+#[derive(Clone, Debug)]
 pub struct ImageMetadata {
     pub end_date: i64,
     pub coverage: f64,

@@ -35,6 +35,10 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(FillAllRequest {
         geohash: fill_matches.value_of("geohash").unwrap().to_string(),
         platform: fill_matches.value_of("platform").unwrap().to_string(),
+        thread_count: fill_matches.value_of("thread_count")
+            .unwrap().parse::<u32>()?,
+        window_seconds: fill_matches.value_of("window_seconds")
+            .unwrap().parse::<i64>()?,
     });
 
     // retrieve reply

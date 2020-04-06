@@ -1,9 +1,10 @@
-use protobuf::{self, DataManagementClient, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
 use crate::data::DataManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
+use crate::task::fill::FillTask;
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 
 use std::collections::HashMap;
@@ -28,6 +29,82 @@ impl DataManagementImpl {
 
 #[tonic::async_trait]
 impl DataManagement for DataManagementImpl {
+    async fn fill(&self, request: Request<FillRequest>)
+            -> Result<Response<FillReply>, Status> {
+        trace!("FillRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // initialize task
+        let task = FillTask::new(self.data_manager.clone(),
+            request.geohash.clone(), request.platform.clone(),
+            request.thread_count as u8, request.window_seconds);
+
+        // execute task using task manager
+        let task_id = {
+            let mut task_manager = self.task_manager.write().unwrap();
+            task_manager.execute(task).unwrap() // TODO - handle error
+        };
+
+        // initialize reply
+        let reply = FillReply {
+            task_id: task_id,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn fill_all(&self, request: Request<FillAllRequest>)
+            -> Result<Response<FillAllReply>, Status> {
+        trace!("FillAllRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+            }
+        }
+
+        // send SearchRequest to each dht node
+        let mut nodes = HashMap::new();
+        for (node_id, addr) in dht_nodes {
+            // initialize grpc client
+            // TODO - unwrap on await
+            let mut client = DataManagementClient::connect(
+                format!("http://{}", addr)).await.unwrap();
+
+            // initialize request
+            let request = Request::new(FillRequest {
+                geohash: request.geohash.clone(),
+                platform: request.platform.clone(),
+                thread_count: request.thread_count,
+                window_seconds: request.window_seconds,
+            });
+
+            // retrieve reply
+            // TODO - unwrap on await
+            let reply = client.fill(request).await.unwrap();
+            let reply = reply.get_ref();
+
+            // add images
+            nodes.insert(node_id as u32, reply.to_owned());
+        }
+
+        // initialize reply
+        let reply = FillAllReply {
+            nodes: nodes,
+        };
+
+        Ok(Response::new(reply))
+    }
+
     async fn load(&self, request: Request<LoadRequest>)
             -> Result<Response<LoadReply>, Status> {
         trace!("LoadDirectoryRequest: {:?}", request);
