@@ -1,7 +1,7 @@
 use crossbeam_channel::Receiver;
 use gdal::raster::{Dataset, Driver};
 
-use crate::image::{ImageManager, ImageMetadata};
+use crate::image::{BASE_DATASET, FILL_DATASET, ImageManager, ImageMetadata};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering;
@@ -11,20 +11,20 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
 pub struct FillTask {
-    image_manager: Arc<ImageManager>,
     geohash: String,
+    image_manager: Arc<ImageManager>,
     platform: String,
     thread_count: u8,
     window_seconds: i64,
 }
 
 impl FillTask {
-    pub fn new(image_manager: Arc<ImageManager>, geohash: String,
-            platform: String, thread_count: u8, window_seconds: i64)
-            -> FillTask {
+    pub fn new(geohash: String, image_manager: Arc<ImageManager>,
+            platform: String, thread_count: u8, 
+            window_seconds: i64) -> FillTask {
         FillTask {
-            image_manager: image_manager,
             geohash: geohash,
+            image_manager: image_manager,
             platform: platform,
             thread_count: thread_count,
             window_seconds: window_seconds,
@@ -35,7 +35,7 @@ impl FillTask {
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let images = self.image_manager.search(
+        let images = self.image_manager.search(BASE_DATASET,
             &self.geohash, &self.platform)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
@@ -223,8 +223,9 @@ fn worker_thread(image_manager: Arc<ImageManager>,
         let coverage = st_image::coverage(&mem_dataset).unwrap();
 
         if coverage > image.coverage {
-            image_manager.write("test-fill", &image.geohash, &tile_id,
-                image.start_date, image.end_date, coverage, &mem_dataset)?;
+            image_manager.write(&image.platform, FILL_DATASET, 
+                &image.geohash, &tile_id, image.start_date,
+                image.end_date, coverage, &mem_dataset)?;
         }
 
         // increment items completed counter

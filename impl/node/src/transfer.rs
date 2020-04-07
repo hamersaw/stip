@@ -4,7 +4,7 @@ use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::image::ImageManager;
+use crate::image::{BASE_DATASET, ImageManager};
 
 use std::error::Error;
 use std::io::{Read, Write};
@@ -58,11 +58,11 @@ impl StreamHandler for TransferStreamHandler {
                 let coverage = stream.read_f64::<BigEndian>()?;
 
                 // read image
-                let dataset = st_image::read(stream)?;
+                let image = st_image::read(stream)?;
 
                 // write image using ImageManager
-                self.image_manager.write(&platform, &geohash, &tile,
-                    start_date, end_date, coverage, &dataset)?;
+                self.image_manager.write(&platform, BASE_DATASET, &geohash,
+                    &tile, start_date, end_date, coverage, &image)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -74,7 +74,7 @@ impl StreamHandler for TransferStreamHandler {
 }
 
 pub fn send_image(platform: &str, geohash: &str, tile: &str,
-        start_date: i64, end_date: i64, coverage: f64, dataset: &Dataset,
+        start_date: i64, end_date: i64, coverage: f64, image: &Dataset,
         addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
@@ -96,7 +96,7 @@ pub fn send_image(platform: &str, geohash: &str, tile: &str,
     stream.write_f64::<BigEndian>(coverage)?;
 
     // write dataset
-    st_image::write(&dataset, &mut stream)?;
+    st_image::write(&image, &mut stream)?;
 
     Ok(())
 }

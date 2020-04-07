@@ -97,6 +97,12 @@ subcommands:
             - search:
                 about: search for images
                 args:
+                    - dataset:
+                        default_value: "*"
+                        help: image dataset
+                        long: dataset
+                        short: d
+                        takes_value: true
                     - geohash:
                         default_value: "*"
                         help: image geohash boundary

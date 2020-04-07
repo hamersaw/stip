@@ -35,8 +35,8 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = FillTask::new(self.image_manager.clone(),
-            request.geohash.clone(), request.platform.clone(),
+        let task = FillTask::new(request.geohash.clone(),
+            self.image_manager.clone(), request.platform.clone(),
             request.thread_count as u8, request.window_seconds);
 
         // execute task using task manager
@@ -148,11 +148,12 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // search for the requested images - TODO error
-        let images = self.image_manager.search(&request.geohash,
-                &request.platform).unwrap().iter()
+        let images = self.image_manager.search(&request.dataset,
+                &request.geohash, &request.platform).unwrap().iter()
             .map(|x| Image {
-                end_date: x.end_date,
                 coverage: x.coverage,
+                dataset: x.dataset.clone(),
+                end_date: x.end_date,
                 geohash: x.geohash.clone(),
                 path: x.path.clone(),
                 platform: x.platform.clone(),
@@ -196,6 +197,7 @@ impl DataManagement for DataManagementImpl {
 
             // initialize request
             let request = Request::new(SearchRequest {
+                dataset: request.dataset.clone(),
                 geohash: request.geohash.clone(),
                 platform: request.platform.clone(),
             });

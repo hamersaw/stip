@@ -5,7 +5,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 ## TODO
 - improve node logging
 - image replication?
-- fix image directories on 'data fill' command
 ## COMMANDS
 - data split / merge command
 - data summary

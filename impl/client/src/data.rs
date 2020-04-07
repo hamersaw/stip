@@ -112,6 +112,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize request
     let request = Request::new(SearchAllRequest {
+        dataset: search_matches.value_of("dataset").unwrap().to_string(),
         geohash: search_matches.value_of("geohash").unwrap().to_string(),
         platform: search_matches.value_of("platform").unwrap().to_string(),
     });
@@ -121,13 +122,13 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<12}{:<80}{:<16}{:<12}{:<8}", "node_id",
-        "path", "platform", "geohash", "coverage");
+    println!("{:<12}{:<80}{:<16}{:<12}{:<12}{:<8}", "node_id",
+        "path", "platform", "dataset", "geohash", "coverage");
     println!("--------------------------------------------------------------------------------------------------------------------------------");
     for (node_id, search_reply) in reply.nodes.iter() {
         for image in search_reply.images.iter() {
-            println!("{:<12}{:<80}{:<16}{:<12}{:<8}", node_id,
-                image.path, image.platform,
+            println!("{:<12}{:<80}{:<16}{:<12}{:<12}{:<8}", node_id,
+                image.path, image.platform, image.dataset,
                 image.geohash, image.coverage);
         }
     }

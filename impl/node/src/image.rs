@@ -5,10 +5,14 @@ use std::error::Error;
 use std::fs::File;
 use std::path::PathBuf;
 
+pub const BASE_DATASET: &'static str = "base";
+pub const FILL_DATASET: &'static str = "fill";
+
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
-    pub end_date: i64,
     pub coverage: f64,
+    pub dataset: String,
+    pub end_date: i64,
     pub geohash: String,
     pub path: String,
     pub platform: String,
@@ -26,12 +30,13 @@ impl ImageManager {
         }
     }
 
-    pub fn write(&self, platform: &str, geohash: &str, tile: &str,
-            start_date: i64, end_date: i64, coverage: f64,
-            dataset: &Dataset) -> Result<(), Box<dyn Error>> {
+    pub fn write(&self, platform: &str, dataset: &str, geohash: &str,
+            tile: &str, start_date: i64, end_date: i64, coverage: f64,
+            image: &Dataset) -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash'
         let mut path = self.directory.clone();
         path.push(platform);
+        path.push(dataset);
         path.push(geohash);
 
         std::fs::create_dir_all(&path)?;
@@ -41,7 +46,7 @@ impl ImageManager {
         path.set_extension("tif");
         
         let driver = Driver::get("GTiff").unwrap();
-        dataset.create_copy(&driver, &path.to_string_lossy()).unwrap();
+        image.create_copy(&driver, &path.to_string_lossy()).unwrap();
 
         // write metadata file
         path.set_extension("meta");
@@ -54,11 +59,11 @@ impl ImageManager {
         Ok(())
     }
 
-    pub fn search(&self, geohash: &str, platform: &str)
+    pub fn search(&self, dataset: &str, geohash: &str, platform: &str)
             -> Result<Vec<ImageMetadata>, Box<dyn Error>> {
         // compile glob file search regex
-        let directory = format!("{}/{}/{}/*meta",
-            self.directory.to_string_lossy(), platform, geohash);
+        let directory = format!("{}/{}/{}/{}/*meta",
+            self.directory.to_string_lossy(), platform, dataset, geohash);
 
         // search for metadata files
         let mut vec = Vec::new();
@@ -79,6 +84,10 @@ impl ImageManager {
                 .ok_or("geohash not found in path")?
                 .to_string_lossy().to_string();
             let _ = path.pop();
+            let dataset = path.file_name()
+                .ok_or("dataset not found in path")?
+                .to_string_lossy().to_string();
+            let _ = path.pop();
             let platform = path.file_name()
                 .ok_or("platform not found in path")?
                 .to_string_lossy().to_string();
@@ -86,6 +95,7 @@ impl ImageManager {
             // initialize ImageMetadata
             let image_metadata = ImageMetadata {
                 coverage: coverage,
+                dataset: dataset,
                 end_date: end_date,
                 geohash: geohash,
                 path: path_str,

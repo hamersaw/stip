@@ -95,17 +95,19 @@ message LoadReply {
 
 // Search Messages
 message Image {
-    int64 endDate = 1;
-    double coverage = 2;
-    string geohash = 3;
-    string path = 4;
-    string platform = 5;
-    int64 startDate = 6;
+    double coverage = 1;
+    string dataset = 2;
+    int64 endDate = 3;
+    string geohash = 4;
+    string path = 5;
+    string platform = 6;
+    int64 startDate = 7;
 }
 
 message SearchAllRequest {
-    string geohash = 1;
-    string platform = 2;
+    string dataset = 1;
+    string geohash = 2;
+    string platform = 3;
 }
 
 message SearchAllReply {
@@ -113,8 +115,9 @@ message SearchAllReply {
 }
 
 message SearchRequest {
-    string geohash = 1;
-    string platform = 2;
+    string dataset = 1;
+    string geohash = 2;
+    string platform = 3;
 }
 
 message SearchReply {
