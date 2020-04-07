@@ -7,6 +7,9 @@ use std::{error, io};
 pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match data_matches.subcommand() {
+        ("fill", Some(fill_matches)) => {
+            fill(&matches, &data_matches, &fill_matches)
+        },
         ("load", Some(load_matches)) => {
             load(&matches, &data_matches, &load_matches)
         },

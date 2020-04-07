@@ -1,10 +1,12 @@
 use crossbeam_channel::Receiver;
+use gdal::raster::{Dataset, Driver};
 
 use crate::data::{DataManager, ImageMetadata};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering;
 use std::error::Error;
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
@@ -38,7 +40,7 @@ impl Task for FillTask {
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
             .filter(|x| x.coverage != 1f64).collect();
-        
+
         filter_images.sort_by(|a, b| 
             match a.geohash.cmp(&b.geohash) {
                 Ordering::Equal => a.start_date.cmp(&b.start_date),
@@ -52,7 +54,7 @@ impl Task for FillTask {
         let mut geohash = "";
         let mut timestamp = 0i64;
         for image in filter_images {
-            if image.geohash != geohash && image.start_date
+            if image.geohash != geohash || image.start_date
                     - timestamp > self.window_seconds {
                 // process images_buf
                 if images_buf.len() >= 2 {
@@ -78,13 +80,14 @@ impl Task for FillTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
+            let data_manager = self.data_manager.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let receiver_clone = receiver.clone();
 
             let join_handle = std::thread::spawn(move || {
-                if let Err(e) = worker_thread(items_completed,
-                        items_skipped, receiver_clone) {
+                if let Err(e) = worker_thread(data_manager,
+                        items_completed, items_skipped, receiver_clone) {
                     panic!("worker thread failure: {}", e);
                 }
             });
@@ -143,10 +146,9 @@ impl Task for FillTask {
     }
 }
 
-fn worker_thread(items_completed: Arc<AtomicU32>,
-        _items_skipped: Arc<AtomicU32>,
-        receiver: Receiver<Vec<ImageMetadata>>)
-        -> Result<(), Box<dyn Error>> {
+fn worker_thread(data_manager: Arc<DataManager>,
+        items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
+        receiver: Receiver<Vec<ImageMetadata>>) -> Result<(), Box<dyn Error>> {
     // iterate over records
     loop {
         let record: Vec<ImageMetadata> = match receiver.recv() {
@@ -154,8 +156,77 @@ fn worker_thread(items_completed: Arc<AtomicU32>,
             Err(_) => break,
         };
 
-        // TODO - process
-        println!("TODO - process images: {:?}", record);
+        // check if path exists
+        let path = Path::new(&record[0].path);
+        if !path.exists() {
+            // increment items skipped counter
+            items_skipped.fetch_add(1, AtomicOrdering::SeqCst);
+            continue;
+        }
+
+        // open image - TODO error
+        let dataset = Dataset::open(&path).unwrap();
+ 
+        // read dataset rasterbands
+        let mut rasters = Vec::new();
+        for i in 0..dataset.count() {
+            let raster = dataset
+                .read_full_raster_as::<u8>(i+1).unwrap();
+            rasters.push(raster);
+        }
+
+        for i in 1..record.len() {
+            let image = &record[i];
+
+            // check if path exists
+            let fill_path = Path::new(&image.path);
+            if !fill_path.exists() {
+                // TODO - log
+                continue;
+            }
+
+            // open fill image - TODO  error
+            let fill_dataset = Dataset::open(&fill_path).unwrap();
+ 
+            // read fill dataset rasterbands
+            let mut fill_rasters = Vec::new();
+            for i in 0..fill_dataset.count() {
+                let fill_raster = fill_dataset
+                    .read_full_raster_as::<u8>(i+1).unwrap();
+                fill_rasters.push(fill_raster);
+            }
+
+            // fill rasterband
+            st_image::fill(&mut rasters, &fill_rasters)?;
+        }
+ 
+        // open memory dataset
+        let (width, height) = dataset.size();
+        let driver = Driver::get("Mem").unwrap();
+        let mem_dataset = driver.create("unreachable", width as isize,
+            height as isize, rasters.len() as isize).unwrap();
+
+        mem_dataset.set_geo_transform(
+            &dataset.geo_transform().unwrap()).unwrap();
+        mem_dataset.set_projection(
+            &dataset.projection()).unwrap();
+
+        // set rasterbands - TODO error
+        for (i, raster) in rasters.iter().enumerate() {
+            mem_dataset.write_raster((i + 1) as isize,
+                (0, 0), (width, height), &raster).unwrap();
+        }
+
+        // write mem_dataset - TODO error
+        // TODO - tile_id, coverage
+        let image = &record[0];
+        let tile_id = &path.file_name().unwrap().to_string_lossy();
+        let coverage = st_image::coverage(&mem_dataset).unwrap();
+
+        if coverage > image.coverage {
+            data_manager.write_image("test-fill", &image.geohash, &tile_id,
+                image.start_date, image.end_date, coverage, &mem_dataset)?;
+        }
 
         // increment items completed counter
         items_completed.fetch_add(1, AtomicOrdering::SeqCst);
