@@ -1,7 +1,7 @@
 use crossbeam_channel::Receiver;
 use gdal::raster::{Dataset, Driver};
 
-use crate::data::{DataManager, ImageMetadata};
+use crate::image::{ImageManager, ImageMetadata};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering;
@@ -11,7 +11,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
 pub struct FillTask {
-    data_manager: Arc<DataManager>,
+    image_manager: Arc<ImageManager>,
     geohash: String,
     platform: String,
     thread_count: u8,
@@ -19,11 +19,11 @@ pub struct FillTask {
 }
 
 impl FillTask {
-    pub fn new(data_manager: Arc<DataManager>, geohash: String,
+    pub fn new(image_manager: Arc<ImageManager>, geohash: String,
             platform: String, thread_count: u8, window_seconds: i64)
             -> FillTask {
         FillTask {
-            data_manager: data_manager,
+            image_manager: image_manager,
             geohash: geohash,
             platform: platform,
             thread_count: thread_count,
@@ -34,8 +34,8 @@ impl FillTask {
 
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // search for images using DataManager
-        let images = self.data_manager.search_images(
+        // search for images using ImageManager
+        let images = self.image_manager.search(
             &self.geohash, &self.platform)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
@@ -80,13 +80,13 @@ impl Task for FillTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
-            let data_manager = self.data_manager.clone();
+            let image_manager = self.image_manager.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let receiver_clone = receiver.clone();
 
             let join_handle = std::thread::spawn(move || {
-                if let Err(e) = worker_thread(data_manager,
+                if let Err(e) = worker_thread(image_manager,
                         items_completed, items_skipped, receiver_clone) {
                     panic!("worker thread failure: {}", e);
                 }
@@ -146,7 +146,7 @@ impl Task for FillTask {
     }
 }
 
-fn worker_thread(data_manager: Arc<DataManager>,
+fn worker_thread(image_manager: Arc<ImageManager>,
         items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
         receiver: Receiver<Vec<ImageMetadata>>) -> Result<(), Box<dyn Error>> {
     // iterate over records
@@ -218,13 +218,12 @@ fn worker_thread(data_manager: Arc<DataManager>,
         }
 
         // write mem_dataset - TODO error
-        // TODO - tile_id, coverage
         let image = &record[0];
         let tile_id = &path.file_name().unwrap().to_string_lossy();
         let coverage = st_image::coverage(&mem_dataset).unwrap();
 
         if coverage > image.coverage {
-            data_manager.write_image("test-fill", &image.geohash, &tile_id,
+            image_manager.write("test-fill", &image.geohash, &tile_id,
                 image.start_date, image.end_date, coverage, &mem_dataset)?;
         }
 

@@ -2,7 +2,7 @@ use protobuf::{self, DataManagementClient, FillAllReply, FillAllRequest, FillRep
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
-use crate::data::DataManager;
+use crate::image::ImageManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::fill::FillTask;
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
@@ -11,17 +11,17 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 pub struct DataManagementImpl {
-    data_manager: Arc<DataManager>,
+    image_manager: Arc<ImageManager>,
     dht: Arc<RwLock<Dht>>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl DataManagementImpl {
-    pub fn new(data_manager: Arc<DataManager>, dht: Arc<RwLock<Dht>>,
+    pub fn new(dht: Arc<RwLock<Dht>>, image_manager: Arc<ImageManager>,
             task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
         DataManagementImpl {
-            data_manager: data_manager,
             dht: dht,
+            image_manager: image_manager,
             task_manager: task_manager,
         }
     }
@@ -35,7 +35,7 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = FillTask::new(self.data_manager.clone(),
+        let task = FillTask::new(self.image_manager.clone(),
             request.geohash.clone(), request.platform.clone(),
             request.thread_count as u8, request.window_seconds);
 
@@ -148,8 +148,8 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // search for the requested images - TODO error
-        let images = self.data_manager.search_images(
-                &request.geohash, &request.platform).unwrap().iter()
+        let images = self.image_manager.search(&request.geohash,
+                &request.platform).unwrap().iter()
             .map(|x| Image {
                 end_date: x.end_date,
                 coverage: x.coverage,

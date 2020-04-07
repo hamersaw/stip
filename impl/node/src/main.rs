@@ -7,8 +7,8 @@ use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
-mod data;
-use data::DataManager;
+mod image;
+use image::ImageManager;
 mod task;
 use task::TaskManager;
 mod rpc;
@@ -35,8 +35,8 @@ fn main() {
             opt.directory, e);
     }
 
-    // initialize DataManager and TaskManager
-    let data_manager = Arc::new(DataManager::new(opt.directory));
+    // initialize ImageManager and TaskManager
+    let image_manager = Arc::new(ImageManager::new(opt.directory));
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
     // build swarm config
@@ -67,7 +67,7 @@ fn main() {
     let listener = TcpListener::bind(format!("{}:{}",
         opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
     let transfer_stream_handler =
-        Arc::new(TransferStreamHandler::new(data_manager.clone()));
+        Arc::new(TransferStreamHandler::new(image_manager.clone()));
     let mut server = CommServer::new(listener,
         50, transfer_stream_handler);
 
@@ -78,7 +78,7 @@ fn main() {
 
     let cluster_management = ClusterManagementImpl::new(dht.clone());
     let data_management =
-        DataManagementImpl::new(data_manager, dht, task_manager);
+        DataManagementImpl::new(dht, image_manager, task_manager);
     if let Err(e) = start_rpc_server(addr,
             cluster_management, data_management) {
         panic!("failed to start rpc server: {}", e);

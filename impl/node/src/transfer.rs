@@ -4,7 +4,7 @@ use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::data::DataManager;
+use crate::image::ImageManager;
 
 use std::error::Error;
 use std::io::{Read, Write};
@@ -18,13 +18,13 @@ enum TransferOp {
 }
 
 pub struct TransferStreamHandler {
-    data_manager: Arc<DataManager>,
+    image_manager: Arc<ImageManager>,
 }
 
 impl TransferStreamHandler {
-    pub fn new(data_manager: Arc<DataManager>) -> TransferStreamHandler {
+    pub fn new(image_manager: Arc<ImageManager>) -> TransferStreamHandler {
         TransferStreamHandler {
-            data_manager: data_manager,
+            image_manager: image_manager,
         }
     }
 }
@@ -60,9 +60,9 @@ impl StreamHandler for TransferStreamHandler {
                 // read image
                 let dataset = st_image::read(stream)?;
 
-                // write image using DataManager
-                self.data_manager.write_image(&platform, &geohash,
-                    &tile, start_date, end_date, coverage, &dataset)?;
+                // write image using ImageManager
+                self.image_manager.write(&platform, &geohash, &tile,
+                    start_date, end_date, coverage, &dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,

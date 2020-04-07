@@ -15,18 +15,18 @@ pub struct ImageMetadata {
     pub start_date: i64,
 }
 
-pub struct DataManager {
+pub struct ImageManager {
     directory: PathBuf,
 }
 
-impl DataManager {
-    pub fn new(directory: PathBuf) -> DataManager {
-        DataManager {
+impl ImageManager {
+    pub fn new(directory: PathBuf) -> ImageManager {
+        ImageManager {
             directory: directory,
         }
     }
 
-    pub fn write_image(&self, platform: &str, geohash: &str, tile: &str,
+    pub fn write(&self, platform: &str, geohash: &str, tile: &str,
             start_date: i64, end_date: i64, coverage: f64,
             dataset: &Dataset) -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash'
@@ -54,7 +54,7 @@ impl DataManager {
         Ok(())
     }
 
-    pub fn search_images(&self, geohash: &str, platform: &str)
+    pub fn search(&self, geohash: &str, platform: &str)
             -> Result<Vec<ImageMetadata>, Box<dyn Error>> {
         // compile glob file search regex
         let directory = format!("{}/{}/{}/*meta",
