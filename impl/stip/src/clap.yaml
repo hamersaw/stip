@@ -1,6 +1,6 @@
 name: client
 author: "Daniel Rammer <hamersaw@protonmail.com>"
-about: client to interface with mickey distributed framework
+about: client to interface with STIP distributed framework
 args:
     - ip_address:
         default_value: "127.0.0.1"

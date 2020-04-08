@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "stip"
 version = "0.1.0"
 authors = ["Daniel Rammer <hamersaw@protonmail.com>"]
 edition = "2018"

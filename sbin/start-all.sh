@@ -12,7 +12,7 @@ projectdir="$(pwd)/$(dirname $0)/.."
 hostfile="$projectdir/etc/hosts.txt"
 
 # initialize instance variables
-application="$projectdir/impl/node/target/debug/node"
+application="$projectdir/impl/stipd/target/debug/stipd"
 
 # iterate over hosts
 nodeid=0

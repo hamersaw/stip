@@ -102,7 +102,7 @@ async fn start_rpc_server(addr: SocketAddr,
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "mnode", about="Node in the mickey framework.")]
+#[structopt(name = "stipd", about="Node in the STIP framework.")]
 struct Opt {
     #[structopt(name="NODE_ID", help="Integer node identifier.")]
     node_id: u16,
