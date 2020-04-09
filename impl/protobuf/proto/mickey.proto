@@ -41,6 +41,8 @@ service DataManagement {
     rpc Load (LoadRequest) returns (LoadReply);
     rpc SearchAll (SearchAllRequest) returns (SearchAllReply);
     rpc Search (SearchRequest) returns (SearchReply);
+    rpc SplitAll (SplitAllRequest) returns (SplitAllReply);
+    rpc Split (SplitRequest) returns (SplitReply);
     rpc TaskListAll (TaskListAllRequest) returns (TaskListAllReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
@@ -123,6 +125,30 @@ message SearchRequest {
 message SearchReply {
     repeated Image images = 1;
 }
+
+// Split Messages
+message SplitAllRequest {
+    string geohash = 1;
+    string platform = 2;
+    uint32 precision = 3;
+    uint32 threadCount = 4;
+}
+
+message SplitAllReply {
+    map<uint32, SplitReply> nodes = 1;
+}
+
+message SplitRequest {
+    string geohash = 1;
+    string platform = 2;
+    uint32 precision = 3;
+    uint32 threadCount = 4;
+}
+
+message SplitReply {
+    uint64 taskId = 1;
+}
+
 
 // Task Messages
 message Task {
