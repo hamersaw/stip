@@ -6,7 +6,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 - improve node logging
 - image replication?
 - add 'min_coverage' field to 'data search' command
-## COMMANDS
+#### COMMANDS
 - data split / merge command
-- data summary
 - stop task functionality?

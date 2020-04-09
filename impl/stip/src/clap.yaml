@@ -1,4 +1,4 @@
-name: client
+name: stip
 author: "Daniel Rammer <hamersaw@protonmail.com>"
 about: client to interface with STIP distributed framework
 args:
@@ -104,7 +104,7 @@ subcommands:
                         short: d
                         takes_value: true
                     - geohash:
-                        default_value: "*"
+                        default_value: ""
                         help: image geohash boundary
                         long: geohash
                         short: g
@@ -115,6 +115,10 @@ subcommands:
                         long: platform
                         short: p
                         takes_value: true
+                    - summary:
+                        help: print summary of data
+                        long: summary
+                        short: s
     - task:
         about: manage cluster tasks
         subcommands:
