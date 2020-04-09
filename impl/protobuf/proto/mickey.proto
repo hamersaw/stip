@@ -128,10 +128,11 @@ message SearchReply {
 
 // Split Messages
 message SplitAllRequest {
-    string geohash = 1;
-    string platform = 2;
-    uint32 precision = 3;
-    uint32 threadCount = 4;
+    string dataset = 1;
+    string geohash = 2;
+    string platform = 3;
+    uint32 precision = 4;
+    uint32 threadCount = 5;
 }
 
 message SplitAllReply {
@@ -139,10 +140,11 @@ message SplitAllReply {
 }
 
 message SplitRequest {
-    string geohash = 1;
-    string platform = 2;
-    uint32 precision = 3;
-    uint32 threadCount = 4;
+    string dataset = 1;
+    string geohash = 2;
+    string platform = 3;
+    uint32 precision = 4;
+    uint32 threadCount = 5;
 }
 
 message SplitReply {

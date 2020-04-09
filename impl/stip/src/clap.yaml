@@ -119,6 +119,39 @@ subcommands:
                         help: print summary of data
                         long: summary
                         short: s
+            - split:
+                about: split images with a new geohash precision
+                args:
+                    - dataset:
+                        default_value: "*"
+                        help: image dataset
+                        long: dataset
+                        short: d
+                        takes_value: true
+                    - geohash:
+                        default_value: ""
+                        help: image geohash boundary
+                        long: geohash
+                        short: g
+                        takes_value: true
+                    - platform:
+                        default_value: "*"
+                        help: image platform (ex. SENTINEL-2B)
+                        long: platform
+                        short: p
+                        takes_value: true
+                    - precision:
+                        default_value: "4"
+                        help: geohash precision
+                        long: precision
+                        short: p
+                        takes_value: true
+                    - thread_count:
+                        default_value: "4"
+                        help: thread count for processing task
+                        long: threads
+                        short: t
+                        takes_value: true
     - task:
         about: manage cluster tasks
         subcommands:

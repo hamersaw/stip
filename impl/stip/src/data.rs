@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{FillAllRequest, ImageFormat, SearchAllRequest, LoadFormat, LoadRequest, DataManagementClient};
+use protobuf::{DataManagementClient, FillAllRequest, ImageFormat, SearchAllRequest, LoadFormat, LoadRequest, SplitAllRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -16,6 +16,9 @@ pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
         },
         ("search", Some(search_matches)) => {
             search(&matches, &data_matches, &search_matches)
+        },
+        ("split", Some(split_matches)) => {
+            split(&matches, &data_matches, &split_matches)
         },
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
@@ -177,6 +180,39 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
                     image.geohash, image.coverage);
             }
         }
+    }
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn split(matches: &ArgMatches, _: &ArgMatches,
+        split_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = DataManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize request
+    let request = Request::new(SplitAllRequest {
+        dataset: split_matches.value_of("dataset").unwrap().to_string(),
+        geohash: split_matches.value_of("geohash").unwrap().to_string(),
+        platform: split_matches.value_of("platform").unwrap().to_string(),
+        precision: split_matches.value_of("precision")
+            .unwrap().parse::<u32>()?,
+        thread_count: split_matches.value_of("thread_count")
+            .unwrap().parse::<u32>()?,
+    });
+
+    // retrieve reply
+    let reply = client.split_all(request).await?;
+    let reply = reply.get_ref();
+
+    // print information
+    for (node_id, split_reply) in reply.nodes.iter() {
+        println!("task starting on node '{}' with id '{}'",
+            node_id, split_reply.task_id);
     }
 
     Ok(())
