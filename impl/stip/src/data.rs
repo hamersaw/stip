@@ -142,7 +142,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
                 let geohash_map = dataset_map.entry(
                     image.dataset.clone()).or_insert(BTreeMap::new());
 
-                let geohash = &image.geohash[..precision];
+                let geohash = &image.geohash[..std::cmp::min(precision, image.geohash.len())];
                 let count_map = geohash_map.entry(
                     geohash.clone()).or_insert(BTreeMap::new());
 
@@ -160,8 +160,6 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             for (dataset, geohash_map) in dataset_map.iter() {
                 for (geohash, count_map) in geohash_map.iter() {
                     for (precision, count) in count_map.iter() {
-                        //println!("{} {} {} {} {}", platform, dataset,
-                        //    geohash, precision, count);
                         println!("{:<16}{:<12}{:<12}{:<12}{:<12}",
                             platform, dataset, geohash,
                             precision, count);

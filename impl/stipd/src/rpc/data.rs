@@ -1,4 +1,4 @@
-use protobuf::{self, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, ImageFormat as ProtoImageFormat, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, SplitAllReply, SplitAllRequest, SplitReply, SplitRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -6,6 +6,7 @@ use crate::image::ImageManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 use crate::task::fill::FillTask;
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
+use crate::task::split::SplitTask;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -72,7 +73,7 @@ impl DataManagement for DataManagementImpl {
             }
         }
 
-        // send SearchRequest to each dht node
+        // send FillRequest to each dht node
         let mut nodes = HashMap::new();
         for (node_id, addr) in dht_nodes {
             // initialize grpc client
@@ -213,6 +214,84 @@ impl DataManagement for DataManagementImpl {
 
         // initialize reply
         let reply = SearchAllReply {
+            nodes: nodes,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn split(&self, request: Request<SplitRequest>)
+            -> Result<Response<SplitReply>, Status> {
+        trace!("SplitRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // initialize task
+        let task = SplitTask::new(request.dataset.clone(),
+            self.dht.clone(), request.geohash.clone(),
+            self.image_manager.clone(), request.platform.clone(),
+            request.precision as usize, request.thread_count as u8);
+
+        // execute task using task manager
+        let task_id = {
+            let mut task_manager = self.task_manager.write().unwrap();
+            task_manager.execute(task).unwrap() // TODO - handle error
+        };
+
+        // initialize reply
+        let reply = SplitReply {
+            task_id: task_id,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn split_all(&self, request: Request<SplitAllRequest>)
+            -> Result<Response<SplitAllReply>, Status> {
+        trace!("SplitAllRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+            }
+        }
+
+        // send SplitRequest to each dht node
+        let mut nodes = HashMap::new();
+        for (node_id, addr) in dht_nodes {
+            // initialize grpc client
+            // TODO - unwrap on await
+            let mut client = DataManagementClient::connect(
+                format!("http://{}", addr)).await.unwrap();
+
+            // initialize request
+            let request = Request::new(SplitRequest {
+                dataset: request.dataset.clone(),
+                geohash: request.geohash.clone(),
+                platform: request.platform.clone(),
+                precision: request.precision,
+                thread_count: request.thread_count,
+            });
+
+            // retrieve reply
+            // TODO - unwrap on await
+            let reply = client.split(request).await.unwrap();
+            let reply = reply.get_ref();
+
+            // add images
+            nodes.insert(node_id as u32, reply.to_owned());
+        }
+
+        // initialize reply
+        let reply = SplitAllReply {
             nodes: nodes,
         };
 

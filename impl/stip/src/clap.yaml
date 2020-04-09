@@ -59,7 +59,7 @@ subcommands:
                         default_value: "4"
                         help: geohash precision
                         long: precision
-                        short: p
+                        short: r
                         takes_value: true
                     - thread_count:
                         default_value: "4"
@@ -144,7 +144,7 @@ subcommands:
                         default_value: "4"
                         help: geohash precision
                         long: precision
-                        short: p
+                        short: r
                         takes_value: true
                     - thread_count:
                         default_value: "4"
