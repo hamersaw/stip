@@ -1,5 +1,6 @@
 use crossbeam_channel::Receiver;
 use gdal::raster::Dataset;
+use geohash::Coordinate;
 use swarm::prelude::Dht;
 
 use crate::image::{ImageManager, ImageMetadata};
@@ -123,15 +124,18 @@ impl Task for SplitTask {
 fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
         items_skipped: Arc<AtomicU32>, precision: usize,
         receiver: Receiver<ImageMetadata>) -> Result<(), Box<dyn Error>> {
-/*fn worker_thread(image_manager: Arc<ImageManager>,
-        items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
-        receiver: Receiver<ImageMetadata>) -> Result<(), Box<dyn Error>> {*/
+    // compute geohash intervals for given precision
+    let (y_interval, x_interval) =
+        st_image::coordinate::get_geohash_intervals(precision);
+
     // iterate over records
     loop {
         let record: ImageMetadata = match receiver.recv() {
             Ok(record) => record,
             Err(_) => break,
         };
+
+        println!("PROCESSING RECORD: {:?}", record);
 
         // check if path exists
         let path = Path::new(&record.path);
@@ -145,8 +149,14 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
         let dataset = Dataset::open(&path).unwrap();
  
         // split image with geohash precision - TODO error
-        for (geohash, dataset) in
-                st_image::split(&dataset, precision).unwrap() {
+        for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
+                &dataset, 4326, x_interval, y_interval).unwrap() {
+            // compute window geohash
+            let coordinate = Coordinate{x: win_max_x, y: win_max_y};
+            let geohash = geohash::encode(coordinate, precision)?;
+
+            println!("FOUND GEOHASH: {}", geohash);
+
             // compute geohash hash
             let mut hasher = DefaultHasher::new();
             hasher.write(geohash.as_bytes());

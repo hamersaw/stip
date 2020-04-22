@@ -2,6 +2,7 @@ use csv::Reader;
 use chrono::prelude::{DateTime, Utc};
 use crossbeam_channel::Receiver;
 use gdal::raster::Dataset;
+use geohash::Coordinate;
 use serde::Deserialize;
 use swarm::prelude::Dht;
 
@@ -127,6 +128,10 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
         items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
         precision: usize, receiver: Receiver<Record>) 
         -> Result<(), Box<dyn Error>> {
+    // compute geohash intervals for given precision
+    let (y_interval, x_interval) =
+        st_image::coordinate::get_geohash_intervals(precision);
+
     // iterate over records
     loop {
         let record: Record = match receiver.recv() {
@@ -154,8 +159,12 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
         // TODO - process imageformat (when it exists)
 
         // split image with geohash precision - TODO error
-        for (geohash, dataset) in
-                st_image::split(&dataset, precision).unwrap() {
+        for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
+                &dataset, 4326, x_interval, y_interval).unwrap() {
+            // compute window geohash
+            let coordinate = Coordinate{x: win_max_x, y: win_max_y};
+            let geohash = geohash::encode(coordinate, precision)?;
+
             // compute geohash hash
             let mut hasher = DefaultHasher::new();
             hasher.write(geohash.as_bytes());
