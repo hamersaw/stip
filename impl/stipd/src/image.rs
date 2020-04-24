@@ -5,8 +5,8 @@ use std::error::Error;
 use std::fs::File;
 use std::path::PathBuf;
 
-pub const BASE_DATASET: &'static str = "base";
-pub const FILL_DATASET: &'static str = "fill";
+pub const FILLED_DATASET: &'static str = "filled";
+pub const RAW_DATASET: &'static str = "raw";
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {

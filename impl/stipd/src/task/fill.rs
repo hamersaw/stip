@@ -1,7 +1,7 @@
 use crossbeam_channel::Receiver;
 use gdal::raster::{Dataset, Driver};
 
-use crate::image::{BASE_DATASET, FILL_DATASET, ImageManager, ImageMetadata};
+use crate::image::{RAW_DATASET, FILLED_DATASET, ImageManager, ImageMetadata};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering;
@@ -35,7 +35,7 @@ impl FillTask {
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        /*let images = self.image_manager.search(BASE_DATASET,
+        /*let images = self.image_manager.search(RAW_DATASET,
             &self.geohash, &self.platform)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
@@ -223,7 +223,7 @@ fn worker_thread(image_manager: Arc<ImageManager>,
         let coverage = st_image::coverage(&mem_dataset).unwrap();
 
         if coverage > image.coverage {
-            /*image_manager.write(&image.platform, FILL_DATASET, 
+            /*image_manager.write(&image.platform, FILLED_DATASET, 
                 &image.geohash, &tile_id, image.start_date,
                 image.end_date, coverage, &mem_dataset)?;*/
         }

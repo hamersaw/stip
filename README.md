@@ -3,7 +3,6 @@
 A distributed spatiotemporal image management framework designed specifically for training neural networks.
 
 ## TODO
-- change 'base' dataset to 'raw'?
 - add LZW compression on GeoTiff files
 - instead of using .meta file -> add metadata attribute to GeoTiff
 - use LoadFormat on LoadEarthExplorerTask
