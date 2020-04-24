@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{DataManagementClient, FillAllRequest, ImageFormat, SearchAllRequest, LoadFormat, LoadRequest, SplitAllRequest};
+use protobuf::{DataManagementClient, FillAllRequest, SearchAllRequest, LoadFormat, LoadRequest, SplitAllRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -70,13 +70,7 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // parse formats
-    let image_format = match load_matches.value_of("IMAGE_FORMAT") {
-        Some("jpeg") => ImageFormat::Jpeg as i32,
-        Some("tiff") => ImageFormat::Tiff as i32,
-        _ => unimplemented!(),
-    };
-
+    // parse load format
     let load_format = match load_matches.value_of("LOAD_FORMAT") {
         Some("landsat") => LoadFormat::Landsat as i32,
         Some("sentinel") => LoadFormat::Sentinel as i32,
@@ -86,8 +80,6 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
     // initialize request
     let request = Request::new(LoadRequest {
         directory: load_matches.value_of("DIRECTORY").unwrap().to_string(),
-        file: load_matches.value_of("FILE").unwrap().to_string(),
-        image_format: image_format,
         load_format: load_format,
         precision: load_matches.value_of("precision")
             .unwrap().parse::<u32>()?,

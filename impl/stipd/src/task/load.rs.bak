@@ -1,27 +1,25 @@
+use csv::Reader;
 use chrono::prelude::{DateTime, Utc};
 use crossbeam_channel::Receiver;
-use gdal::metadata::Metadata;
 use gdal::raster::Dataset;
 use geohash::Coordinate;
 use serde::Deserialize;
 use swarm::prelude::Dht;
-use zip::ZipArchive;
 
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::hash::Hasher;
-use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct LoadEarthExplorerTask {
     dht: Arc<RwLock<Dht>>,
     directory: String,
+    file: String,
     load_format: LoadFormat,
     precision: usize,
     thread_count: u8,
@@ -29,11 +27,12 @@ pub struct LoadEarthExplorerTask {
 
 impl LoadEarthExplorerTask {
     pub fn new(dht: Arc<RwLock<Dht>>, directory: String,
-            load_format: LoadFormat, precision: usize,
-            thread_count: u8) -> LoadEarthExplorerTask {
+            file: String, load_format: LoadFormat,
+            precision: usize, thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
             dht: dht,
             directory: directory,
+            file: file,
             load_format: load_format,
             precision: precision,
             thread_count: thread_count,
@@ -44,13 +43,9 @@ impl LoadEarthExplorerTask {
 impl Task for LoadEarthExplorerTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // read file records
-        let directory = format!("/{}*", self.directory);
-
-        // search for image files
-        let mut records = Vec::new();
-        for entry in glob::glob(&directory)? {
-            records.push(entry?);
-        }
+        let path = Path::new(&self.file);
+        let mut reader = Reader::from_path(path)?;
+        let records = self.load_format.records(&mut reader)?;
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -61,6 +56,7 @@ impl Task for LoadEarthExplorerTask {
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
             let dht_clone = self.dht.clone();
+            let directory_clone = self.directory.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
@@ -68,7 +64,7 @@ impl Task for LoadEarthExplorerTask {
 
             let join_handle = std::thread::spawn(move || {
                 if let Err(e) = worker_thread(dht_clone,
-                        items_completed, items_skipped,
+                        directory_clone, items_completed, items_skipped,
                         precision_clone, receiver_clone) {
                     panic!("worker thread failure: {}", e);
                 }
@@ -128,156 +124,22 @@ impl Task for LoadEarthExplorerTask {
     }
 }
 
-fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
-        items_skipped: Arc<AtomicU32>, precision: usize,
-        receiver: Receiver<PathBuf>) -> Result<(), Box<dyn Error>> {
+fn worker_thread(dht: Arc<RwLock<Dht>>, directory: String,
+        items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
+        precision: usize, receiver: Receiver<Record>) 
+        -> Result<(), Box<dyn Error>> {
     // compute geohash intervals for given precision
     let (y_interval, x_interval) =
         st_image::coordinate::get_geohash_intervals(precision);
 
     // iterate over records
     loop {
-        let record: PathBuf = match receiver.recv() {
+        let record: Record = match receiver.recv() {
             Ok(record) => record,
             Err(_) => break,
         };
 
-        // compute tile name
-        let mut tile_path = record.with_extension("");
-        let tile = tile_path.file_name()
-            .unwrap_or(OsStr::new("")).to_string_lossy();
-
-        //println!("TILE: '{}'", tile);
-
-        // open zip archive
-        let file = File::open(&record)?;
-        let reader = BufReader::new(file);
-        let archive = ZipArchive::new(reader)?;
-
-        // identify metadata xml file and band image files
-        let mut zip_images = Vec::new();
-        let mut zip_metadata_option = None;
-        for filename in archive.file_names() {
-            let path = PathBuf::from(&filename);
-
-            if path.extension() == Some(OsStr::new("jp2")) {
-                zip_images.push(filename);
-            } else if path.file_name() == Some(OsStr::new("MTD_MSIL1C.xml")) {
-                zip_metadata_option = Some(filename);
-            }
-        }
-
-        // check if we identified metadata xml file and band image files
-        if zip_metadata_option == None {
-            items_skipped.fetch_add(1, Ordering::SeqCst);
-            continue;
-        } else if zip_images.len() == 0 {
-            items_skipped.fetch_add(1, Ordering::SeqCst);
-            continue;
-        }
-        
-        // open gdal metadata dataset - TODO error
-        let zip_metadata = zip_metadata_option.unwrap();
-        let metadata_filename = format!("/vsizip/{}/{}",
-            record.to_string_lossy(), zip_metadata);
-        let metadata_path = PathBuf::from(&metadata_filename);
-        let dataset = Dataset::open(&metadata_path).unwrap();
-
-        // parse metadata
-        let platform = match dataset.metadata_item("DATATAKE_1_SPACECRAFT_NAME", "") {
-            Some(platform) => platform,
-            None => {
-                items_skipped.fetch_add(1, Ordering::SeqCst);
-                continue;
-            },
-        };
-
-        let start_time = match dataset.metadata_item("PRODUCT_START_TIME", "") {
-            Some(start_time) =>
-                start_time.parse::<DateTime<Utc>>()?.timestamp(),
-            None => {
-                items_skipped.fetch_add(1, Ordering::SeqCst);
-                continue;
-            },
-        };
-
-        let end_time = match dataset.metadata_item("PRODUCT_STOP_TIME", "") {
-            Some(end_time) =>
-                end_time.parse::<DateTime<Utc>>()?.timestamp(),
-            None => {
-                items_skipped.fetch_add(1, Ordering::SeqCst);
-                continue;
-            },
-        };
-
-        //let uri = dataset.metadata_item("PRODUCT_URI", ""));
-        //println!("  PLATFORM: {}", platform);
-        //println!("  TIMES: {} - {}", start_time, end_time);
-
-        // iterate over zipped images
-        for zip_image in zip_images.iter() {
-            // open dataset - TODO error
-            let zip_image_filename = format!("/vsizip/{}/{}",
-                record.to_string_lossy(), zip_image);
-            let zip_image_path = PathBuf::from(&zip_image_filename);
-            let dataset = Dataset::open(&zip_image_path).unwrap();
-
-            // parse band ID
-            let band_id = 
-                &zip_image[zip_image.len() - 7..zip_image.len() - 4];
-            //println!("  BAND: {}", band_id);
-
-            // split image with geohash precision - TODO error
-            for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
-                    &dataset, 4326, x_interval, y_interval).unwrap() {
-                // if image has 0.0 coverage -> don't process - TODO error
-                let coverage = st_image::coverage(&dataset).unwrap();
-                if coverage == 0f64 {
-                    continue;
-                }
-
-                // compute window geohash
-                let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-                let geohash = geohash::encode(coordinate, precision)?;
-
-                // compute geohash hash
-                let mut hasher = DefaultHasher::new();
-                hasher.write(geohash.as_bytes());
-                let hash = hasher.finish();
-
-                // discover hash location
-                let addr = {
-                    let dht = dht.read().unwrap(); 
-                    let (node_id, addrs) = match dht.locate(hash) {
-                        Some(node) => node,
-                        None => {
-                            warn!("no dht location for hash {}", hash);
-                            continue;
-                        },
-                    };
-
-                    match addrs.1 {
-                        Some(addr) => addr.clone(),
-                        None => {
-                            warn!("dht node {} has no xfer_addr", node_id);
-                            continue;
-                        },
-                    }
-                };
-
-                //println!("    GEOHASH: {}", geohash);
-                //println!("    DIMENSIONS: {:?}", dataset.size());
-
-                // send image to new host - TODO tmp commented
-                /*if let Err(e) = crate::transfer::send_image(&platform,
-                        &geohash, &tile, start_time, end_time,
-                        coverage, &dataset, &addr) {
-                    warn!("failed to write image to node {}: {}", addr, e);
-                }*/
-            }
-        }
-
-        /*// check if path exists
+        // check if path exists
         let filename = format!("{}/{}", directory, record.tile());
         let path = Path::new(&filename);
         if !path.exists() {
@@ -340,7 +202,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
                     end_date,  coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
-        }*/
+        }
 
         // increment items completed counter
         items_completed.fetch_add(1, Ordering::SeqCst);
@@ -355,7 +217,7 @@ pub enum LoadFormat {
 }
 
 impl LoadFormat {
-    /*fn records(&self, reader: &mut Reader<File>)
+    fn records(&self, reader: &mut Reader<File>)
             -> Result<Vec<Record>, Box<dyn Error>> {
         let mut records = Vec::new();
         match self {
@@ -376,10 +238,10 @@ impl LoadFormat {
         }
 
         Ok(records)
-    }*/
+    }
 }
 
-/*enum Record {
+enum Record {
     Landsat(LandsatRecord),
     Sentinel(SentinelRecord),
 }
@@ -448,4 +310,4 @@ struct SentinelRecord {
     vendor_tile_id: String,
     #[serde(rename(deserialize = "Platform"))]
     platform: String,
-}*/
+}

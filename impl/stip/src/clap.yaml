@@ -33,28 +33,17 @@ subcommands:
             - load:
                 about: initialize load data task
                 args:
-                    - FILE:
+                    - DIRECTORY:
                         index: 1
                         required: true
-                        help: earth explorer export file
-                    - DIRECTORY:
-                        index: 2
-                        required: true
                         help: image directory location
-                    - IMAGE_FORMAT:
-                        index: 3
-                        required: true
-                        possible_values: 
-                            - jpeg
-                            - tiff
-                        help: file image format
                     - LOAD_FORMAT:
-                        index: 4
+                        index: 2
                         required: true
                         possible_values: 
                             - landsat
                             - sentinel
-                        help: earth explorer export file format
+                        help: dataset load format
                     - precision:
                         default_value: "4"
                         help: geohash precision
