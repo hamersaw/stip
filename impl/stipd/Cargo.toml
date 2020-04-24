@@ -19,7 +19,6 @@ log = "0.4"
 num-derive = "0.2"
 num-traits = "0.2"
 protobuf = { path = "../protobuf" }
-serde = { version = "1.0.55", features = ["derive"] }
 st-image = { path = "../../../st-image" }
 structopt = { version = "0.3", default-features = false }
 swarm = { path = "../../../swarm-rs" }

@@ -3,7 +3,6 @@ use crossbeam_channel::Receiver;
 use gdal::metadata::Metadata;
 use gdal::raster::Dataset;
 use geohash::Coordinate;
-use serde::Deserialize;
 use swarm::prelude::Dht;
 use zip::ZipArchive;
 
@@ -143,7 +142,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
         };
 
         // compute tile name
-        let mut tile_path = record.with_extension("");
+        let tile_path = record.with_extension("");
         let tile = tile_path.file_name()
             .unwrap_or(OsStr::new("")).to_string_lossy();
 
@@ -223,8 +222,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
             let dataset = Dataset::open(&zip_image_path).unwrap();
 
             // parse band ID
-            let band_id = 
-                &zip_image[zip_image.len() - 7..zip_image.len() - 4];
+            let band = &zip_image[zip_image.len() - 7..zip_image.len() - 4];
             //println!("  BAND: {}", band_id);
 
             // split image with geohash precision - TODO error
@@ -269,78 +267,13 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
                 //println!("    DIMENSIONS: {:?}", dataset.size());
 
                 // send image to new host - TODO tmp commented
-                /*if let Err(e) = crate::transfer::send_image(&platform,
-                        &geohash, &tile, start_time, end_time,
-                        coverage, &dataset, &addr) {
+                if let Err(e) = crate::transfer::send_image(&platform,
+                        &geohash, &band, &tile, start_time,
+                        end_time, coverage, &dataset, &addr) {
                     warn!("failed to write image to node {}: {}", addr, e);
-                }*/
-            }
-        }
-
-        /*// check if path exists
-        let filename = format!("{}/{}", directory, record.tile());
-        let path = Path::new(&filename);
-        if !path.exists() {
-            // increment items skipped counter
-            items_skipped.fetch_add(1, Ordering::SeqCst);
-            continue;
-        }
-
-        // parse image timestamps
-        let start_date = record.start_date()
-            .parse::<DateTime<Utc>>()?.timestamp();
-        let end_date = record.end_date()
-            .parse::<DateTime<Utc>>()?.timestamp();
-
-        // open image - TODO error
-        let dataset = Dataset::open(&path).unwrap();
-        // TODO - process imageformat (when it exists)
-
-        // split image with geohash precision - TODO error
-        for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
-                &dataset, 4326, x_interval, y_interval).unwrap() {
-            // compute window geohash
-            let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-            let geohash = geohash::encode(coordinate, precision)?;
-
-            // compute geohash hash
-            let mut hasher = DefaultHasher::new();
-            hasher.write(geohash.as_bytes());
-            let hash = hasher.finish();
-
-            // discover hash location
-            let addr = {
-                let dht = dht.read().unwrap(); 
-                let (node_id, addrs) = match dht.locate(hash) {
-                    Some(node) => node,
-                    None => {
-                        warn!("no dht location for hash {}", hash);
-                        continue;
-                    },
-                };
-
-                match addrs.1 {
-                    Some(addr) => addr.clone(),
-                    None => {
-                        warn!("dht node {} has no xfer_addr", node_id);
-                        continue;
-                    },
                 }
-            };
-
-            // if image has 0.0 coverage -> don't process - TODO error
-            let coverage = st_image::coverage(&dataset).unwrap();
-            if coverage == 0f64 {
-                continue;
             }
-
-            // send image to new host
-            if let Err(e) = crate::transfer::send_image(&record.platform(), 
-                    &geohash, &record.tile(), start_date,
-                    end_date,  coverage, &dataset, &addr) {
-                warn!("failed to write image to node {}: {}", addr, e);
-            }
-        }*/
+        }
 
         // increment items completed counter
         items_completed.fetch_add(1, Ordering::SeqCst);
@@ -355,97 +288,4 @@ pub enum LoadFormat {
 }
 
 impl LoadFormat {
-    /*fn records(&self, reader: &mut Reader<File>)
-            -> Result<Vec<Record>, Box<dyn Error>> {
-        let mut records = Vec::new();
-        match self {
-            LoadFormat::Landsat => {
-                // parse all records as 'landsat'
-                for result in reader.deserialize() {
-                    let record: LandsatRecord = result?;
-                    records.push(Record::Landsat(record));
-                }
-            },
-            LoadFormat::Sentinel => {
-                // parse all records as 'sentinel'
-                for result in reader.deserialize() {
-                    let record: SentinelRecord = result?;
-                    records.push(Record::Sentinel(record));
-                }
-            },
-        }
-
-        Ok(records)
-    }*/
 }
-
-/*enum Record {
-    Landsat(LandsatRecord),
-    Sentinel(SentinelRecord),
-}
-
-impl Record {
-    fn end_date(&self) -> &str {
-        match self {
-            Record::Landsat(_record) => unimplemented!(),
-            Record::Sentinel(record) => &record.acquisition_end_date,
-        }
-    }
-
-    fn platform(&self) -> &str {
-        match self {
-            Record::Landsat(record) => &record.spacecraft_id,
-            Record::Sentinel(record) => &record.platform,
-        }
-    }
-
-    fn start_date(&self) -> &str {
-        match self {
-            Record::Landsat(_record) => unimplemented!(),
-            Record::Sentinel(record) => &record.acquisition_start_date,
-        }
-    }
-
-    fn tile(&self) -> &str {
-        match self {
-            Record::Landsat(record) => &record.product_id,
-            Record::Sentinel(record) => &record.vendor_tile_id,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-struct LandsatRecord {
-    #[serde(rename(deserialize = "Landsat Product Identifier"))]
-    product_id: String,
-    #[serde(rename(deserialize = "Spacecraft Identifier"))]
-    spacecraft_id: String,
-    #[serde(rename(deserialize = "LL Corner Lat dec"))]
-    ll_lat: f64,
-    #[serde(rename(deserialize = "LL Corner Long dec"))]
-    ll_long: f64,
-    #[serde(rename(deserialize = "UL Corner Lat dec"))]
-    ul_lat: f64,
-    #[serde(rename(deserialize = "UL Corner Long dec"))]
-    ul_long: f64,
-    #[serde(rename(deserialize = "LR Corner Lat dec"))]
-    lr_lat: f64,
-    #[serde(rename(deserialize = "LR Corner Long dec"))]
-    lr_long: f64,
-    #[serde(rename(deserialize = "UR Corner Lat dec"))]
-    ur_lat: f64,
-    #[serde(rename(deserialize = "UR Corner Long dec"))]
-    ur_long: f64,
-}
-
-#[derive(Debug, Deserialize)]
-struct SentinelRecord {
-    #[serde(rename(deserialize = "Acquisition Start Date"))]
-    acquisition_start_date: String,
-    #[serde(rename(deserialize = "Acquisition End Date"))]
-    acquisition_end_date: String,
-    #[serde(rename(deserialize = "Vendor Tile ID"))]
-    vendor_tile_id: String,
-    #[serde(rename(deserialize = "Platform"))]
-    platform: String,
-}*/

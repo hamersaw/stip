@@ -86,6 +86,12 @@ subcommands:
             - search:
                 about: search for images
                 args:
+                    - band:
+                        default_value: "*"
+                        help: image band
+                        long: band
+                        short: b
+                        takes_value: true
                     - dataset:
                         default_value: "*"
                         help: image dataset

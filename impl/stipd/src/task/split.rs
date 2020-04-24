@@ -42,8 +42,9 @@ impl SplitTask {
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let records = self.image_manager.search(&self.dataset,
-            &self.geohash, &self.platform)?;
+        let records = Vec::new();
+        /*let records = self.image_manager.search(&self.dataset,
+            &self.geohash, &self.platform)?;*/
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -191,11 +192,11 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
 
             // send image to new host
             let tile_id = &path.file_name().unwrap().to_string_lossy();
-            if let Err(e) = crate::transfer::send_image(&record.platform, 
+            /*if let Err(e) = crate::transfer::send_image(&record.platform, 
                     &geohash, &tile_id, record.start_date,
                     record.end_date,  coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
-            }
+            }*/
         }
 
         // increment items completed counter

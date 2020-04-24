@@ -108,6 +108,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize request
     let request = Request::new(SearchAllRequest {
+        band: search_matches.value_of("band").unwrap().to_string(),
         dataset: search_matches.value_of("dataset").unwrap().to_string(),
         geohash: search_matches.value_of("geohash").unwrap().to_string(),
         platform: search_matches.value_of("platform").unwrap().to_string(),

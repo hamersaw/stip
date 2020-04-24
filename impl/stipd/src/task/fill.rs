@@ -35,7 +35,7 @@ impl FillTask {
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let images = self.image_manager.search(BASE_DATASET,
+        /*let images = self.image_manager.search(BASE_DATASET,
             &self.geohash, &self.platform)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
@@ -45,13 +45,13 @@ impl Task for FillTask {
             match a.geohash.cmp(&b.geohash) {
                 Ordering::Equal => a.start_date.cmp(&b.start_date),
                 x => x,
-            });
+            });*/
 
         // initialize fill image vectors
         let mut records: Vec<Vec<ImageMetadata>> = Vec::new();
         let mut images_buf: Vec<ImageMetadata> = Vec::new();
 
-        let mut geohash = "";
+        /*let mut geohash = "";
         let mut timestamp = 0i64;
         for image in filter_images {
             if image.geohash != geohash || image.start_date
@@ -70,7 +70,7 @@ impl Task for FillTask {
             }
 
             images_buf.push(image.clone());
-        }
+        }*/
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -223,9 +223,9 @@ fn worker_thread(image_manager: Arc<ImageManager>,
         let coverage = st_image::coverage(&mem_dataset).unwrap();
 
         if coverage > image.coverage {
-            image_manager.write(&image.platform, FILL_DATASET, 
+            /*image_manager.write(&image.platform, FILL_DATASET, 
                 &image.geohash, &tile_id, image.start_date,
-                image.end_date, coverage, &mem_dataset)?;
+                image.end_date, coverage, &mem_dataset)?;*/
         }
 
         // increment items completed counter

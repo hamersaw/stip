@@ -142,9 +142,11 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // search for the requested images - TODO error
-        let images = self.image_manager.search(&request.dataset,
-                &request.geohash, &request.platform).unwrap().iter()
+        let images = self.image_manager.search(&request.band,
+                &request.dataset, &request.geohash,
+                &request.platform).unwrap().iter()
             .map(|x| Image {
+                band: x.band.clone(),
                 coverage: x.coverage,
                 dataset: x.dataset.clone(),
                 end_date: x.end_date,
@@ -191,6 +193,7 @@ impl DataManagement for DataManagementImpl {
 
             // initialize request
             let request = Request::new(SearchRequest {
+                band: request.band.clone(),
                 dataset: request.dataset.clone(),
                 geohash: request.geohash.clone(),
                 platform: request.platform.clone(),
