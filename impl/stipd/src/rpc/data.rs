@@ -224,10 +224,11 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = SplitTask::new(request.dataset.clone(),
-            self.dht.clone(), request.geohash.clone(),
-            self.image_manager.clone(), request.platform.clone(),
-            request.precision as usize, request.thread_count as u8);
+        let task = SplitTask::new(request.band.clone(),
+            request.dataset.clone(), self.dht.clone(),
+            request.geohash.clone(), self.image_manager.clone(),
+            request.platform.clone(), request.precision as usize,
+            request.thread_count as u8);
 
         // execute task using task manager
         let task_id = {
@@ -272,6 +273,7 @@ impl DataManagement for DataManagementImpl {
 
             // initialize request
             let request = Request::new(SplitRequest {
+                band: request.band.clone(),
                 dataset: request.dataset.clone(),
                 geohash: request.geohash.clone(),
                 platform: request.platform.clone(),

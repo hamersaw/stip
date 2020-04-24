@@ -123,6 +123,12 @@ subcommands:
             - split:
                 about: split images with a new geohash precision
                 args:
+                    - band:
+                        default_value: "*"
+                        help: image band
+                        long: band
+                        short: b
+                        takes_value: true
                     - dataset:
                         default_value: "*"
                         help: image dataset

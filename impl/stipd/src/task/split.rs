@@ -14,6 +14,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
 pub struct SplitTask {
+    band: String,
     dataset: String,
     dht: Arc<RwLock<Dht>>,
     geohash: String,
@@ -24,10 +25,12 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(dataset: String, dht: Arc<RwLock<Dht>>, geohash: String,
-                image_manager: Arc<ImageManager>, platform: String,
-            precision: usize, thread_count: u8) -> SplitTask {
+    pub fn new(band: String, dataset: String, dht: Arc<RwLock<Dht>>,
+            geohash: String, image_manager: Arc<ImageManager>,
+            platform: String, precision: usize,
+            thread_count: u8) -> SplitTask {
         SplitTask {
+            band: band,
             dataset: dataset,
             dht: dht,
             geohash: geohash,
@@ -42,9 +45,8 @@ impl SplitTask {
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let records = Vec::new();
-        /*let records = self.image_manager.search(&self.dataset,
-            &self.geohash, &self.platform)?;*/
+        let records = self.image_manager.search(&self.band,
+            &self.dataset, &self.geohash, &self.platform)?;
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -192,11 +194,11 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
 
             // send image to new host
             let tile_id = &path.file_name().unwrap().to_string_lossy();
-            /*if let Err(e) = crate::transfer::send_image(&record.platform, 
-                    &geohash, &tile_id, record.start_date,
+            if let Err(e) = crate::transfer::send_image(&record.platform, 
+                    &geohash, &record.band, &tile_id, record.start_date,
                     record.end_date,  coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
-            }*/
+            }
         }
 
         // increment items completed counter

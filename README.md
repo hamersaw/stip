@@ -15,5 +15,7 @@ A distributed spatiotemporal image management framework designed specifically fo
 - image replication?
 #### COMMANDS 
 - data merge
-- data split - fix
+- data split
+    - don't allow split precision to be <= geohash length
+    - only perform on subgeohashes (invalid pixel border allows others)
 - stop task functionality?
