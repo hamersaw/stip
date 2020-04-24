@@ -65,9 +65,11 @@ impl ImageManager {
     pub fn search(&self, band: &str, dataset: &str, geohash: &str,
             platform: &str) -> Result<Vec<ImageMetadata>, Box<dyn Error>> {
         // compile glob file search regex
-        let directory = format!("{}/{}/{}/{}/{}*/*meta",
+        let directory = format!("{}/{}/{}*/{}/{}/*meta",
             self.directory.to_string_lossy(), platform,
             geohash, band, dataset);
+
+        println!("SEARCH FOR '{}'", directory);
 
         // search for metadata files
         let mut vec = Vec::new();

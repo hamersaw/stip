@@ -16,6 +16,5 @@ A distributed spatiotemporal image management framework designed specifically fo
 #### COMMANDS 
 - data fill - fix
 - data merge
-- data search - fix
 - data split - fix
 - stop task functionality?

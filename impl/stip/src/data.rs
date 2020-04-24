@@ -129,15 +129,18 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         let mut platform_map = BTreeMap::new();
         for (_, search_reply) in reply.nodes.iter() {
             for image in search_reply.images.iter() {
-                let dataset_map = platform_map.entry(
+                let geohash_map = platform_map.entry(
                     image.platform.clone()).or_insert(BTreeMap::new());
 
-                let geohash_map = dataset_map.entry(
-                    image.dataset.clone()).or_insert(BTreeMap::new());
-
                 let geohash = &image.geohash[..std::cmp::min(precision, image.geohash.len())];
-                let count_map = geohash_map.entry(
+                let band_map = geohash_map.entry(
                     geohash.clone()).or_insert(BTreeMap::new());
+
+                let dataset_map = band_map.entry(image.band.clone())
+                    .or_insert(BTreeMap::new());
+
+                let count_map = dataset_map.entry(
+                    image.dataset.clone()).or_insert(BTreeMap::new());
 
                 let count = count_map.entry(image.geohash.len())
                     .or_insert(0);
@@ -146,29 +149,31 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         }
 
         // print summarized data
-        println!("{:<16}{:<12}{:<12}{:<12}{:<12}", "platform",
-            "dataset", "geohash", "precision", "count");
-        println!("----------------------------------------------------------------");
-        for (platform, dataset_map) in platform_map.iter() {
-            for (dataset, geohash_map) in dataset_map.iter() {
-                for (geohash, count_map) in geohash_map.iter() {
-                    for (precision, count) in count_map.iter() {
-                        println!("{:<16}{:<12}{:<12}{:<12}{:<12}",
-                            platform, dataset, geohash,
-                            precision, count);
+        println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}", "platform",
+            "geohash", "band", "dataset", "precision", "count");
+        println!("--------------------------------------------------------------------");
+        for (platform, geohash_map) in platform_map.iter() {
+            for (geohash, band_map) in geohash_map.iter() {
+                for (band, dataset_map) in band_map.iter() {
+                    for (dataset, count_map) in dataset_map.iter() {
+                        for (precision, count) in count_map.iter() {
+                            println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}",
+                                platform, geohash, band, dataset,
+                                precision, count);
+                        }
                     }
                 }
             }
         }
     } else {
-        println!("{:<12}{:<80}{:<16}{:<12}{:<12}{:<8}", "node_id",
-            "path", "platform", "dataset", "geohash", "coverage");
-        println!("--------------------------------------------------------------------------------------------------------------------------------");
+        println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<8}", "node_id",
+            "path", "platform", "geohash", "band", "dataset", "coverage");
+        println!("------------------------------------------------------------------------------------------------------------------------------------");
         for (node_id, search_reply) in reply.nodes.iter() {
             for image in search_reply.images.iter() {
-                println!("{:<12}{:<80}{:<16}{:<12}{:<12}{:<8}", 
-                    node_id, image.path, image.platform, image.dataset,
-                    image.geohash, image.coverage);
+                println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<8}", 
+                    node_id, image.path, image.platform, image.geohash,
+                    image.band, image.dataset, image.coverage);
             }
         }
     }
