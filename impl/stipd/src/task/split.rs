@@ -155,6 +155,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
             let coordinate = Coordinate{x: win_max_x, y: win_max_y};
             let geohash = geohash::encode(coordinate, precision)?;
 
+            // TODO - skip if geohash doesn't 'start_with' base image geohash
             println!("FOUND GEOHASH: {}", geohash);
 
             // compute geohash hash

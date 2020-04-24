@@ -310,20 +310,4 @@ struct SentinelRecord {
     vendor_tile_id: String,
     #[serde(rename(deserialize = "Platform"))]
     platform: String,
-    /*#[serde(rename(deserialize = "SW Corner Lat dec"))]
-    sw_lat: f64,
-    #[serde(rename(deserialize = "SW Corner Long dec"))]
-    sw_long: f64,
-    #[serde(rename(deserialize = "NW  Corner Lat dec"))]
-    nw_lat: f64,
-    #[serde(rename(deserialize = "NW Corner Long dec"))]
-    nw_long: f64,
-    #[serde(rename(deserialize = "SE Corner Lat dec"))]
-    se_lat: f64,
-    #[serde(rename(deserialize = "SE Corner Long dec"))]
-    se_long: f64,
-    #[serde(rename(deserialize = "NE Corner Lat dec"))]
-    ne_lat: f64,
-    #[serde(rename(deserialize = "NE Corner Long dec"))]
-    ne_long: f64,*/
 }
