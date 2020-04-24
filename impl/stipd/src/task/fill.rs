@@ -11,6 +11,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
 pub struct FillTask {
+    band: String,
     geohash: String,
     image_manager: Arc<ImageManager>,
     platform: String,
@@ -19,10 +20,11 @@ pub struct FillTask {
 }
 
 impl FillTask {
-    pub fn new(geohash: String, image_manager: Arc<ImageManager>,
-            platform: String, thread_count: u8, 
-            window_seconds: i64) -> FillTask {
+    pub fn new(band: String, geohash: String,
+            image_manager: Arc<ImageManager>, platform: String,
+            thread_count: u8, window_seconds: i64) -> FillTask {
         FillTask {
+            band: band,
             geohash: geohash,
             image_manager: image_manager,
             platform: platform,
@@ -35,27 +37,44 @@ impl FillTask {
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        /*let images = self.image_manager.search(RAW_DATASET,
-            &self.geohash, &self.platform)?;
+        let images = self.image_manager.search(&self.band,
+            RAW_DATASET, &self.geohash, &self.platform)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
             .filter(|x| x.coverage != 1f64).collect();
 
-        filter_images.sort_by(|a, b| 
-            match a.geohash.cmp(&b.geohash) {
-                Ordering::Equal => a.start_date.cmp(&b.start_date),
-                x => x,
-            });*/
+        // order by platform, geohash, band
+        filter_images.sort_by(|a, b| {
+            let platform_cmp = a.platform.cmp(&b.platform);
+            if platform_cmp != Ordering::Equal {
+                return platform_cmp;
+            }
+
+            let geohash_cmp = a.geohash.cmp(&b.geohash);
+            if geohash_cmp != Ordering::Equal {
+                return geohash_cmp;
+            }
+
+            let band_cmp = a.band.cmp(&b.band);
+            if band_cmp != Ordering::Equal {
+                return band_cmp;
+            }
+
+            a.start_date.cmp(&b.start_date)
+        });
 
         // initialize fill image vectors
         let mut records: Vec<Vec<ImageMetadata>> = Vec::new();
         let mut images_buf: Vec<ImageMetadata> = Vec::new();
 
-        /*let mut geohash = "";
+        let mut platform = "";
+        let mut geohash = "";
+        let mut band = "";
         let mut timestamp = 0i64;
         for image in filter_images {
-            if image.geohash != geohash || image.start_date
-                    - timestamp > self.window_seconds {
+            if image.platform != platform || image.geohash != geohash
+                    || image.band != band || image.start_date
+                        - timestamp > self.window_seconds {
                 // process images_buf
                 if images_buf.len() >= 2 {
                     records.push(images_buf);
@@ -65,12 +84,18 @@ impl Task for FillTask {
                 }
 
                 // reset geohash and timestamp
+                platform = &image.platform;
                 geohash = &image.geohash;
+                band = &image.band;
                 timestamp = image.start_date;
             }
 
             images_buf.push(image.clone());
-        }*/
+        }
+        
+        if images_buf.len() >= 2 {
+            records.push(images_buf);
+        }
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -170,8 +195,7 @@ fn worker_thread(image_manager: Arc<ImageManager>,
         // read dataset rasterbands
         let mut rasters = Vec::new();
         for i in 0..dataset.count() {
-            let raster = dataset
-                .read_full_raster_as::<u8>(i+1).unwrap();
+            let raster = dataset.read_full_raster_as::<u8>(i+1).unwrap();
             rasters.push(raster);
         }
 
@@ -223,9 +247,9 @@ fn worker_thread(image_manager: Arc<ImageManager>,
         let coverage = st_image::coverage(&mem_dataset).unwrap();
 
         if coverage > image.coverage {
-            /*image_manager.write(&image.platform, FILLED_DATASET, 
-                &image.geohash, &tile_id, image.start_date,
-                image.end_date, coverage, &mem_dataset)?;*/
+            image_manager.write(&image.platform, &image.geohash, 
+                &image.band, FILLED_DATASET, &tile_id, image.start_date,
+                image.end_date, coverage, &mem_dataset)?;
         }
 
         // increment items completed counter

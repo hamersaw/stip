@@ -50,10 +50,11 @@ service DataManagement {
 
 // Fill Messages
 message FillAllRequest {
-    string geohash = 1;
-    string platform = 2;
-    uint32 threadCount = 3;
-    int64 windowSeconds = 4;
+    string band = 1;
+    string geohash = 2;
+    string platform = 3;
+    uint32 threadCount = 4;
+    int64 windowSeconds = 5;
 }
 
 message FillAllReply {
@@ -61,10 +62,11 @@ message FillAllReply {
 }
 
 message FillRequest {
-    string geohash = 1;
-    string platform = 2;
-    uint32 threadCount = 3;
-    int64 windowSeconds = 4;
+    string band = 1;
+    string geohash = 2;
+    string platform = 3;
+    uint32 threadCount = 4;
+    int64 windowSeconds = 5;
 }
 
 message FillReply {

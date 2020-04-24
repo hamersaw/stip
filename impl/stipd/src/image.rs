@@ -69,8 +69,6 @@ impl ImageManager {
             self.directory.to_string_lossy(), platform,
             geohash, band, dataset);
 
-        println!("SEARCH FOR '{}'", directory);
-
         // search for metadata files
         let mut vec = Vec::new();
         for entry in glob::glob(&directory)? {

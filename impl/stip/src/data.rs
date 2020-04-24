@@ -40,6 +40,7 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize request
     let request = Request::new(FillAllRequest {
+        band: fill_matches.value_of("band").unwrap().to_string(),
         geohash: fill_matches.value_of("geohash").unwrap().to_string(),
         platform: fill_matches.value_of("platform").unwrap().to_string(),
         thread_count: fill_matches.value_of("thread_count")

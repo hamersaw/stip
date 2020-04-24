@@ -59,8 +59,14 @@ subcommands:
             - fill:
                 about: initialize fill data task
                 args:
-                    - geohash:
+                    - band:
                         default_value: "*"
+                        help: image band
+                        long: band
+                        short: b
+                        takes_value: true
+                    - geohash:
+                        default_value: ""
                         help: image geohash boundary
                         long: geohash
                         short: g

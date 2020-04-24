@@ -36,9 +36,10 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = FillTask::new(request.geohash.clone(),
-            self.image_manager.clone(), request.platform.clone(),
-            request.thread_count as u8, request.window_seconds);
+        let task = FillTask::new(request.band.clone(),
+            request.geohash.clone(), self.image_manager.clone(),
+            request.platform.clone(), request.thread_count as u8,
+            request.window_seconds);
 
         // execute task using task manager
         let task_id = {
@@ -83,6 +84,7 @@ impl DataManagement for DataManagementImpl {
 
             // initialize request
             let request = Request::new(FillRequest {
+                band: request.band.clone(),
                 geohash: request.geohash.clone(),
                 platform: request.platform.clone(),
                 thread_count: request.thread_count,
@@ -404,7 +406,7 @@ fn to_protobuf_task(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task
     Task {
         id: task_id,
         completion_percent: task_handle
-            .get_completion_percent().unwrap_or(0.0),
+            .get_completion_percent().unwrap_or(1.0),
         status: status as i32,
     }
 }
