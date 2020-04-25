@@ -266,7 +266,7 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
                 //println!("    GEOHASH: {}", geohash);
                 //println!("    DIMENSIONS: {:?}", dataset.size());
 
-                // send image to new host - TODO tmp commented
+                // send image to new host
                 if let Err(e) = crate::transfer::send_image(&platform,
                         &geohash, &band, &tile, start_time,
                         end_time, coverage, &dataset, &addr) {

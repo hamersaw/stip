@@ -2,6 +2,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use gdal::raster::{Dataset, Driver};
 
 use std::error::Error;
+use std::ffi::CString;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -44,12 +45,30 @@ impl ImageManager {
 
         std::fs::create_dir_all(&path)?;
 
-        // save image file - TODO error
         path.push(tile);
         path.set_extension("tif");
         
+        // open GeoTiff driver
         let driver = Driver::get("GTiff").unwrap();
-        image.create_copy(&driver, &path.to_string_lossy()).unwrap();
+
+        // copy image to GeoTiff format
+        let mut c_options = vec![
+            CString::new("COMPRESS=LZW")?.into_raw(),
+            std::ptr::null_mut()
+        ];
+
+        // TODO - error
+        let _ = image.create_copy(&driver, &path.to_string_lossy(),
+            Some(c_options.as_mut_ptr())).unwrap();
+
+        // clean up potential memory leaks
+        unsafe {
+            for ptr in c_options {
+                if !ptr.is_null() {
+                    let _ = CString::from_raw(ptr);
+                }
+            }
+        }
 
         // write metadata file
         path.set_extension("meta");
