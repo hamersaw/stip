@@ -45,8 +45,11 @@ impl SplitTask {
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let records = self.image_manager.search(&self.band,
+        let base_records = self.image_manager.search(&self.band,
             &self.dataset, &self.geohash, &self.platform)?;
+
+        let records: Vec<ImageMetadata> = base_records.into_iter()
+            .filter(|x| x.geohash.len() < self.precision as usize).collect();
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -158,8 +161,16 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
             let coordinate = Coordinate{x: win_max_x, y: win_max_y};
             let geohash = geohash::encode(coordinate, precision)?;
 
-            // TODO - skip if geohash doesn't 'start_with' base image geohash
-            println!("FOUND GEOHASH: {}", geohash);
+            //  skip if geohash doesn't 'start_with' base image geohash
+            if !geohash.starts_with(&record.geohash) {
+                continue;
+            }
+
+            // if image has 0.0 coverage -> don't process - TODO error
+            let coverage = st_image::coverage(&dataset).unwrap();
+            if coverage == 0f64 {
+                continue;
+            }
 
             // compute geohash hash
             let mut hasher = DefaultHasher::new();
@@ -185,12 +196,6 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
                     },
                 }
             };
-
-            // if image has 0.0 coverage -> don't process - TODO error
-            let coverage = st_image::coverage(&dataset).unwrap();
-            if coverage == 0f64 {
-                continue;
-            }
 
             // send image to new host
             let tile_id = &path.file_name().unwrap().to_string_lossy();

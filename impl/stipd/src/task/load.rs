@@ -228,15 +228,15 @@ fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
             // split image with geohash precision - TODO error
             for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
                     &dataset, 4326, x_interval, y_interval).unwrap() {
+                // compute window geohash
+                let coordinate = Coordinate{x: win_max_x, y: win_max_y};
+                let geohash = geohash::encode(coordinate, precision)?;
+
                 // if image has 0.0 coverage -> don't process - TODO error
                 let coverage = st_image::coverage(&dataset).unwrap();
                 if coverage == 0f64 {
                     continue;
                 }
-
-                // compute window geohash
-                let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-                let geohash = geohash::encode(coordinate, precision)?;
 
                 // compute geohash hash
                 let mut hasher = DefaultHasher::new();
