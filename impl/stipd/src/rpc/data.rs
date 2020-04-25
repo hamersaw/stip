@@ -1,6 +1,6 @@
 use protobuf::{self, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, SplitAllReply, SplitAllRequest, SplitReply, SplitRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 
 use crate::image::ImageManager;
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
@@ -222,6 +222,12 @@ impl DataManagement for DataManagementImpl {
             -> Result<Response<SplitReply>, Status> {
         trace!("SplitRequest: {:?}", request);
         let request = request.get_ref();
+
+        if request.geohash.len() != 0 
+                && request.precision as usize <= request.geohash.len() {
+            return Err(Status::new(Code::InvalidArgument,
+                "precision must be larger than geohash length"));
+        }
 
         // initialize task
         let task = SplitTask::new(request.band.clone(),
