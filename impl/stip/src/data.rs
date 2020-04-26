@@ -194,7 +194,6 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     // initialize request
     let request = Request::new(SplitAllRequest {
         band: split_matches.value_of("band").unwrap().to_string(),
-        dataset: split_matches.value_of("dataset").unwrap().to_string(),
         geohash: split_matches.value_of("geohash").unwrap().to_string(),
         platform: split_matches.value_of("platform").unwrap().to_string(),
         precision: split_matches.value_of("precision")

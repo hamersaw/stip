@@ -1,6 +1,6 @@
 use gdal::raster::{Dataset, Driver};
 
-use crate::image::{RAW_DATASET, FILLED_DATASET, ImageManager, ImageMetadata};
+use crate::image::{FILLED_DATASET, ImageManager, ImageMetadata, RAW_DATASET};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;

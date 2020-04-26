@@ -127,11 +127,10 @@ message SearchReply {
 // Split Messages
 message SplitAllRequest {
     string band = 1;
-    string dataset = 2;
-    string geohash = 3;
-    string platform = 4;
-    uint32 precision = 5;
-    uint32 threadCount = 6;
+    string geohash = 2;
+    string platform = 3;
+    uint32 precision = 4;
+    uint32 threadCount = 5;
 }
 
 message SplitAllReply {
@@ -140,11 +139,10 @@ message SplitAllReply {
 
 message SplitRequest {
     string band = 1;
-    string dataset = 2;
-    string geohash = 3;
-    string platform = 4;
-    uint32 precision = 5;
-    uint32 threadCount = 6;
+    string geohash = 2;
+    string platform = 3;
+    uint32 precision = 4;
+    uint32 threadCount = 5;
 }
 
 message SplitReply {

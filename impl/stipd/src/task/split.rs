@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
 
-use crate::image::{ImageManager, ImageMetadata};
+use crate::image::{ImageManager, ImageMetadata, RAW_DATASET};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -14,7 +14,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct SplitTask {
     band: String,
-    dataset: String,
     dht: Arc<RwLock<Dht>>,
     geohash: String,
     image_manager: Arc<ImageManager>,
@@ -24,13 +23,11 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(band: String, dataset: String, dht: Arc<RwLock<Dht>>,
-            geohash: String, image_manager: Arc<ImageManager>,
-            platform: String, precision: usize,
-            thread_count: u8) -> SplitTask {
+    pub fn new(band: String, dht: Arc<RwLock<Dht>>, geohash: String,
+            image_manager: Arc<ImageManager>, platform: String,
+            precision: usize, thread_count: u8) -> SplitTask {
         SplitTask {
             band: band,
-            dataset: dataset,
             dht: dht,
             geohash: geohash,
             image_manager: image_manager,
@@ -45,7 +42,7 @@ impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let base_records = self.image_manager.search(&self.band,
-            &self.dataset, &self.geohash, &self.platform, false)?;
+            RAW_DATASET, &self.geohash, &self.platform, false)?;
 
         let records: Vec<ImageMetadata> = base_records.into_iter()
             .filter(|x| x.geohash.len() < self.precision as usize).collect();
