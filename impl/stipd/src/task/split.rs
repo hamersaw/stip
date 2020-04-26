@@ -1,4 +1,3 @@
-use crossbeam_channel::Receiver;
 use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
@@ -11,7 +10,7 @@ use std::error::Error;
 use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
-use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct SplitTask {
     band: String,
@@ -65,11 +64,29 @@ impl Task for SplitTask {
             let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
 
+            // compute geohash intervals for given precision
+            let (y_interval, x_interval) =
+                st_image::coordinate::get_geohash_intervals(self.precision);
+
             let join_handle = std::thread::spawn(move || {
-                if let Err(e) = worker_thread(dht_clone,
-                        items_completed, items_skipped, 
-                        precision_clone, receiver_clone) {
-                    panic!("worker thread failure: {}", e);
+                // iterate over records
+                loop {
+                    // fetch next record
+                    let record: ImageMetadata = match receiver_clone.recv() {
+                        Ok(record) => record,
+                        Err(_) => break,
+                    };
+
+                    // process record
+                    match process(&dht_clone, precision_clone,
+                            &record, x_interval, y_interval) {
+                        Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
+                        Err(e) => {
+                            warn!("skipping record '{:?}': {}",
+                                &record, e);
+                            items_skipped.fetch_add(1, Ordering::SeqCst)
+                        },
+                    };
                 }
             });
 
@@ -127,87 +144,68 @@ impl Task for SplitTask {
     }
 }
 
-fn worker_thread(dht: Arc<RwLock<Dht>>, items_completed: Arc<AtomicU32>,
-        items_skipped: Arc<AtomicU32>, precision: usize,
-        receiver: Receiver<ImageMetadata>) -> Result<(), Box<dyn Error>> {
-    // compute geohash intervals for given precision
-    let (y_interval, x_interval) =
-        st_image::coordinate::get_geohash_intervals(precision);
+fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
+        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
+    // check if path exists
+    let path = Path::new(&record.path);
+    if !path.exists() {
+        return Err(format!("image path '{}' does not exist",
+            path.to_string_lossy()).into());
+    }
 
-    // iterate over records
-    loop {
-        let record: ImageMetadata = match receiver.recv() {
-            Ok(record) => record,
-            Err(_) => break,
-        };
+    // open image - TODO error
+    let dataset = Dataset::open(&path).unwrap();
 
-        println!("PROCESSING RECORD: {:?}", record);
+    // split image with geohash precision - TODO error
+    for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
+            &dataset, 4326, x_interval, y_interval).unwrap() {
+        // compute window geohash
+        let coordinate = Coordinate{x: win_max_x, y: win_max_y};
+        let geohash = geohash::encode(coordinate, precision)?;
 
-        // check if path exists
-        let path = Path::new(&record.path);
-        if !path.exists() {
-            // increment items skipped counter
-            items_skipped.fetch_add(1, AtomicOrdering::SeqCst);
+        //  skip if geohash doesn't 'start_with' base image geohash
+        if !geohash.starts_with(&record.geohash) {
             continue;
         }
 
-        // open image - TODO error
-        let dataset = Dataset::open(&path).unwrap();
- 
-        // split image with geohash precision - TODO error
-        for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
-                &dataset, 4326, x_interval, y_interval).unwrap() {
-            // compute window geohash
-            let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-            let geohash = geohash::encode(coordinate, precision)?;
-
-            //  skip if geohash doesn't 'start_with' base image geohash
-            if !geohash.starts_with(&record.geohash) {
-                continue;
-            }
-
-            // if image has 0.0 coverage -> don't process - TODO error
-            let coverage = st_image::coverage(&dataset).unwrap();
-            if coverage == 0f64 {
-                continue;
-            }
-
-            // compute geohash hash
-            let mut hasher = DefaultHasher::new();
-            hasher.write(geohash.as_bytes());
-            let hash = hasher.finish();
-
-            // discover hash location
-            let addr = {
-                let dht = dht.read().unwrap(); 
-                let (node_id, addrs) = match dht.locate(hash) {
-                    Some(node) => node,
-                    None => {
-                        warn!("no dht location for hash {}", hash);
-                        continue;
-                    },
-                };
-
-                match addrs.1 {
-                    Some(addr) => addr.clone(),
-                    None => {
-                        warn!("dht node {} has no xfer_addr", node_id);
-                        continue;
-                    },
-                }
-            };
-
-            // send image to new host
-            let tile_id = &path.file_name().unwrap().to_string_lossy();
-            if let Err(e) = crate::transfer::send_image(&record.platform, 
-                    &geohash, &record.band, &tile_id, record.start_date,
-                    record.end_date,  coverage, &dataset, &addr) {
-                warn!("failed to write image to node {}: {}", addr, e);
-            }
+        // if image has 0.0 coverage -> don't process - TODO error
+        let coverage = st_image::coverage(&dataset).unwrap();
+        if coverage == 0f64 {
+            continue;
         }
 
-        // increment items completed counter
-        items_completed.fetch_add(1, AtomicOrdering::SeqCst);
+        // compute geohash hash
+        let mut hasher = DefaultHasher::new();
+        hasher.write(geohash.as_bytes());
+        let hash = hasher.finish();
+
+        // discover hash location
+        let addr = {
+            let dht = dht.read().unwrap(); 
+            let (node_id, addrs) = match dht.locate(hash) {
+                Some(node) => node,
+                None => {
+                    warn!("no dht location for hash {}", hash);
+                    continue;
+                },
+            };
+
+            match addrs.1 {
+                Some(addr) => addr.clone(),
+                None => {
+                    warn!("dht node {} has no xfer_addr", node_id);
+                    continue;
+                },
+            }
+        };
+
+        // send image to new host
+        let tile_id = &path.file_name().unwrap().to_string_lossy();
+        if let Err(e) = crate::transfer::send_image(&record.platform, 
+                &geohash, &record.band, &tile_id, record.start_date,
+                record.end_date,  coverage, &dataset, &addr) {
+            warn!("failed to write image to node {}: {}", addr, e);
+        }
     }
 
     Ok(())

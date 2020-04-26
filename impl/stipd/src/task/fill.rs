@@ -1,4 +1,3 @@
-use crossbeam_channel::Receiver;
 use gdal::raster::{Dataset, Driver};
 
 use crate::image::{RAW_DATASET, FILLED_DATASET, ImageManager, ImageMetadata};
