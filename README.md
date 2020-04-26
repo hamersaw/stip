@@ -4,7 +4,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 
 ## TODO
 - instead of using .meta file -> add metadata attribute to GeoTiff
-- use LoadFormat in LoadEarthExplorerTask
 - data fill / split commands should query on an exact geohash - not include sub-geohashes
 - test 'data fill' command
 - abstract some task functionality - lots of code copies
