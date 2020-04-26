@@ -45,7 +45,7 @@ impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let base_records = self.image_manager.search(&self.band,
-            &self.dataset, &self.geohash, &self.platform)?;
+            &self.dataset, &self.geohash, &self.platform, false)?;
 
         let records: Vec<ImageMetadata> = base_records.into_iter()
             .filter(|x| x.geohash.len() < self.precision as usize).collect();

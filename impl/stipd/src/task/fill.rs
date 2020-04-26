@@ -37,7 +37,7 @@ impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let images = self.image_manager.search(&self.band,
-            RAW_DATASET, &self.geohash, &self.platform)?;
+            RAW_DATASET, &self.geohash, &self.platform, false)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
             .filter(|x| x.coverage != 1f64).collect();

@@ -146,7 +146,7 @@ impl DataManagement for DataManagementImpl {
         // search for the requested images - TODO error
         let images = self.image_manager.search(&request.band,
                 &request.dataset, &request.geohash,
-                &request.platform).unwrap().iter()
+                &request.platform, true).unwrap().iter()
             .map(|x| Image {
                 band: x.band.clone(),
                 coverage: x.coverage,
