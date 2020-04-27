@@ -37,14 +37,10 @@ message NodeShowReply {
  */
 service DataManagement {
     rpc Broadcast (BroadcastRequest) returns (BroadcastReply);
-    rpc FillAll (FillAllRequest) returns (FillAllReply);
     rpc Fill (FillRequest) returns (FillReply);
     rpc Load (LoadRequest) returns (LoadReply);
-    rpc SearchAll (SearchAllRequest) returns (SearchAllReply);
     rpc Search (SearchRequest) returns (SearchReply);
-    rpc SplitAll (SplitAllRequest) returns (SplitAllReply);
     rpc Split (SplitRequest) returns (SplitReply);
-    rpc TaskListAll (TaskListAllRequest) returns (TaskListAllReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
 }
@@ -74,18 +70,6 @@ message BroadcastReply {
 }
 
 // Fill Messages
-message FillAllRequest {
-    string band = 1;
-    string geohash = 2;
-    string platform = 3;
-    uint32 threadCount = 4;
-    int64 windowSeconds = 5;
-}
-
-message FillAllReply {
-    map<uint32, FillReply> nodes = 1;
-}
-
 message FillRequest {
     string band = 1;
     string geohash = 2;
@@ -127,17 +111,6 @@ message Image {
     int64 startDate = 8;
 }
 
-message SearchAllRequest {
-    string band = 1;
-    string dataset = 2;
-    string geohash = 3;
-    string platform = 4;
-}
-
-message SearchAllReply {
-    map<uint32, SearchReply> nodes = 1;
-}
-
 message SearchRequest {
     string band = 1;
     string dataset = 2;
@@ -150,18 +123,6 @@ message SearchReply {
 }
 
 // Split Messages
-message SplitAllRequest {
-    string band = 1;
-    string geohash = 2;
-    string platform = 3;
-    uint32 precision = 4;
-    uint32 threadCount = 5;
-}
-
-message SplitAllReply {
-    map<uint32, SplitReply> nodes = 1;
-}
-
 message SplitRequest {
     string band = 1;
     string geohash = 2;
@@ -185,13 +146,6 @@ enum TaskStatus {
     COMPLETE = 0;
     FAILURE = 1;
     RUNNING = 2;
-}
-
-message TaskListAllRequest {
-}
-
-message TaskListAllReply {
-    map<uint32, TaskListReply> nodes = 1;
 }
 
 message TaskListRequest {

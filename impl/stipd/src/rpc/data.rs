@@ -1,4 +1,4 @@
-use protobuf::{self, BroadcastReply, BroadcastRequest, BroadcastType, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, SplitAllReply, SplitAllRequest, SplitReply, SplitRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, BroadcastReply, BroadcastRequest, BroadcastType, DataManagementClient, FillReply, FillRequest, Image, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchReply, SearchRequest, SplitReply, SplitRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -126,59 +126,6 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
-    async fn fill_all(&self, request: Request<FillAllRequest>)
-            -> Result<Response<FillAllReply>, Status> {
-        trace!("FillAllRequest: {:?}", request);
-        let request = request.get_ref();
-
-        // copy valid dht nodes
-        let mut dht_nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // check if rpc address is populated
-                if let None = addrs.1 {
-                    continue;
-                }
-
-                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
-            }
-        }
-
-        // send FillRequest to each dht node
-        let mut nodes = HashMap::new();
-        for (node_id, addr) in dht_nodes {
-            // initialize grpc client
-            // TODO - unwrap on await
-            let mut client = DataManagementClient::connect(
-                format!("http://{}", addr)).await.unwrap();
-
-            // initialize request
-            let request = Request::new(FillRequest {
-                band: request.band.clone(),
-                geohash: request.geohash.clone(),
-                platform: request.platform.clone(),
-                thread_count: request.thread_count,
-                window_seconds: request.window_seconds,
-            });
-
-            // retrieve reply
-            // TODO - unwrap on await
-            let reply = client.fill(request).await.unwrap();
-            let reply = reply.get_ref();
-
-            // add images
-            nodes.insert(node_id as u32, reply.to_owned());
-        }
-
-        // initialize reply
-        let reply = FillAllReply {
-            nodes: nodes,
-        };
-
-        Ok(Response::new(reply))
-    }
-
     async fn load(&self, request: Request<LoadRequest>)
             -> Result<Response<LoadReply>, Status> {
         trace!("LoadDirectoryRequest: {:?}", request);
@@ -237,58 +184,6 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
-    async fn search_all(&self, request: Request<SearchAllRequest>)
-            -> Result<Response<SearchAllReply>, Status> {
-        trace!("SearchAllRequest: {:?}", request);
-        let request = request.get_ref();
-
-        // copy valid dht nodes
-        let mut dht_nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // check if rpc address is populated
-                if let None = addrs.1 {
-                    continue;
-                }
-
-                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
-            }
-        }
-
-        // send SearchRequest to each dht node
-        let mut nodes = HashMap::new();
-        for (node_id, addr) in dht_nodes {
-            // initialize grpc client
-            // TODO - unwrap on await
-            let mut client = DataManagementClient::connect(
-                format!("http://{}", addr)).await.unwrap();
-
-            // initialize request
-            let request = Request::new(SearchRequest {
-                band: request.band.clone(),
-                dataset: request.dataset.clone(),
-                geohash: request.geohash.clone(),
-                platform: request.platform.clone(),
-            });
-
-            // retrieve reply
-            // TODO - unwrap on await
-            let reply = client.search(request).await.unwrap();
-            let reply = reply.get_ref();
-
-            // add images
-            nodes.insert(node_id as u32, reply.to_owned());
-        }
-
-        // initialize reply
-        let reply = SearchAllReply {
-            nodes: nodes,
-        };
-
-        Ok(Response::new(reply))
-    }
-
     async fn split(&self, request: Request<SplitRequest>)
             -> Result<Response<SplitReply>, Status> {
         trace!("SplitRequest: {:?}", request);
@@ -314,59 +209,6 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
-    async fn split_all(&self, request: Request<SplitAllRequest>)
-            -> Result<Response<SplitAllReply>, Status> {
-        trace!("SplitAllRequest: {:?}", request);
-        let request = request.get_ref();
-
-        // copy valid dht nodes
-        let mut dht_nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // check if rpc address is populated
-                if let None = addrs.1 {
-                    continue;
-                }
-
-                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
-            }
-        }
-
-        // send SplitRequest to each dht node
-        let mut nodes = HashMap::new();
-        for (node_id, addr) in dht_nodes {
-            // initialize grpc client
-            // TODO - unwrap on await
-            let mut client = DataManagementClient::connect(
-                format!("http://{}", addr)).await.unwrap();
-
-            // initialize request
-            let request = Request::new(SplitRequest {
-                band: request.band.clone(),
-                geohash: request.geohash.clone(),
-                platform: request.platform.clone(),
-                precision: request.precision,
-                thread_count: request.thread_count,
-            });
-
-            // retrieve reply
-            // TODO - unwrap on await
-            let reply = client.split(request).await.unwrap();
-            let reply = reply.get_ref();
-
-            // add images
-            nodes.insert(node_id as u32, reply.to_owned());
-        }
-
-        // initialize reply
-        let reply = SplitAllReply {
-            nodes: nodes,
-        };
-
-        Ok(Response::new(reply))
-    }
-
     async fn task_list(&self, request: Request<TaskListRequest>)
             -> Result<Response<TaskListReply>, Status> {
         trace!("TaskListRequest: {:?}", request);
@@ -387,52 +229,6 @@ impl DataManagement for DataManagementImpl {
         // initialize reply
         let reply = TaskListReply {
             tasks: tasks,
-        };
-
-        Ok(Response::new(reply))
-    }
-
-    async fn task_list_all(&self, request: Request<TaskListAllRequest>)
-            -> Result<Response<TaskListAllReply>, Status> {
-        trace!("TaskListAllRequest: {:?}", request);
-
-        // copy valid dht nodes
-        let mut dht_nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // check if rpc address is populated
-                if let None = addrs.1 {
-                    continue;
-                }
-
-                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
-            }
-        }
-
-        // send SearchRequest to each dht node
-        let mut nodes = HashMap::new();
-        for (node_id, addr) in dht_nodes {
-            // initialize grpc client
-            // TODO - unwrap on await
-            let mut client = DataManagementClient::connect(
-                format!("http://{}", addr)).await.unwrap();
-
-            // initialize request
-            let request = Request::new(TaskListRequest {});
-
-            // retrieve reply
-            // TODO - unwrap on await
-            let reply = client.task_list(request).await.unwrap();
-            let reply = reply.get_ref();
-
-            // add images
-            nodes.insert(node_id as u32, reply.to_owned());
-        }
-
-        // initialize reply
-        let reply = TaskListAllReply {
-            nodes: nodes,
         };
 
         Ok(Response::new(reply))
