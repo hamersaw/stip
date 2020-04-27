@@ -1,4 +1,4 @@
-use protobuf::{self, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, SplitAllReply, SplitAllRequest, SplitReply, SplitRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, BroadcastReply, BroadcastRequest, BroadcastType, DataManagementClient, FillAllReply, FillAllRequest, FillReply, FillRequest, Image, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchAllReply, SearchAllRequest, SearchReply, SearchRequest, SplitAllReply, SplitAllRequest, SplitReply, SplitRequest, Task, TaskListAllReply, TaskListAllRequest, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -30,6 +30,77 @@ impl DataManagementImpl {
 
 #[tonic::async_trait]
 impl DataManagement for DataManagementImpl {
+    async fn broadcast(&self, request: Request<BroadcastRequest>)
+            -> Result<Response<BroadcastReply>, Status> {
+        trace!("BroadcastRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+            }
+        }
+
+        // send broadcast message to each dht node
+        let mut fill_replies = HashMap::new();
+        let mut search_replies = HashMap::new();
+        let mut split_replies = HashMap::new();
+        let mut task_list_replies = HashMap::new();
+
+        for (node_id, addr) in dht_nodes {
+            // initialize grpc client - TODO error
+            let mut client = DataManagementClient::connect(
+                format!("http://{}", addr)).await.unwrap();
+
+            // execute message at dht node
+            match BroadcastType::from_i32(request.message_type).unwrap() {
+                BroadcastType::Fill => {
+                    let reply = client.fill(request
+                        .fill_request.clone().unwrap()).await.unwrap();
+                    fill_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+                BroadcastType::Search => {
+                    let reply = client.search(request
+                        .search_request.clone().unwrap()).await.unwrap();
+                    search_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+                BroadcastType::Split => {
+                    let reply = client.split(request
+                        .split_request.clone().unwrap()).await.unwrap();
+                    split_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+                BroadcastType::TaskList => {
+                    let reply = client.task_list(request
+                        .task_list_request.clone().unwrap()).await.unwrap();
+                    task_list_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+            };
+        }
+
+        // initialize reply
+        let reply = BroadcastReply {
+            message_type: request.message_type,
+            fill_replies: fill_replies,
+            search_replies: search_replies,
+            split_replies: split_replies,
+            task_list_replies: task_list_replies,
+        };
+
+        Ok(Response::new(reply))
+    }
+
     async fn fill(&self, request: Request<FillRequest>)
             -> Result<Response<FillReply>, Status> {
         trace!("FillRequest: {:?}", request);

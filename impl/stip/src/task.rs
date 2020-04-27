@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{DataManagementClient, TaskListAllRequest, TaskShowRequest, TaskStatus};
+use protobuf::{BroadcastRequest, BroadcastType, DataManagementClient, TaskListRequest, TaskShowRequest, TaskStatus};
 use tonic::Request;
 
 use std::{error, io};
@@ -32,17 +32,23 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
-    let request = Request::new(TaskListAllRequest { });
+    let request = Request::new(BroadcastRequest {
+        message_type: BroadcastType::TaskList as i32,
+        fill_request: None,
+        search_request: None,
+        split_request: None,
+        task_list_request: Some(TaskListRequest {}),
+    });
 
     // retrieve reply
-    let reply = client.task_list_all(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     // print information
     println!("{:<12}{:<12}{:<24}{:<8}", "node_id",
         "task_id", "completion percent", "status");
     println!("------------------------------------------------------------");
-    for (node_id, task_list_reply) in reply.nodes.iter() {
+    for (node_id, task_list_reply) in reply.task_list_replies.iter() {
         for task in task_list_reply.tasks.iter() {
             println!("{:<12}{:<12}{:<24}{:<8}", node_id, task.id,
                 task.completion_percent, convert_status(task.status));

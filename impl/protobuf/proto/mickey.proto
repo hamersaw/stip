@@ -58,7 +58,7 @@ enum BroadcastType {
 }
 
 message BroadcastRequest {
-    BroadcastType type = 1;    
+    BroadcastType messageType = 1;    
     FillRequest fillRequest = 2;
     SearchRequest searchRequest = 3;
     SplitRequest splitRequest = 4;
@@ -66,7 +66,7 @@ message BroadcastRequest {
 }
 
 message BroadcastReply {
-    BroadcastType type = 1;    
+    BroadcastType messageType = 1;    
     map<uint32, FillReply> fillReplies = 2;
     map<uint32, SearchReply> searchReplies = 3;
     map<uint32, SplitReply> splitReplies = 4;

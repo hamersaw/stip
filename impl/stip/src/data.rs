@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{DataManagementClient, FillAllRequest, SearchAllRequest, LoadFormat, LoadRequest, SplitAllRequest};
+use protobuf::{BroadcastRequest, BroadcastType, DataManagementClient, FillRequest, SearchRequest, LoadFormat, LoadRequest, SplitRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -38,8 +38,8 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize request
-    let request = Request::new(FillAllRequest {
+    // initialize FillRequest
+    let fill_request = FillRequest {
         band: fill_matches.value_of("band").unwrap().to_string(),
         geohash: fill_matches.value_of("geohash").unwrap().to_string(),
         platform: fill_matches.value_of("platform").unwrap().to_string(),
@@ -47,14 +47,23 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
             .unwrap().parse::<u32>()?,
         window_seconds: fill_matches.value_of("window_seconds")
             .unwrap().parse::<i64>()?,
+    };
+ 
+    // initialize request
+    let request = Request::new(BroadcastRequest {
+        message_type: BroadcastType::Fill as i32,
+        fill_request: Some(fill_request),
+        search_request: None,
+        split_request: None,
+        task_list_request: None,
     });
 
     // retrieve reply
-    let reply = client.fill_all(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     // print information
-    for (node_id, fill_reply) in reply.nodes.iter() {
+    for (node_id, fill_reply) in reply.fill_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, fill_reply.task_id);
     }
@@ -107,16 +116,25 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize request
-    let request = Request::new(SearchAllRequest {
+    // initialize SearchRequest
+    let search_request = SearchRequest {
         band: search_matches.value_of("band").unwrap().to_string(),
         dataset: search_matches.value_of("dataset").unwrap().to_string(),
         geohash: search_matches.value_of("geohash").unwrap().to_string(),
         platform: search_matches.value_of("platform").unwrap().to_string(),
+    };
+
+    // initialize request
+    let request = Request::new(BroadcastRequest {
+        message_type: BroadcastType::Search as i32,
+        fill_request: None,
+        search_request: Some(search_request),
+        split_request: None,
+        task_list_request: None,
     });
 
     // retrieve reply
-    let reply = client.search_all(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     // print information
@@ -128,7 +146,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
  
         // compile agglomerate view of data
         let mut platform_map = BTreeMap::new();
-        for (_, search_reply) in reply.nodes.iter() {
+        for (_, search_reply) in reply.search_replies.iter() {
             for image in search_reply.images.iter() {
                 let geohash_map = platform_map.entry(
                     image.platform.clone()).or_insert(BTreeMap::new());
@@ -170,7 +188,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<8}", "node_id",
             "path", "platform", "geohash", "band", "dataset", "coverage");
         println!("------------------------------------------------------------------------------------------------------------------------------------");
-        for (node_id, search_reply) in reply.nodes.iter() {
+        for (node_id, search_reply) in reply.search_replies.iter() {
             for image in search_reply.images.iter() {
                 println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<8}", 
                     node_id, image.path, image.platform, image.geohash,
@@ -191,8 +209,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize request
-    let request = Request::new(SplitAllRequest {
+    // initialize SplitRequest
+    let split_request = SplitRequest {
         band: split_matches.value_of("band").unwrap().to_string(),
         geohash: split_matches.value_of("geohash").unwrap().to_string(),
         platform: split_matches.value_of("platform").unwrap().to_string(),
@@ -200,14 +218,23 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
             .unwrap().parse::<u32>()?,
         thread_count: split_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
+    };
+
+    // initialize request
+    let request = Request::new(BroadcastRequest {
+        message_type: BroadcastType::Split as i32,
+        fill_request: None,
+        search_request: None,
+        split_request: Some(split_request),
+        task_list_request: None,
     });
 
     // retrieve reply
-    let reply = client.split_all(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     // print information
-    for (node_id, split_reply) in reply.nodes.iter() {
+    for (node_id, split_reply) in reply.split_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, split_reply.task_id);
     }
