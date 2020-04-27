@@ -36,6 +36,7 @@ message NodeShowReply {
  * DataManagement Service
  */
 service DataManagement {
+    rpc Broadcast (BroadcastRequest) returns (BroadcastReply);
     rpc FillAll (FillAllRequest) returns (FillAllReply);
     rpc Fill (FillRequest) returns (FillReply);
     rpc Load (LoadRequest) returns (LoadReply);
@@ -46,6 +47,30 @@ service DataManagement {
     rpc TaskListAll (TaskListAllRequest) returns (TaskListAllReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
+}
+
+// Broadcast Messages
+enum BroadcastType {
+    FILL = 0;
+    SEARCH = 1;
+    SPLIT = 2;
+    TASK_LIST = 3;
+}
+
+message BroadcastRequest {
+    BroadcastType type = 1;    
+    FillRequest fillRequest = 2;
+    SearchRequest searchRequest = 3;
+    SplitRequest splitRequest = 4;
+    TaskListRequest taskListRequest = 5;
+}
+
+message BroadcastReply {
+    BroadcastType type = 1;    
+    map<uint32, FillReply> fillReplies = 2;
+    map<uint32, SearchReply> searchReplies = 3;
+    map<uint32, SplitReply> splitReplies = 4;
+    map<uint32, TaskListReply> taskListReplies = 5;
 }
 
 // Fill Messages
@@ -148,7 +173,6 @@ message SplitRequest {
 message SplitReply {
     uint64 taskId = 1;
 }
-
 
 // Task Messages
 message Task {
