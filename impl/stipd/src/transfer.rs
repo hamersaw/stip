@@ -63,7 +63,7 @@ impl StreamHandler for TransferStreamHandler {
                 let coverage = stream.read_f64::<BigEndian>()?;
 
                 // read image
-                let image = st_image::read(stream)?;
+                let image = st_image::prelude::read(stream)?;
 
                 // write image using ImageManager
                 self.image_manager.write(&platform, &geohash,
@@ -105,7 +105,7 @@ pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
     stream.write_f64::<BigEndian>(coverage)?;
 
     // write dataset
-    st_image::write(&image, &mut stream)?;
+    st_image::prelude::write(&image, &mut stream)?;
 
     Ok(())
 }

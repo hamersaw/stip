@@ -1,4 +1,4 @@
-use gdal::raster::{Dataset, Driver};
+use gdal::raster::Dataset;
 
 use crate::image::{FILLED_DATASET, ImageManager, ImageMetadata, RAW_DATASET};
 use crate::task::{Task, TaskHandle, TaskStatus};
@@ -187,74 +187,34 @@ impl Task for FillTask {
 
 fn process(image_manager: &Arc<ImageManager>,
         record: &Vec<ImageMetadata>) -> Result<(), Box<dyn Error>> {
-    // check if path exists
-    let path = Path::new(&record[0].path);
-    if !path.exists() {
-        return Err(format!("image path '{}' does not exist",
-            path.to_string_lossy()).into());
-    }
-
-    // open image - TODO error
-    let dataset = Dataset::open(&path).unwrap();
-
-    // read dataset rasterbands
-    let mut rasters = Vec::new();
-    for i in 0..dataset.count() {
-        let raster = dataset.read_full_raster_as::<u8>(i+1).unwrap();
-        rasters.push(raster);
-    }
-
-    for i in 1..record.len() {
-        let image = &record[i];
-
+    // read datasets
+    let mut datasets = Vec::new();
+    for image in record.iter() {
         // check if path exists
-        let fill_path = Path::new(&image.path);
-        if !fill_path.exists() {
+        let path = Path::new(&image.path);
+        if !path.exists() {
             // TODO - log
             continue;
         }
 
-        // open fill image - TODO  error
-        let fill_dataset = Dataset::open(&fill_path).unwrap();
-
-        // read fill dataset rasterbands
-        let mut fill_rasters = Vec::new();
-        for i in 0..fill_dataset.count() {
-            let fill_raster = fill_dataset
-                .read_full_raster_as::<u8>(i+1).unwrap();
-            fill_rasters.push(fill_raster);
-        }
-
-        // fill rasterband
-        st_image::fill(&mut rasters, &fill_rasters)?;
+        // open image - TODO  error
+        let dataset = Dataset::open(&path).unwrap();
+        datasets.push(dataset);
     }
 
-    // open memory dataset
-    let (width, height) = dataset.size();
-    let driver = Driver::get("Mem").unwrap();
-    let mem_dataset = driver.create("unreachable", width as isize,
-        height as isize, rasters.len() as isize).unwrap();
-
-    mem_dataset.set_geo_transform(
-        &dataset.geo_transform().unwrap()).unwrap();
-    mem_dataset.set_projection(
-        &dataset.projection()).unwrap();
-
-    // set rasterbands - TODO error
-    for (i, raster) in rasters.iter().enumerate() {
-        mem_dataset.write_raster((i + 1) as isize,
-            (0, 0), (width, height), &raster).unwrap();
-    }
+    // perform fill - TODO error
+    let dataset = st_image::prelude::fill(&datasets).unwrap();
 
     // write mem_dataset - TODO error
     let image = &record[0];
+    let path = Path::new(&record[0].path);
     let tile_id = &path.file_name().unwrap().to_string_lossy();
-    let coverage = st_image::coverage(&mem_dataset).unwrap();
+    let coverage = st_image::coverage(&dataset).unwrap();
 
     if coverage > image.coverage {
         image_manager.write(&image.platform, &image.geohash, 
             &image.band, FILLED_DATASET, &tile_id, image.start_date,
-            image.end_date, coverage, &mem_dataset)?;
+            image.end_date, coverage, &dataset)?;
     }
 
     Ok(())

@@ -63,7 +63,7 @@ impl Task for SplitTask {
 
             // compute geohash intervals for given precision
             let (y_interval, x_interval) =
-                st_image::coordinate::get_geohash_intervals(self.precision);
+                st_image::prelude::get_geohash_intervals(self.precision);
 
             let join_handle = std::thread::spawn(move || {
                 // iterate over records
@@ -154,8 +154,9 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
     let dataset = Dataset::open(&path).unwrap();
 
     // split image with geohash precision - TODO error
-    for (dataset, _, win_max_x, _, win_max_y) in st_image::split(
-            &dataset, 4326, x_interval, y_interval).unwrap() {
+    for (dataset, _, win_max_x, _, win_max_y) in
+            st_image::prelude::split(&dataset, 
+                4326, x_interval, y_interval).unwrap() {
         // compute window geohash
         let coordinate = Coordinate{x: win_max_x, y: win_max_y};
         let geohash = geohash::encode(coordinate, precision)?;
