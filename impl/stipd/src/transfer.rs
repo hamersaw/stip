@@ -60,7 +60,7 @@ impl StreamHandler for TransferStreamHandler {
                 let start_date = stream.read_i64::<BigEndian>()?;
                 let end_date = stream.read_i64::<BigEndian>()?;
 
-                let coverage = stream.read_f64::<BigEndian>()?;
+                let pixel_coverage = stream.read_f32::<BigEndian>()?;
 
                 // read image
                 let image = st_image::prelude::read(stream)?;
@@ -68,7 +68,7 @@ impl StreamHandler for TransferStreamHandler {
                 // write image using ImageManager
                 self.image_manager.write(&platform, &geohash,
                     &band, RAW_DATASET, &tile, start_date,
-                    end_date, coverage, &image)?;
+                    end_date, pixel_coverage, &image)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -80,8 +80,8 @@ impl StreamHandler for TransferStreamHandler {
 }
 
 pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
-        start_date: i64, end_date: i64, coverage: f64, image: &Dataset,
-        addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
+        start_date: i64, end_date: i64, pixel_coverage: f32,
+        image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::Write as u8)?;
@@ -102,7 +102,7 @@ pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
     stream.write_i64::<BigEndian>(start_date)?;
     stream.write_i64::<BigEndian>(end_date)?;
 
-    stream.write_f64::<BigEndian>(coverage)?;
+    stream.write_f32::<BigEndian>(pixel_coverage)?;
 
     // write dataset
     st_image::prelude::write(&image, &mut stream)?;

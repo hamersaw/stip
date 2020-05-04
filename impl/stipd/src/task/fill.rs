@@ -40,7 +40,7 @@ impl Task for FillTask {
             RAW_DATASET, &self.geohash, &self.platform, false)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
-            .filter(|x| x.coverage != 1f64).collect();
+            .filter(|x| x.pixel_coverage != 1f32).collect();
 
         // order by platform, geohash, band
         filter_images.sort_by(|a, b| {
@@ -209,12 +209,12 @@ fn process(image_manager: &Arc<ImageManager>,
     let image = &record[0];
     let path = Path::new(&record[0].path);
     let tile_id = &path.file_name().unwrap().to_string_lossy();
-    let coverage = st_image::coverage(&dataset).unwrap();
+    let pixel_coverage = st_image::coverage(&dataset).unwrap() as f32;
 
-    if coverage > image.coverage {
+    if pixel_coverage > image.pixel_coverage {
         image_manager.write(&image.platform, &image.geohash, 
             &image.band, FILLED_DATASET, &tile_id, image.start_date,
-            image.end_date, coverage, &dataset)?;
+            image.end_date, pixel_coverage, &dataset)?;
     }
 
     Ok(())

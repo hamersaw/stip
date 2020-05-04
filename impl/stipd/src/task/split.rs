@@ -167,8 +167,9 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
         }
 
         // if image has 0.0 coverage -> don't process - TODO error
-        let coverage = st_image::coverage(&dataset).unwrap();
-        if coverage == 0f64 {
+        let pixel_coverage =
+            st_image::coverage(&dataset).unwrap() as f32;
+        if pixel_coverage == 0f32 {
             continue;
         }
 
@@ -201,7 +202,7 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
         let tile_id = &path.file_name().unwrap().to_string_lossy();
         if let Err(e) = crate::transfer::send_image(&record.platform, 
                 &geohash, &record.band, &tile_id, record.start_date,
-                record.end_date,  coverage, &dataset, &addr) {
+                record.end_date, pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
     }

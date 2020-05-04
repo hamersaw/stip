@@ -12,11 +12,12 @@ pub const RAW_DATASET: &'static str = "raw";
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
     pub band: String,
-    pub coverage: f64,
     pub dataset: String,
+    pub cloud_coverage: f32,
     pub end_date: i64,
     pub geohash: String,
     pub path: String,
+    pub pixel_coverage: f32,
     pub platform: String,
     pub start_date: i64,
 }
@@ -34,7 +35,7 @@ impl ImageManager {
 
     pub fn write(&self, platform: &str, geohash: &str, band: &str, 
             dataset: &str, tile: &str, start_date: i64, 
-            end_date: i64, coverage: f64, image: &Dataset)
+            end_date: i64, pixel_coverage: f32, image: &Dataset)
             -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/band/dataset'
         let mut path = self.directory.clone();
@@ -76,7 +77,8 @@ impl ImageManager {
 
         metadata_file.write_i64::<BigEndian>(start_date)?;
         metadata_file.write_i64::<BigEndian>(end_date)?;
-        metadata_file.write_f64::<BigEndian>(coverage)?;
+        metadata_file.write_f32::<BigEndian>(pixel_coverage)?;
+        metadata_file.write_f32::<BigEndian>(std::f32::MAX)?;
 
         Ok(())
     }
@@ -103,7 +105,8 @@ impl ImageManager {
             // read metadata from file
             let start_date = file.read_i64::<BigEndian>()?;
             let end_date = file.read_i64::<BigEndian>()?;
-            let coverage = file.read_f64::<BigEndian>()?;
+            let pixel_coverage = file.read_f32::<BigEndian>()?;
+            let cloud_coverage = file.read_f32::<BigEndian>()?;
 
             // parse platform and geohash from path
             path.set_extension("tif");
@@ -128,11 +131,12 @@ impl ImageManager {
             // initialize ImageMetadata
             let image_metadata = ImageMetadata {
                 band: band,
-                coverage: coverage,
+                cloud_coverage: cloud_coverage,
                 dataset: dataset,
                 end_date: end_date,
                 geohash: geohash,
                 path: path_str,
+                pixel_coverage: pixel_coverage,
                 platform: platform,
                 start_date: start_date,
             };

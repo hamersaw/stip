@@ -185,14 +185,16 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             }
         }
     } else {
-        println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<8}", "node_id",
-            "path", "platform", "geohash", "band", "dataset", "coverage");
-        println!("------------------------------------------------------------------------------------------------------------------------------------");
+        println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}",
+            "node_id", "path", "platform", "geohash", "band",
+            "dataset", "pixel_coverage", "cloud_coverage");
+        println!("------------------------------------------------------------------------------------------------------------------------------------------------------------");
         for (node_id, search_reply) in reply.search_replies.iter() {
             for image in search_reply.images.iter() {
-                println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<8}", 
-                    node_id, image.path, image.platform, image.geohash,
-                    image.band, image.dataset, image.coverage);
+                println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}", 
+                    node_id, image.path, image.platform,
+                    image.geohash, image.band, image.dataset,
+                    image.pixel_coverage, image.cloud_coverage);
             }
         }
     }

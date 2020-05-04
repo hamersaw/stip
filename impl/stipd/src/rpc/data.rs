@@ -167,11 +167,12 @@ impl DataManagement for DataManagementImpl {
                 &request.platform, true).unwrap().iter()
             .map(|x| Image {
                 band: x.band.clone(),
-                coverage: x.coverage,
+                cloud_coverage: x.cloud_coverage,
                 dataset: x.dataset.clone(),
                 end_date: x.end_date,
                 geohash: x.geohash.clone(),
                 path: x.path.clone(),
+                pixel_coverage: x.pixel_coverage,
                 platform: x.platform.clone(),
                 start_date: x.start_date,
             }).collect();

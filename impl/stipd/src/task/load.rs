@@ -241,8 +241,9 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             let geohash = geohash::encode(coordinate, precision)?;
 
             // if image has 0.0 coverage -> don't process - TODO error
-            let coverage = st_image::coverage(&dataset).unwrap();
-            if coverage == 0f64 {
+            let pixel_coverage =
+                st_image::coverage(&dataset).unwrap() as f32;
+            if pixel_coverage == 0f32 {
                 continue;
             }
 
@@ -277,7 +278,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&platform,
                     &geohash, &band, &tile, start_time,
-                    end_time, coverage, &dataset, &addr) {
+                    end_time, pixel_coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }

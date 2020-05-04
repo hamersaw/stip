@@ -102,13 +102,14 @@ message LoadReply {
 // Search Messages
 message Image {
     string band = 1;
-    double coverage = 2;
+    float cloudCoverage = 2;
     string dataset = 3;
     int64 endDate = 4;
     string geohash = 5;
     string path = 6;
-    string platform = 7;
-    int64 startDate = 8;
+    float pixelCoverage = 7;
+    string platform = 8;
+    int64 startDate = 9;
 }
 
 message SearchRequest {
