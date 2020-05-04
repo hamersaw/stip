@@ -27,10 +27,7 @@ while read line; do
         rm $pidfile
     else
         # stop node on remote host
-        echo "TODO - stop remote node"
-
-    #    ssh rammerd@${ARRAY[2]} -n "kill `cat $PROJECT_DIR/log/datanode-${ARRAY[1]}.pid`; \
-    #        rm $PROJECT_DIR/log/datanode-${ARRAY[1]}.pid"
+        ssh rammerd@$host -n "kill `cat $pidfile`; rm $pidfile"
     fi
 
     # increment node id

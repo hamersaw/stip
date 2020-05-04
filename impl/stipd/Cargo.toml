@@ -9,23 +9,19 @@ edition = "2018"
 [dependencies]
 byteorder = "1"
 chrono = "0.4"
-#comm = { path = "../../../comm-rs" }
-comm = { git = "https://github.com/hamersaw/comm-rs" }
+comm = { path = "../../../comm-rs" }
 crossbeam-channel = "0.4"
 env_logger = "0.6"
-#gdal = { path = "/home/hamersaw/Projects/gdal" }
-gdal = { git = "https://github.com/hamersaw/gdal", branch = "feature-options" } 
+gdal = { path = "/home/hamersaw/Projects/gdal" }
 geohash = "0.9"
 glob = "0.3"
 log = "0.4"
 num-derive = "0.2"
 num-traits = "0.2"
 protobuf = { path = "../protobuf" }
-#st-image = { path = "../../../st-image" }
-st-image = { git = "https://github.com/hamersaw/st-image" }
+st-image = { path = "../../../st-image" }
 structopt = { version = "0.3", default-features = false }
-#swarm = { path = "../../../swarm-rs" }
-swarm = { git = "https://github.com/hamersaw/swarm-rs" }
+swarm = { path = "../../../swarm-rs" }
 tokio = { version = "0.2", features = ["macros"] }
 tonic = "0.1"
 zip = "0.5"

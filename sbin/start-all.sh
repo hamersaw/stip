@@ -12,7 +12,14 @@ projectdir="$(pwd)/$(dirname $0)/.."
 hostfile="$projectdir/etc/hosts.txt"
 
 # initialize instance variables
-application="$projectdir/impl/stipd/target/debug/stipd"
+if [ -f "$projectdir/impl/stipd/target/debug/stipd" ]; then
+    application="$projectdir/impl/stipd/target/debug/stipd"
+fi
+
+if [ -z "$application" ]; then
+    echo "'stipd' binary not found."
+    exit
+fi
 
 # iterate over hosts
 nodeid=0
@@ -38,17 +45,16 @@ while read line; do
         RUST_LOG=debug,h2=info,hyper=info,tower_buffer=info \
             $application $nodeid -i $host -p $gossipport \
             -r $rpcport -x $xferport $options \
-            > $projectdir/log/node-$nodeid.log 2>&1 &
+                > $projectdir/log/node-$nodeid.log 2>&1 &
 
         echo $! > $projectdir/log/node-$nodeid.pid
     else
-        echo "TODO - start remote node"
         # start application on remote host
-    #    ssh rammerd@${ARRAY[2]} -n "RUST_LOG=info $DATANODE \
-    #        ${ARRAY[1]} ${ARRAY[1]} ${ARRAY[4]} -i ${ARRAY[2]} \
-    #        -p ${ARRAY[3]} -a $NAMENODE_IP -o $NAMENODE_PORT \
-    #            > $PROJECT_DIR/log/datanode-${ARRAY[1]}.log 2>&1 & \
-    #        echo \$! > $PROJECT_DIR/log/datanode-${ARRAY[1]}.pid"
+        ssh rammerd@$host -n "RUST_LOG=info \
+            $application $nodeid -i $host -p $gossipport \
+            -r $rpcport -x $xferport $options \
+                > $projectdir/log/node-$nodeid.log 2>&1 & \
+            echo \$! > $projectdir/log/node-$nodeid.pid"
     fi
 
     # increment node id
