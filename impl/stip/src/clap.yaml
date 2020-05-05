@@ -30,32 +30,6 @@ subcommands:
     - data:
         about: manage application data
         subcommands:
-            - load:
-                about: initialize load data task
-                args:
-                    - DIRECTORY:
-                        index: 1
-                        required: true
-                        help: image directory location
-                    - LOAD_FORMAT:
-                        index: 2
-                        required: true
-                        possible_values: 
-                            - landsat
-                            - sentinel
-                        help: dataset load format
-                    - precision:
-                        default_value: "4"
-                        help: geohash precision
-                        long: precision
-                        short: r
-                        takes_value: true
-                    - thread_count:
-                        default_value: "4"
-                        help: thread count for processing task
-                        long: threads
-                        short: t
-                        takes_value: true
             - fill:
                 about: initialize fill data task
                 args:
@@ -89,6 +63,59 @@ subcommands:
                         long: window
                         short: w
                         takes_value: true
+            - list:
+                about: list images for the specified criteria
+                args:
+                    - band:
+                        default_value: "*"
+                        help: image band
+                        long: band
+                        short: b
+                        takes_value: true
+                    - dataset:
+                        default_value: "*"
+                        help: image dataset
+                        long: dataset
+                        short: d
+                        takes_value: true
+                    - geohash:
+                        default_value: ""
+                        help: image geohash boundary
+                        long: geohash
+                        short: g
+                        takes_value: true
+                    - platform:
+                        default_value: "*"
+                        help: image platform (ex. SENTINEL-2B)
+                        long: platform
+                        short: p
+                        takes_value: true
+            - load:
+                about: initialize load data task
+                args:
+                    - DIRECTORY:
+                        index: 1
+                        required: true
+                        help: image directory location
+                    - LOAD_FORMAT:
+                        index: 2
+                        required: true
+                        possible_values: 
+                            - landsat
+                            - sentinel
+                        help: dataset load format
+                    - precision:
+                        default_value: "4"
+                        help: geohash precision
+                        long: precision
+                        short: r
+                        takes_value: true
+                    - thread_count:
+                        default_value: "4"
+                        help: thread count for processing task
+                        long: threads
+                        short: t
+                        takes_value: true
             - search:
                 about: search for images
                 args:
@@ -116,10 +143,6 @@ subcommands:
                         long: platform
                         short: p
                         takes_value: true
-                    - summary:
-                        help: print summary of data
-                        long: summary
-                        short: s
             - split:
                 about: split images with a new geohash precision
                 args:

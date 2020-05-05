@@ -38,10 +38,10 @@ message NodeShowReply {
 service DataManagement {
     rpc Broadcast (BroadcastRequest) returns (BroadcastReply);
     rpc Fill (FillRequest) returns (FillReply);
+    rpc List (ListRequest) returns (ListReply);
     rpc Load (LoadRequest) returns (LoadReply);
     rpc Search (SearchRequest) returns (SearchReply);
     rpc Split (SplitRequest) returns (SplitReply);
-    rpc Summary (SummaryRequest) returns (SummaryReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
 }
@@ -49,25 +49,28 @@ service DataManagement {
 // Broadcast Messages
 enum BroadcastType {
     FILL = 0;
-    SEARCH = 1;
-    SPLIT = 2;
-    TASK_LIST = 3;
+    LIST = 1;
+    SEARCH = 2;
+    SPLIT = 3;
+    TASK_LIST = 4;
 }
 
 message BroadcastRequest {
     BroadcastType messageType = 1;    
     FillRequest fillRequest = 2;
-    SearchRequest searchRequest = 3;
-    SplitRequest splitRequest = 4;
-    TaskListRequest taskListRequest = 5;
+    ListRequest listRequest = 3;
+    SearchRequest searchRequest = 4;
+    SplitRequest splitRequest = 5;
+    TaskListRequest taskListRequest = 6;
 }
 
 message BroadcastReply {
     BroadcastType messageType = 1;    
     map<uint32, FillReply> fillReplies = 2;
-    map<uint32, SearchReply> searchReplies = 3;
-    map<uint32, SplitReply> splitReplies = 4;
-    map<uint32, TaskListReply> taskListReplies = 5;
+    map<uint32, ListReply> listReplies = 3;
+    map<uint32, SearchReply> searchReplies = 4;
+    map<uint32, SplitReply> splitReplies = 5;
+    map<uint32, TaskListReply> taskListReplies = 6;
 }
 
 // Fill Messages
@@ -81,6 +84,30 @@ message FillRequest {
 
 message FillReply {
     uint64 taskId = 1;
+}
+
+// List Messages
+message Image {
+    string band = 1;
+    float cloudCoverage = 2;
+    string dataset = 3;
+    int64 endDate = 4;
+    string geohash = 5;
+    string path = 6;
+    float pixelCoverage = 7;
+    string platform = 8;
+    int64 startDate = 9;
+}
+
+message ListRequest {
+    string band = 1;
+    string dataset = 2;
+    string geohash = 3;
+    string platform = 4;
+}
+
+message ListReply {
+    repeated Image images = 1;
 }
 
 // Load Messages
@@ -101,16 +128,13 @@ message LoadReply {
 }
 
 // Search Messages
-message Image {
+message Extent {
     string band = 1;
-    float cloudCoverage = 2;
+    uint32 count = 2;
     string dataset = 3;
-    int64 endDate = 4;
-    string geohash = 5;
-    string path = 6;
-    float pixelCoverage = 7;
-    string platform = 8;
-    int64 startDate = 9;
+    string geohash = 4;
+    string platform = 5;
+    uint32 precision = 6;
 }
 
 message SearchRequest {
@@ -121,7 +145,7 @@ message SearchRequest {
 }
 
 message SearchReply {
-    repeated Image images = 1;
+    repeated Extent extents = 1;
 }
 
 // Split Messages
@@ -135,27 +159,6 @@ message SplitRequest {
 
 message SplitReply {
     uint64 taskId = 1;
-}
-
-// Summary Messages
-message SummaryRow {
-    string band = 1;
-    uint32 count = 2;
-    string dataset = 3;
-    string geohash = 4;
-    string platform = 5;
-    uint32 precision = 6;
-}
-
-message SummaryRequest {
-    string band = 1;
-    string dataset = 2;
-    string geohash = 3;
-    string platform = 4;
-}
-
-message SummaryReply {
-    repeated SummaryRow summaryRow = 1;
 }
 
 // Task Messages

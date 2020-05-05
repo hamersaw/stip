@@ -35,6 +35,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(BroadcastRequest {
         message_type: BroadcastType::TaskList as i32,
         fill_request: None,
+        list_request: None,
         search_request: None,
         split_request: None,
         task_list_request: Some(TaskListRequest {}),

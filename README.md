@@ -8,6 +8,7 @@ A distributed spatiotemporal image management framework designed specifically fo
 - add 'min_coverage' field to 'data search' command
 - improve node logging
 - image replication?
+- move 'task' messages to TaskManagement protobuf service
 #### COMMANDS 
 - implemented data search / data summary separately
 - compute cloud coverage on images
