@@ -190,32 +190,25 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
-    // print information
-    let precision = match search_matches.value_of("geohash") {
-        None => 1,
-        Some(x) => x.len() + 1,
-    };
-
-    // TODO - compile agglomerate view of data
-    /*let mut platform_map = BTreeMap::new();
+    // compile agglomerate view of data
+    let mut platform_map = BTreeMap::new();
     for (_, search_reply) in reply.search_replies.iter() {
-        for image in search_reply.images.iter() {
+        for extent in search_reply.extents.iter() {
             let geohash_map = platform_map.entry(
-                image.platform.clone()).or_insert(BTreeMap::new());
+                extent.platform.clone()).or_insert(BTreeMap::new());
 
-            let geohash = &image.geohash[..std::cmp::min(precision, image.geohash.len())];
             let band_map = geohash_map.entry(
-                geohash.clone()).or_insert(BTreeMap::new());
+                extent.geohash.clone()).or_insert(BTreeMap::new());
 
-            let dataset_map = band_map.entry(image.band.clone())
+            let dataset_map = band_map.entry(extent.band.clone())
                 .or_insert(BTreeMap::new());
 
             let count_map = dataset_map.entry(
-                image.dataset.clone()).or_insert(BTreeMap::new());
+                extent.dataset.clone()).or_insert(BTreeMap::new());
 
-            let count = count_map.entry(image.geohash.len())
+            let count = count_map.entry(extent.precision)
                 .or_insert(0);
-            *count += 1;
+            *count += extent.count;
         }
     }
 
@@ -235,7 +228,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
                 }
             }
         }
-    }*/
+    }
 
     Ok(())
 }

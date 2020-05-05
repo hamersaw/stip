@@ -1,4 +1,4 @@
-use protobuf::{self, BroadcastReply, BroadcastRequest, BroadcastType, DataManagementClient, FillReply, FillRequest, Image, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchReply, SearchRequest, SplitReply, SplitRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, BroadcastReply, BroadcastRequest, BroadcastType, DataManagementClient, Extent, FillReply, FillRequest, Image, ListRequest, ListReply, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchReply, SearchRequest, SplitReply, SplitRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -51,6 +51,7 @@ impl DataManagement for DataManagementImpl {
 
         // send broadcast message to each dht node
         let mut fill_replies = HashMap::new();
+        let mut list_replies = HashMap::new();
         let mut search_replies = HashMap::new();
         let mut split_replies = HashMap::new();
         let mut task_list_replies = HashMap::new();
@@ -66,6 +67,12 @@ impl DataManagement for DataManagementImpl {
                     let reply = client.fill(request
                         .fill_request.clone().unwrap()).await.unwrap();
                     fill_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+                BroadcastType::List => {
+                    let reply = client.list(request
+                        .list_request.clone().unwrap()).await.unwrap();
+                    list_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
                 BroadcastType::Search => {
@@ -93,6 +100,7 @@ impl DataManagement for DataManagementImpl {
         let reply = BroadcastReply {
             message_type: request.message_type,
             fill_replies: fill_replies,
+            list_replies: list_replies,
             search_replies: search_replies,
             split_replies: split_replies,
             task_list_replies: task_list_replies,
@@ -121,6 +129,35 @@ impl DataManagement for DataManagementImpl {
         // initialize reply
         let reply = FillReply {
             task_id: task_id,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn list(&self, request: Request<ListRequest>)
+            -> Result<Response<ListReply>, Status> {
+        trace!("ListRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // search for the requested images - TODO error
+        let images = self.image_manager.search(&request.band,
+                &request.dataset, &request.geohash,
+                &request.platform, false).unwrap().iter()
+            .map(|x| Image {
+                band: x.band.clone(),
+                cloud_coverage: x.cloud_coverage,
+                dataset: x.dataset.clone(),
+                end_date: x.end_date,
+                geohash: x.geohash.clone(),
+                path: x.path.clone(),
+                pixel_coverage: x.pixel_coverage,
+                platform: x.platform.clone(),
+                start_date: x.start_date,
+            }).collect();
+
+        // initialize reply
+        let reply = ListReply {
+            images: images,
         };
 
         Ok(Response::new(reply))
@@ -164,22 +201,54 @@ impl DataManagement for DataManagementImpl {
         // search for the requested images - TODO error
         let images = self.image_manager.search(&request.band,
                 &request.dataset, &request.geohash,
-                &request.platform, true).unwrap().iter()
-            .map(|x| Image {
-                band: x.band.clone(),
-                cloud_coverage: x.cloud_coverage,
-                dataset: x.dataset.clone(),
-                end_date: x.end_date,
-                geohash: x.geohash.clone(),
-                path: x.path.clone(),
-                pixel_coverage: x.pixel_coverage,
-                platform: x.platform.clone(),
-                start_date: x.start_date,
-            }).collect();
+                &request.platform, true).unwrap();
+
+        // compile extents
+        let mut platform_map = HashMap::new();
+        let precision = request.geohash.len() + 1;
+        for image in images {
+            let geohash_map = platform_map.entry(
+                image.platform.clone()).or_insert(HashMap::new());
+
+            let geohash = image.geohash[..std::cmp::min(precision, image.geohash.len())].to_string();
+            let band_map = geohash_map.entry(geohash)
+                .or_insert(HashMap::new());
+
+            let dataset_map = band_map.entry(image.band.clone())
+                .or_insert(HashMap::new());
+
+            let count_map = dataset_map.entry(
+                image.dataset.clone()).or_insert(HashMap::new());
+
+            let count = count_map.entry(image.geohash.len())
+                .or_insert(0);
+            *count += 1;
+        }
+
+        // convert to protobuf format
+        let mut extents = Vec::new();
+        for (platform, geohash_map) in platform_map.iter() {
+            for (geohash, band_map) in geohash_map.iter() {
+                for (band, dataset_map) in band_map.iter() {
+                    for (dataset, count_map) in dataset_map.iter() {
+                        for (precision, count) in count_map.iter() {
+                            extents.push(Extent {
+                                band: band.clone(),
+                                count: *count,
+                                dataset: dataset.clone(),
+                                geohash: geohash.clone(),
+                                platform: platform.clone(),
+                                precision: *precision as u32,
+                            });
+                        }
+                    }
+                }
+            }
+        }
 
         // initialize reply
         let reply = SearchReply {
-            images: images,
+            extents: extents,
         };
 
         Ok(Response::new(reply))
