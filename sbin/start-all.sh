@@ -16,6 +16,10 @@ if [ -f "$projectdir/impl/stipd/target/debug/stipd" ]; then
     application="$projectdir/impl/stipd/target/debug/stipd"
 fi
 
+if [ -f "$projectdir/impl/target/debug/stipd" ]; then
+    application="$projectdir/impl/target/debug/stipd"
+fi
+
 if [ -z "$application" ]; then
     echo "'stipd' binary not found."
     exit
