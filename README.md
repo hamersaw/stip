@@ -9,6 +9,7 @@ A distributed spatiotemporal image management framework designed specifically fo
 - improve node logging
 - image replication?
 #### COMMANDS 
+- implemented data search / data summary separately
 - compute cloud coverage on images
 - data merge
 - stop task functionality?

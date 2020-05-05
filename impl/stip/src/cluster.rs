@@ -39,10 +39,10 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<8}{:<20}{:<20}", "id", "rpc_addr", "xfer_addr");
+    println!("{:<8}{:<24}{:<24}", "id", "rpc_addr", "xfer_addr");
     println!("------------------------------------------------");
     for node in reply.nodes.iter() {
-        println!("{:<8}{:<20}{:<20}", node.id,
+        println!("{:<8}{:<24}{:<24}", node.id,
             node.rpc_addr, node.xfer_addr);
     }
 

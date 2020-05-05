@@ -41,6 +41,7 @@ service DataManagement {
     rpc Load (LoadRequest) returns (LoadReply);
     rpc Search (SearchRequest) returns (SearchReply);
     rpc Split (SplitRequest) returns (SplitReply);
+    rpc Summary (SummaryRequest) returns (SummaryReply);
     rpc TaskList (TaskListRequest) returns (TaskListReply);
     rpc TaskShow (TaskShowRequest) returns (TaskShowReply);
 }
@@ -134,6 +135,27 @@ message SplitRequest {
 
 message SplitReply {
     uint64 taskId = 1;
+}
+
+// Summary Messages
+message SummaryRow {
+    string band = 1;
+    uint32 count = 2;
+    string dataset = 3;
+    string geohash = 4;
+    string platform = 5;
+    uint32 precision = 6;
+}
+
+message SummaryRequest {
+    string band = 1;
+    string dataset = 2;
+    string geohash = 3;
+    string platform = 4;
+}
+
+message SummaryReply {
+    repeated SummaryRow summaryRow = 1;
 }
 
 // Task Messages
