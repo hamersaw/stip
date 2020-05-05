@@ -180,7 +180,7 @@ subcommands:
         about: manage cluster tasks
         subcommands:
             - list:
-                about: list tasks from the contact node
+                about: list tasks from the entire cluster
             - show:
                 about: display task information from the contact node
                 args:

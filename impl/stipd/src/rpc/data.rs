@@ -1,9 +1,9 @@
-use protobuf::{self, BroadcastReply, BroadcastRequest, BroadcastType, DataManagementClient, Extent, FillReply, FillRequest, Image, ListRequest, ListReply, LoadFormat as ProtoLoadFormat, LoadReply, LoadRequest, SearchReply, SearchRequest, SplitReply, SplitRequest, Task, TaskListReply, TaskListRequest, TaskShowReply, TaskShowRequest, DataManagement};
+use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataListReply, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchReply, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, Image, LoadFormat as ProtoLoadFormat};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
 use crate::image::ImageManager;
-use crate::task::{TaskHandle, TaskManager, TaskStatus};
+use crate::task::TaskManager;
 use crate::task::fill::FillTask;
 use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
 use crate::task::split::SplitTask;
@@ -30,9 +30,9 @@ impl DataManagementImpl {
 
 #[tonic::async_trait]
 impl DataManagement for DataManagementImpl {
-    async fn broadcast(&self, request: Request<BroadcastRequest>)
-            -> Result<Response<BroadcastReply>, Status> {
-        trace!("BroadcastRequest: {:?}", request);
+    async fn broadcast(&self, request: Request<DataBroadcastRequest>)
+            -> Result<Response<DataBroadcastReply>, Status> {
+        trace!("DataBroadcastRequest: {:?}", request);
         let request = request.get_ref();
 
         // copy valid dht nodes
@@ -54,7 +54,6 @@ impl DataManagement for DataManagementImpl {
         let mut list_replies = HashMap::new();
         let mut search_replies = HashMap::new();
         let mut split_replies = HashMap::new();
-        let mut task_list_replies = HashMap::new();
 
         for (node_id, addr) in dht_nodes {
             // initialize grpc client - TODO error
@@ -62,56 +61,49 @@ impl DataManagement for DataManagementImpl {
                 format!("http://{}", addr)).await.unwrap();
 
             // execute message at dht node
-            match BroadcastType::from_i32(request.message_type).unwrap() {
-                BroadcastType::Fill => {
+            match DataBroadcastType::from_i32(request.message_type).unwrap() {
+                DataBroadcastType::Fill => {
                     let reply = client.fill(request
                         .fill_request.clone().unwrap()).await.unwrap();
                     fill_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
-                BroadcastType::List => {
+                DataBroadcastType::List => {
                     let reply = client.list(request
                         .list_request.clone().unwrap()).await.unwrap();
                     list_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
-                BroadcastType::Search => {
+                DataBroadcastType::Search => {
                     let reply = client.search(request
                         .search_request.clone().unwrap()).await.unwrap();
                     search_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
-                BroadcastType::Split => {
+                DataBroadcastType::Split => {
                     let reply = client.split(request
                         .split_request.clone().unwrap()).await.unwrap();
                     split_replies.insert(node_id as u32,
-                        reply.get_ref().to_owned());
-                },
-                BroadcastType::TaskList => {
-                    let reply = client.task_list(request
-                        .task_list_request.clone().unwrap()).await.unwrap();
-                    task_list_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
             };
         }
 
         // initialize reply
-        let reply = BroadcastReply {
+        let reply = DataBroadcastReply {
             message_type: request.message_type,
             fill_replies: fill_replies,
             list_replies: list_replies,
             search_replies: search_replies,
             split_replies: split_replies,
-            task_list_replies: task_list_replies,
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn fill(&self, request: Request<FillRequest>)
-            -> Result<Response<FillReply>, Status> {
-        trace!("FillRequest: {:?}", request);
+    async fn fill(&self, request: Request<DataFillRequest>)
+            -> Result<Response<DataFillReply>, Status> {
+        trace!("DataFillRequest: {:?}", request);
         let request = request.get_ref();
 
         // initialize task
@@ -127,16 +119,16 @@ impl DataManagement for DataManagementImpl {
         };
 
         // initialize reply
-        let reply = FillReply {
+        let reply = DataFillReply {
             task_id: task_id,
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn list(&self, request: Request<ListRequest>)
-            -> Result<Response<ListReply>, Status> {
-        trace!("ListRequest: {:?}", request);
+    async fn list(&self, request: Request<DataListRequest>)
+            -> Result<Response<DataListReply>, Status> {
+        trace!("DataListRequest: {:?}", request);
         let request = request.get_ref();
 
         // search for the requested images - TODO error
@@ -156,16 +148,16 @@ impl DataManagement for DataManagementImpl {
             }).collect();
 
         // initialize reply
-        let reply = ListReply {
+        let reply = DataListReply {
             images: images,
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn load(&self, request: Request<LoadRequest>)
-            -> Result<Response<LoadReply>, Status> {
-        trace!("LoadDirectoryRequest: {:?}", request);
+    async fn load(&self, request: Request<DataLoadRequest>)
+            -> Result<Response<DataLoadReply>, Status> {
+        trace!("DataLoadRequest: {:?}", request);
         let request = request.get_ref();
 
         // initialize task
@@ -186,16 +178,16 @@ impl DataManagement for DataManagementImpl {
         };
 
         // initialize reply
-        let reply = LoadReply {
+        let reply = DataLoadReply {
             task_id: task_id,
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn search(&self, request: Request<SearchRequest>)
-            -> Result<Response<SearchReply>, Status> {
-        trace!("SearchRequest: {:?}", request);
+    async fn search(&self, request: Request<DataSearchRequest>)
+            -> Result<Response<DataSearchReply>, Status> {
+        trace!("DataSearchRequest: {:?}", request);
         let request = request.get_ref();
 
         // search for the requested images - TODO error
@@ -247,15 +239,15 @@ impl DataManagement for DataManagementImpl {
         }
 
         // initialize reply
-        let reply = SearchReply {
+        let reply = DataSearchReply {
             extents: extents,
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn split(&self, request: Request<SplitRequest>)
-            -> Result<Response<SplitReply>, Status> {
+    async fn split(&self, request: Request<DataSplitRequest>)
+            -> Result<Response<DataSplitReply>, Status> {
         trace!("SplitRequest: {:?}", request);
         let request = request.get_ref();
 
@@ -272,78 +264,10 @@ impl DataManagement for DataManagementImpl {
         };
 
         // initialize reply
-        let reply = SplitReply {
+        let reply = DataSplitReply {
             task_id: task_id,
         };
 
         Ok(Response::new(reply))
-    }
-
-    async fn task_list(&self, request: Request<TaskListRequest>)
-            -> Result<Response<TaskListReply>, Status> {
-        trace!("TaskListRequest: {:?}", request);
-
-        // populate tasks from task_manager
-        let mut tasks = Vec::new();
-        {
-            let task_manager = self.task_manager.read().unwrap();
-            for (task_id, task_handle) in task_manager.iter() {
-                // convert TaskHandle to protobuf
-                let task = to_protobuf_task(*task_id, task_handle);
-
-                // add to tasks
-                tasks.push(task);
-            }
-        }
-
-        // initialize reply
-        let reply = TaskListReply {
-            tasks: tasks,
-        };
-
-        Ok(Response::new(reply))
-    }
-
-    async fn task_show(&self, request: Request<TaskShowRequest>)
-            -> Result<Response<TaskShowReply>, Status> {
-        trace!("TaskShowRequest: {:?}", request);
-        let request = request.get_ref();
-
-        // populate task from task_manager
-        let task = {
-            let task_manager = self.task_manager.read().unwrap();
-            match task_manager.get(&request.id) {
-                None => None,
-                Some(task_handle) =>
-                    Some(to_protobuf_task(request.id, task_handle)),
-            }
-        };
-
-        // initialize reply
-        let reply = TaskShowReply {
-            task: task,
-        };
-
-        Ok(Response::new(reply))
-    }
-}
-
-fn to_protobuf_task(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task {
-    // get read lock on TaskHandle
-    let task_handle = task_handle.read().unwrap();
-    
-    // compile task status
-    let status = match task_handle.get_status() {
-        TaskStatus::Complete => protobuf::TaskStatus::Complete,
-        TaskStatus::Failure(_) => protobuf::TaskStatus::Failure,
-        TaskStatus::Running => protobuf::TaskStatus::Running,
-    };
-
-    // initialize task protobuf
-    Task {
-        id: task_id,
-        completion_percent: task_handle
-            .get_completion_percent().unwrap_or(1.0),
-        status: status as i32,
     }
 }

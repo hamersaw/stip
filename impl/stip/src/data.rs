@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{BroadcastRequest, BroadcastType, DataManagementClient, FillRequest, ListRequest, LoadFormat, LoadRequest, SearchRequest, SplitRequest};
+use protobuf::{DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -41,8 +41,8 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize FillRequest
-    let fill_request = FillRequest {
+    // initialize DataFillRequest
+    let fill_request = DataFillRequest {
         band: fill_matches.value_of("band").unwrap().to_string(),
         geohash: fill_matches.value_of("geohash").unwrap().to_string(),
         platform: fill_matches.value_of("platform").unwrap().to_string(),
@@ -53,13 +53,12 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     };
  
     // initialize request
-    let request = Request::new(BroadcastRequest {
-        message_type: BroadcastType::Fill as i32,
+    let request = Request::new(DataBroadcastRequest {
+        message_type: DataBroadcastType::Fill as i32,
         fill_request: Some(fill_request),
         list_request: None,
         search_request: None,
         split_request: None,
-        task_list_request: None,
     });
 
     // retrieve reply
@@ -91,8 +90,8 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
         _ => unimplemented!(),
     };
 
-    // initialize request
-    let request = Request::new(LoadRequest {
+    // initialize DataLoadRequest
+    let request = Request::new(DataLoadRequest {
         directory: load_matches.value_of("DIRECTORY").unwrap().to_string(),
         load_format: load_format,
         precision: load_matches.value_of("precision")
@@ -120,8 +119,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize ListRequest
-    let list_request = ListRequest {
+    // initialize DataListRequest
+    let list_request = DataListRequest {
         band: list_matches.value_of("band").unwrap().to_string(),
         dataset: list_matches.value_of("dataset").unwrap().to_string(),
         geohash: list_matches.value_of("geohash").unwrap().to_string(),
@@ -129,13 +128,12 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // initialize request
-    let request = Request::new(BroadcastRequest {
-        message_type: BroadcastType::List as i32,
+    let request = Request::new(DataBroadcastRequest {
+        message_type: DataBroadcastType::List as i32,
         fill_request: None,
         list_request: Some(list_request),
         search_request: None,
         split_request: None,
-        task_list_request: None,
     });
 
     // retrieve reply
@@ -168,8 +166,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize SearchRequest
-    let search_request = SearchRequest {
+    // initialize DataSearchRequest
+    let search_request = DataSearchRequest {
         band: search_matches.value_of("band").unwrap().to_string(),
         dataset: search_matches.value_of("dataset").unwrap().to_string(),
         geohash: search_matches.value_of("geohash").unwrap().to_string(),
@@ -177,13 +175,12 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // initialize request
-    let request = Request::new(BroadcastRequest {
-        message_type: BroadcastType::Search as i32,
+    let request = Request::new(DataBroadcastRequest {
+        message_type: DataBroadcastType::Search as i32,
         fill_request: None,
         list_request: None,
         search_request: Some(search_request),
         split_request: None,
-        task_list_request: None,
     });
 
     // retrieve reply
@@ -242,8 +239,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize SplitRequest
-    let split_request = SplitRequest {
+    // initialize DataSplitRequest
+    let split_request = DataSplitRequest {
         band: split_matches.value_of("band").unwrap().to_string(),
         geohash: split_matches.value_of("geohash").unwrap().to_string(),
         platform: split_matches.value_of("platform").unwrap().to_string(),
@@ -254,13 +251,12 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // initialize request
-    let request = Request::new(BroadcastRequest {
-        message_type: BroadcastType::Split as i32,
+    let request = Request::new(DataBroadcastRequest {
+        message_type: DataBroadcastType::Split as i32,
         fill_request: None,
         list_request: None,
         search_request: None,
         split_request: Some(split_request),
-        task_list_request: None,
     });
 
     // retrieve reply

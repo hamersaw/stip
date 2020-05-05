@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{BroadcastRequest, BroadcastType, DataManagementClient, TaskListRequest, TaskShowRequest, TaskStatus};
+use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskManagementClient, TaskListRequest, TaskShowRequest, TaskStatus};
 use tonic::Request;
 
 use std::{error, io};
@@ -28,17 +28,13 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = TaskManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
-    let request = Request::new(BroadcastRequest {
-        message_type: BroadcastType::TaskList as i32,
-        fill_request: None,
-        list_request: None,
-        search_request: None,
-        split_request: None,
-        task_list_request: Some(TaskListRequest {}),
+    let request = Request::new(TaskBroadcastRequest {
+        message_type: TaskBroadcastType::TaskList as i32,
+        list_request: Some(TaskListRequest {}),
     });
 
     // retrieve reply
@@ -49,7 +45,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     println!("{:<12}{:<12}{:<24}{:<8}", "node_id",
         "task_id", "completion percent", "status");
     println!("------------------------------------------------------------");
-    for (node_id, task_list_reply) in reply.task_list_replies.iter() {
+    for (node_id, task_list_reply) in reply.list_replies.iter() {
         for task in task_list_reply.tasks.iter() {
             println!("{:<12}{:<12}{:<24}{:<8}", node_id, task.id,
                 task.completion_percent, convert_status(task.status));
@@ -65,7 +61,7 @@ async fn show(matches: &ArgMatches, _: &ArgMatches,
     // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = TaskManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
@@ -75,7 +71,7 @@ async fn show(matches: &ArgMatches, _: &ArgMatches,
     });
 
     // retrieve reply
-    let reply = client.task_show(request).await?;
+    let reply = client.show(request).await?;
     let reply = reply.get_ref();
 
     // print information
