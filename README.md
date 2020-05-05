@@ -3,12 +3,12 @@
 A distributed spatiotemporal image management framework designed specifically for training neural networks.
 
 ## TODO
-- instead of using .meta file -> add metadata attribute to GeoTiff
-- abstract some task functionality - lots of code copies
-- add 'min_coverage' field to 'data search' command
+- abstract task functionality - lots of code copies
+- image replication? - one replica on geohash of length (x - 1)
 - improve node logging
-- image replication?
+- use GeoTiff metadata attributes instead of .meta files
 #### COMMANDS 
-- compute cloud coverage on images
-- data merge?
-- stop task functionality?
+- 'cloud coverage' - computation on images
+- 'data merge'?
+- 'data search' - add coverage (pixel and cloud) filters
+- 'task stop'?
