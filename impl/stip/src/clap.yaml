@@ -72,12 +72,6 @@ subcommands:
                         long: band
                         short: b
                         takes_value: true
-                    - dataset:
-                        default_value: "*"
-                        help: image dataset
-                        long: dataset
-                        short: d
-                        takes_value: true
                     - geohash:
                         default_value: ""
                         help: image geohash boundary
@@ -89,6 +83,12 @@ subcommands:
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p
+                        takes_value: true
+                    - source:
+                        default_value: "*"
+                        help: image source
+                        long: source
+                        short: s
                         takes_value: true
             - load:
                 about: initialize load data task
@@ -125,12 +125,6 @@ subcommands:
                         long: band
                         short: b
                         takes_value: true
-                    - dataset:
-                        default_value: "*"
-                        help: image dataset
-                        long: dataset
-                        short: d
-                        takes_value: true
                     - geohash:
                         default_value: ""
                         help: image geohash boundary
@@ -142,6 +136,12 @@ subcommands:
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p
+                        takes_value: true
+                    - source:
+                        default_value: "*"
+                        help: image soure
+                        long: source
+                        short: s
                         takes_value: true
             - split:
                 about: split images with a new geohash precision

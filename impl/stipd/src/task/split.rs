@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
 
-use crate::image::{ImageManager, ImageMetadata, RAW_DATASET};
+use crate::image::{ImageManager, ImageMetadata, RAW_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -42,7 +42,7 @@ impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let base_records = self.image_manager.search(&self.band,
-            RAW_DATASET, &self.geohash, &self.platform, false)?;
+            &self.geohash, &self.platform, false, RAW_SOURCE)?;
 
         let records: Vec<ImageMetadata> = base_records.into_iter()
             .filter(|x| x.geohash.len() < self.precision as usize).collect();

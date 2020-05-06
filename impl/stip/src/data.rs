@@ -122,9 +122,9 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataListRequest
     let list_request = DataListRequest {
         band: list_matches.value_of("band").unwrap().to_string(),
-        dataset: list_matches.value_of("dataset").unwrap().to_string(),
         geohash: list_matches.value_of("geohash").unwrap().to_string(),
         platform: list_matches.value_of("platform").unwrap().to_string(),
+        source: list_matches.value_of("source").unwrap().to_string(),
     };
 
     // initialize request
@@ -143,13 +143,13 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     // print information
     println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}",
         "node_id", "path", "platform", "geohash", "band",
-        "dataset", "pixel_coverage", "cloud_coverage");
+        "source", "pixel_coverage", "cloud_coverage");
     println!("------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for (node_id, list_reply) in reply.list_replies.iter() {
         for image in list_reply.images.iter() {
             println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}", 
                 node_id, image.path, image.platform,
-                image.geohash, image.band, image.dataset,
+                image.geohash, image.band, image.source,
                 image.pixel_coverage, image.cloud_coverage);
         }
     }
@@ -169,9 +169,9 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataSearchRequest
     let search_request = DataSearchRequest {
         band: search_matches.value_of("band").unwrap().to_string(),
-        dataset: search_matches.value_of("dataset").unwrap().to_string(),
         geohash: search_matches.value_of("geohash").unwrap().to_string(),
         platform: search_matches.value_of("platform").unwrap().to_string(),
+        source: search_matches.value_of("source").unwrap().to_string(),
     };
 
     // initialize request
@@ -197,11 +197,11 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             let band_map = geohash_map.entry(
                 extent.geohash.clone()).or_insert(BTreeMap::new());
 
-            let dataset_map = band_map.entry(extent.band.clone())
+            let source_map = band_map.entry(extent.band.clone())
                 .or_insert(BTreeMap::new());
 
-            let count_map = dataset_map.entry(
-                extent.dataset.clone()).or_insert(BTreeMap::new());
+            let count_map = source_map.entry(
+                extent.source.clone()).or_insert(BTreeMap::new());
 
             let count = count_map.entry(extent.precision)
                 .or_insert(0);
@@ -211,15 +211,15 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // print summarized data
     println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}", "platform",
-        "geohash", "band", "dataset", "precision", "count");
+        "geohash", "band", "source", "precision", "count");
     println!("--------------------------------------------------------------------");
     for (platform, geohash_map) in platform_map.iter() {
         for (geohash, band_map) in geohash_map.iter() {
-            for (band, dataset_map) in band_map.iter() {
-                for (dataset, count_map) in dataset_map.iter() {
+            for (band, source_map) in band_map.iter() {
+                for (source, count_map) in source_map.iter() {
                     for (precision, count) in count_map.iter() {
                         println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}",
-                            platform, geohash, band, dataset,
+                            platform, geohash, band, source,
                             precision, count);
                     }
                 }

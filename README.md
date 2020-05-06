@@ -7,6 +7,7 @@ A distributed spatiotemporal image management framework designed specifically fo
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
 - use GeoTiff metadata attributes instead of .meta files
+    - maybe instead use a secondary index?
 #### COMMANDS 
 - 'cloud coverage' - computation on images
 - 'data merge'?

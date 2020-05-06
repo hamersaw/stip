@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # check arguments
-if [ $# != 0 ]
-then
+if [ $# != 0 ]; then
     echo "usage: $(basename $0)"
     exit
 fi

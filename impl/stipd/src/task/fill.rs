@@ -1,6 +1,6 @@
 use gdal::raster::Dataset;
 
-use crate::image::{FILLED_DATASET, ImageManager, ImageMetadata, RAW_DATASET};
+use crate::image::{FILLED_SOURCE, ImageManager, ImageMetadata, RAW_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;
@@ -37,7 +37,7 @@ impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let images = self.image_manager.search(&self.band,
-            RAW_DATASET, &self.geohash, &self.platform, false)?;
+            &self.geohash, &self.platform, false, RAW_SOURCE)?;
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
             .filter(|x| x.pixel_coverage != 1f32).collect();
@@ -213,7 +213,7 @@ fn process(image_manager: &Arc<ImageManager>,
 
     if pixel_coverage > image.pixel_coverage {
         image_manager.write(&image.platform, &image.geohash, 
-            &image.band, FILLED_DATASET, &tile_id, image.start_date,
+            &image.band, FILLED_SOURCE, &tile_id, image.start_date,
             image.end_date, pixel_coverage, &dataset)?;
     }
 

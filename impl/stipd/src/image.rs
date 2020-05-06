@@ -6,19 +6,19 @@ use std::ffi::CString;
 use std::fs::File;
 use std::path::PathBuf;
 
-pub const FILLED_DATASET: &'static str = "filled";
-pub const RAW_DATASET: &'static str = "raw";
+pub const FILLED_SOURCE: &'static str = "filled";
+pub const RAW_SOURCE: &'static str = "raw";
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
     pub band: String,
-    pub dataset: String,
     pub cloud_coverage: f32,
     pub end_date: i64,
     pub geohash: String,
     pub path: String,
     pub pixel_coverage: f32,
     pub platform: String,
+    pub source: String,
     pub start_date: i64,
 }
 
@@ -34,7 +34,7 @@ impl ImageManager {
     }
 
     pub fn write(&self, platform: &str, geohash: &str, band: &str, 
-            dataset: &str, tile: &str, start_date: i64, 
+            source: &str, tile: &str, start_date: i64, 
             end_date: i64, pixel_coverage: f32, image: &Dataset)
             -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/band/dataset'
@@ -42,7 +42,7 @@ impl ImageManager {
         path.push(platform);
         path.push(geohash);
         path.push(band);
-        path.push(dataset);
+        path.push(source);
 
         std::fs::create_dir_all(&path)?;
 
@@ -83,8 +83,8 @@ impl ImageManager {
         Ok(())
     }
 
-    pub fn search(&self, band: &str, dataset: &str,
-            geohash: &str, platform: &str, recurse: bool)
+    pub fn search(&self, band: &str, geohash: &str,
+            platform: &str, recurse: bool, source: &str)
             -> Result<Vec<ImageMetadata>, Box<dyn Error>> {
         // compile glob file search regex
         let recurse_geohash = match recurse {
@@ -94,7 +94,7 @@ impl ImageManager {
         
         let directory = format!("{}/{}/{}/{}/{}/*meta",
             self.directory.to_string_lossy(), platform,
-            recurse_geohash, band, dataset);
+            recurse_geohash, band, source);
 
         // search for metadata files
         let mut vec = Vec::new();
@@ -112,8 +112,8 @@ impl ImageManager {
             path.set_extension("tif");
             let path_str = path.to_string_lossy().to_string();
             let _ = path.pop();
-            let dataset = path.file_name()
-                .ok_or("dataset not found in path")?
+            let source = path.file_name()
+                .ok_or("source not found in path")?
                 .to_string_lossy().to_string();
             let _ = path.pop();
             let band = path.file_name()
@@ -132,12 +132,12 @@ impl ImageManager {
             let image_metadata = ImageMetadata {
                 band: band,
                 cloud_coverage: cloud_coverage,
-                dataset: dataset,
                 end_date: end_date,
                 geohash: geohash,
                 path: path_str,
                 pixel_coverage: pixel_coverage,
                 platform: platform,
+                source: source,
                 start_date: start_date,
             };
 

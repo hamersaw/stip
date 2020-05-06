@@ -133,17 +133,17 @@ impl DataManagement for DataManagementImpl {
 
         // search for the requested images - TODO error
         let images = self.image_manager.search(&request.band,
-                &request.dataset, &request.geohash,
-                &request.platform, false).unwrap().iter()
+                &request.geohash, &request.platform,
+                false, &request.source).unwrap().iter()
             .map(|x| Image {
                 band: x.band.clone(),
                 cloud_coverage: x.cloud_coverage,
-                dataset: x.dataset.clone(),
                 end_date: x.end_date,
                 geohash: x.geohash.clone(),
                 path: x.path.clone(),
                 pixel_coverage: x.pixel_coverage,
                 platform: x.platform.clone(),
+                source: x.source.clone(),
                 start_date: x.start_date,
             }).collect();
 
@@ -192,8 +192,8 @@ impl DataManagement for DataManagementImpl {
 
         // search for the requested images - TODO error
         let images = self.image_manager.search(&request.band,
-                &request.dataset, &request.geohash,
-                &request.platform, true).unwrap();
+                &request.geohash, &request.platform,
+                true, &request.source).unwrap();
 
         // compile extents
         let mut platform_map = HashMap::new();
@@ -206,11 +206,11 @@ impl DataManagement for DataManagementImpl {
             let band_map = geohash_map.entry(geohash)
                 .or_insert(HashMap::new());
 
-            let dataset_map = band_map.entry(image.band.clone())
+            let source_map = band_map.entry(image.band.clone())
                 .or_insert(HashMap::new());
 
-            let count_map = dataset_map.entry(
-                image.dataset.clone()).or_insert(HashMap::new());
+            let count_map = source_map.entry(
+                image.source.clone()).or_insert(HashMap::new());
 
             let count = count_map.entry(image.geohash.len())
                 .or_insert(0);
@@ -221,16 +221,16 @@ impl DataManagement for DataManagementImpl {
         let mut extents = Vec::new();
         for (platform, geohash_map) in platform_map.iter() {
             for (geohash, band_map) in geohash_map.iter() {
-                for (band, dataset_map) in band_map.iter() {
-                    for (dataset, count_map) in dataset_map.iter() {
+                for (band, source_map) in band_map.iter() {
+                    for (source, count_map) in source_map.iter() {
                         for (precision, count) in count_map.iter() {
                             extents.push(Extent {
                                 band: band.clone(),
                                 count: *count,
-                                dataset: dataset.clone(),
                                 geohash: geohash.clone(),
                                 platform: platform.clone(),
                                 precision: *precision as u32,
+                                source: source.clone(),
                             });
                         }
                     }

@@ -4,7 +4,7 @@ use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::image::{RAW_DATASET, ImageManager};
+use crate::image::{RAW_SOURCE, ImageManager};
 
 use std::error::Error;
 use std::io::{Read, Write};
@@ -67,7 +67,7 @@ impl StreamHandler for TransferStreamHandler {
 
                 // write image using ImageManager
                 self.image_manager.write(&platform, &geohash,
-                    &band, RAW_DATASET, &tile, start_date,
+                    &band, RAW_SOURCE, &tile, start_date,
                     end_date, pixel_coverage, &image)?;
             },
             None => return Err(Box::new(std::io::Error::new(

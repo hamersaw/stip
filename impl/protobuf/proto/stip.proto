@@ -85,20 +85,20 @@ message DataFillReply {
 message Image {
     string band = 1;
     float cloudCoverage = 2;
-    string dataset = 3;
-    int64 endDate = 4;
-    string geohash = 5;
-    string path = 6;
-    float pixelCoverage = 7;
-    string platform = 8;
+    int64 endDate = 3;
+    string geohash = 4;
+    string path = 5;
+    float pixelCoverage = 6;
+    string platform = 7;
+    string source = 8;
     int64 startDate = 9;
 }
 
 message DataListRequest {
     string band = 1;
-    string dataset = 2;
-    string geohash = 3;
-    string platform = 4;
+    string geohash = 2;
+    string platform = 3;
+    string source = 4;
 }
 
 message DataListReply {
@@ -126,17 +126,17 @@ message DataLoadReply {
 message Extent {
     string band = 1;
     uint32 count = 2;
-    string dataset = 3;
-    string geohash = 4;
-    string platform = 5;
-    uint32 precision = 6;
+    string geohash = 3;
+    string platform = 4;
+    uint32 precision = 5;
+    string source = 6;
 }
 
 message DataSearchRequest {
     string band = 1;
-    string dataset = 2;
-    string geohash = 3;
-    string platform = 4;
+    string geohash = 2;
+    string platform = 3;
+    string source = 4;
 }
 
 message DataSearchReply {
