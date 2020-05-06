@@ -34,19 +34,16 @@ subcommands:
                 about: initialize fill data task
                 args:
                     - band:
-                        default_value: "*"
                         help: image band
                         long: band
                         short: b
                         takes_value: true
                     - geohash:
-                        default_value: ""
                         help: image geohash boundary
                         long: geohash
                         short: g
                         takes_value: true
                     - platform:
-                        default_value: "*"
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p
@@ -67,25 +64,21 @@ subcommands:
                 about: list images for the specified criteria
                 args:
                     - band:
-                        default_value: "*"
                         help: image band
                         long: band
                         short: b
                         takes_value: true
                     - geohash:
-                        default_value: ""
                         help: image geohash boundary
                         long: geohash
                         short: g
                         takes_value: true
                     - platform:
-                        default_value: "*"
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p
                         takes_value: true
                     - source:
-                        default_value: "*"
                         help: image source
                         long: source
                         short: s
@@ -120,25 +113,21 @@ subcommands:
                 about: search for images
                 args:
                     - band:
-                        default_value: "*"
                         help: image band
                         long: band
                         short: b
                         takes_value: true
                     - geohash:
-                        default_value: ""
                         help: image geohash boundary
                         long: geohash
                         short: g
                         takes_value: true
                     - platform:
-                        default_value: "*"
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p
                         takes_value: true
                     - source:
-                        default_value: "*"
                         help: image soure
                         long: source
                         short: s
@@ -147,19 +136,16 @@ subcommands:
                 about: split images with a new geohash precision
                 args:
                     - band:
-                        default_value: "*"
                         help: image band
                         long: band
                         short: b
                         takes_value: true
                     - geohash:
-                        default_value: ""
                         help: image geohash boundary
                         long: geohash
                         short: g
                         takes_value: true
                     - platform:
-                        default_value: "*"
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p

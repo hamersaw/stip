@@ -43,9 +43,9 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataFillRequest
     let fill_request = DataFillRequest {
-        band: fill_matches.value_of("band").unwrap().to_string(),
-        geohash: fill_matches.value_of("geohash").unwrap().to_string(),
-        platform: fill_matches.value_of("platform").unwrap().to_string(),
+        band: crate::opt(fill_matches.value_of("band")),
+        geohash: crate::opt(fill_matches.value_of("geohash")),
+        platform: crate::opt(fill_matches.value_of("platform")),
         thread_count: fill_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
         window_seconds: fill_matches.value_of("window_seconds")
@@ -121,10 +121,10 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataListRequest
     let list_request = DataListRequest {
-        band: list_matches.value_of("band").unwrap().to_string(),
-        geohash: list_matches.value_of("geohash").unwrap().to_string(),
-        platform: list_matches.value_of("platform").unwrap().to_string(),
-        source: list_matches.value_of("source").unwrap().to_string(),
+        band: crate::opt(list_matches.value_of("band")),
+        geohash: crate::opt(list_matches.value_of("geohash")),
+        platform: crate::opt(list_matches.value_of("platform")),
+        source: crate::opt(list_matches.value_of("source")),
     };
 
     // initialize request
@@ -147,7 +147,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     println!("------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for (node_id, list_reply) in reply.list_replies.iter() {
         for image in list_reply.images.iter() {
-            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}", 
+            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16?}", 
                 node_id, image.path, image.platform,
                 image.geohash, image.band, image.source,
                 image.pixel_coverage, image.cloud_coverage);
@@ -168,10 +168,10 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataSearchRequest
     let search_request = DataSearchRequest {
-        band: search_matches.value_of("band").unwrap().to_string(),
-        geohash: search_matches.value_of("geohash").unwrap().to_string(),
-        platform: search_matches.value_of("platform").unwrap().to_string(),
-        source: search_matches.value_of("source").unwrap().to_string(),
+        band: crate::opt(search_matches.value_of("band")),
+        geohash: crate::opt(search_matches.value_of("geohash")),
+        platform: crate::opt(search_matches.value_of("platform")),
+        source: crate::opt(search_matches.value_of("source")),
     };
 
     // initialize request
@@ -241,9 +241,9 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataSplitRequest
     let split_request = DataSplitRequest {
-        band: split_matches.value_of("band").unwrap().to_string(),
-        geohash: split_matches.value_of("geohash").unwrap().to_string(),
-        platform: split_matches.value_of("platform").unwrap().to_string(),
+        band: crate::opt(split_matches.value_of("band")),
+        geohash: crate::opt(split_matches.value_of("geohash")),
+        platform: crate::opt(split_matches.value_of("platform")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
         thread_count: split_matches.value_of("thread_count")

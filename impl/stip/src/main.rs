@@ -21,3 +21,10 @@ fn main() {
         (cmd, _) => println!("unknown subcommand '{}'", cmd),
     }
 }
+
+fn opt(value: Option<&str>) -> Option<String> {
+    match value {
+        Some(value) => Some(value.to_string()),
+        None => None,
+    }
+}

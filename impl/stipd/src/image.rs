@@ -200,23 +200,4 @@ impl ImageManager {
 
         images
     }
-
-    //pub fn search(&self, band: &str, geohash: &str,
-    //        platform: &str, recurse: bool, source: &str)
-    //        -> Result<Vec<ImageMetadata>, Box<dyn Error>> {
-        // compile glob file search regex
-        //let recurse_geohash = match recurse {
-        //    true => format!("{}*", geohash),
-        //    false => geohash.to_string(),
-        //};
-        
-        //let directory = format!("{}/{}/{}/{}/{}/*tif",
-        //    self.directory.to_string_lossy(), platform,
-        //    recurse_geohash, band, source);
-
-        // TODO - search for metadata files
-    //    let mut vec = Vec::new();
-
-    //    Ok(vec)
-    //}
 }
