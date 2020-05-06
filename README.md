@@ -6,7 +6,7 @@ A distributed spatiotemporal image management framework designed specifically fo
 - abstract task functionality - lots of code copies
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
-- __use an in-memory index instead of globbing .meta files__
+- __use an in-memory index instead of globbing .tif files__
 #### COMMANDS 
 - 'cloud coverage' - computation on images
 - __'data load' - implement for NAIP dataset__

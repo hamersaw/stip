@@ -9,7 +9,7 @@ use crate::image::{RAW_SOURCE, ImageManager};
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::{TcpStream, SocketAddr};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(FromPrimitive)]
 enum TransferOp {
@@ -18,11 +18,12 @@ enum TransferOp {
 }
 
 pub struct TransferStreamHandler {
-    image_manager: Arc<ImageManager>,
+    image_manager: Arc<RwLock<ImageManager>>,
 }
 
 impl TransferStreamHandler {
-    pub fn new(image_manager: Arc<ImageManager>) -> TransferStreamHandler {
+    pub fn new(image_manager: Arc<RwLock<ImageManager>>)
+            -> TransferStreamHandler {
         TransferStreamHandler {
             image_manager: image_manager,
         }
@@ -66,7 +67,9 @@ impl StreamHandler for TransferStreamHandler {
                 let mut dataset = st_image::prelude::read(stream)?;
 
                 // write image using ImageManager
-                self.image_manager.write(&platform, &geohash,
+                let mut image_manager =
+                    self.image_manager.write().unwrap();
+                image_manager.write(&platform, &geohash,
                     &band, RAW_SOURCE, &tile, start_date,
                     end_date, pixel_coverage, &mut dataset)?;
             },

@@ -12,13 +12,14 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 pub struct DataManagementImpl {
-    image_manager: Arc<ImageManager>,
+    image_manager: Arc<RwLock<ImageManager>>,
     dht: Arc<RwLock<Dht>>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl DataManagementImpl {
-    pub fn new(dht: Arc<RwLock<Dht>>, image_manager: Arc<ImageManager>,
+    pub fn new(dht: Arc<RwLock<Dht>>,
+            image_manager: Arc<RwLock<ImageManager>>,
             task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
         DataManagementImpl {
             dht: dht,
@@ -131,21 +132,24 @@ impl DataManagement for DataManagementImpl {
         trace!("DataListRequest: {:?}", request);
         let request = request.get_ref();
 
-        // search for the requested images - TODO error
-        let images = self.image_manager.search(&request.band,
-                &request.geohash, &request.platform,
-                false, &request.source).unwrap().iter()
-            .map(|x| Image {
-                band: x.band.clone(),
-                cloud_coverage: x.cloud_coverage,
-                end_date: x.end_date,
-                geohash: x.geohash.clone(),
-                path: x.path.clone(),
-                pixel_coverage: x.pixel_coverage,
-                platform: x.platform.clone(),
-                source: x.source.clone(),
-                start_date: x.start_date,
-            }).collect();
+        // search for the requested images
+        let images = {
+            let image_manager = self.image_manager.read().unwrap();
+            image_manager.search(&request.band,
+                    &request.geohash, &request.platform,
+                    false, &request.source).iter()
+                .map(|x| Image {
+                    band: x.band.clone(),
+                    cloud_coverage: x.cloud_coverage,
+                    end_date: x.end_date,
+                    geohash: x.geohash.clone(),
+                    path: x.path.clone(),
+                    pixel_coverage: x.pixel_coverage,
+                    platform: x.platform.clone(),
+                    source: x.source.clone(),
+                    start_date: x.start_date,
+                }).collect()
+        };
 
         // initialize reply
         let reply = DataListReply {
@@ -191,13 +195,17 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // search for the requested images - TODO error
-        let images = self.image_manager.search(&request.band,
-                &request.geohash, &request.platform,
-                true, &request.source).unwrap();
+        let image_manager = self.image_manager.read().unwrap();
+        let images = image_manager.search(&request.band,
+            &request.geohash, &request.platform, true, &request.source);
 
         // compile extents
         let mut platform_map = HashMap::new();
-        let precision = request.geohash.len() + 1;
+        let precision = match &request.geohash {
+            Some(geohash) => geohash.len() + 1,
+            None => 1,
+        };
+
         for image in images {
             let geohash_map = platform_map.entry(
                 image.platform.clone()).or_insert(HashMap::new());

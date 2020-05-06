@@ -13,18 +13,19 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct SplitTask {
-    band: String,
+    band: Option<String>,
     dht: Arc<RwLock<Dht>>,
-    geohash: String,
-    image_manager: Arc<ImageManager>,
-    platform: String,
+    geohash: Option<String>,
+    image_manager: Arc<RwLock<ImageManager>>,
+    platform: Option<String>,
     precision: usize,
     thread_count: u8,
 }
 
 impl SplitTask {
-    pub fn new(band: String, dht: Arc<RwLock<Dht>>, geohash: String,
-            image_manager: Arc<ImageManager>, platform: String,
+    pub fn new(band: Option<String>, dht: Arc<RwLock<Dht>>, 
+            geohash: Option<String>,
+            image_manager: Arc<RwLock<ImageManager>>, platform: Option<String>, 
             precision: usize, thread_count: u8) -> SplitTask {
         SplitTask {
             band: band,
@@ -41,8 +42,13 @@ impl SplitTask {
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let base_records = self.image_manager.search(&self.band,
-            &self.geohash, &self.platform, false, RAW_SOURCE)?;
+        let base_records: Vec<ImageMetadata> = {
+            let image_manager = self.image_manager.read().unwrap();
+            let images = image_manager.search(&self.band, &self.geohash,
+                &self.platform, false, &Some(RAW_SOURCE.to_string()));
+
+            images.into_iter().map(|x| x.clone()).collect()
+        };
 
         let records: Vec<ImageMetadata> = base_records.into_iter()
             .filter(|x| x.geohash.len() < self.precision as usize).collect();

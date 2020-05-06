@@ -10,18 +10,19 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct FillTask {
-    band: String,
-    geohash: String,
-    image_manager: Arc<ImageManager>,
-    platform: String,
+    band: Option<String>,
+    geohash: Option<String>,
+    image_manager: Arc<RwLock<ImageManager>>,
+    platform: Option<String>,
     thread_count: u8,
     window_seconds: i64,
 }
 
 impl FillTask {
-    pub fn new(band: String, geohash: String,
-            image_manager: Arc<ImageManager>, platform: String,
-            thread_count: u8, window_seconds: i64) -> FillTask {
+    pub fn new(band: Option<String>, geohash: Option<String>,
+            image_manager: Arc<RwLock<ImageManager>>,
+            platform: Option<String>, thread_count: u8,
+            window_seconds: i64) -> FillTask {
         FillTask {
             band: band,
             geohash: geohash,
@@ -36,8 +37,13 @@ impl FillTask {
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let images = self.image_manager.search(&self.band,
-            &self.geohash, &self.platform, false, RAW_SOURCE)?;
+        let images: Vec<ImageMetadata> = {
+            let image_manager = self.image_manager.read().unwrap();
+            let images = image_manager.search(&self.band, &self.geohash,
+                &self.platform, false, &Some(RAW_SOURCE.to_string()));
+
+            images.into_iter().map(|x| x.clone()).collect()
+        };
 
         let mut filter_images: Vec<&ImageMetadata> = images.iter()
             .filter(|x| x.pixel_coverage != 1f32).collect();
@@ -185,7 +191,7 @@ impl Task for FillTask {
     }
 }
 
-fn process(image_manager: &Arc<ImageManager>,
+fn process(image_manager: &Arc<RwLock<ImageManager>>,
         record: &Vec<ImageMetadata>) -> Result<(), Box<dyn Error>> {
     // read datasets
     let mut datasets = Vec::new();
@@ -212,6 +218,7 @@ fn process(image_manager: &Arc<ImageManager>,
     let pixel_coverage = st_image::coverage(&dataset).unwrap() as f32;
 
     if pixel_coverage > image.pixel_coverage {
+        let mut image_manager = image_manager.write().unwrap();
         image_manager.write(&image.platform, &image.geohash, 
             &image.band, FILLED_SOURCE, &tile_id, image.start_date,
             image.end_date, pixel_coverage, &mut dataset)?;
