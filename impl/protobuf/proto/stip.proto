@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 
 package stip;
 
@@ -12,9 +12,9 @@ service ClusterManagement {
 
 // Node Messages
 message Node {
-    uint32 id = 1;
-    string rpcAddr = 2;
-    string xferAddr = 3;
+    required uint32 id = 1;
+    required string rpcAddr = 2;
+    required string xferAddr = 3;
 }
 
 message NodeListRequest {
@@ -25,11 +25,11 @@ message NodeListReply {
 }
 
 message NodeShowRequest {
-    uint32 id = 1;
+    required uint32 id = 1;
 }
 
 message NodeShowReply {
-    Node node = 1;
+    optional Node node = 1;
 }
 
 /*
@@ -53,15 +53,15 @@ enum DataBroadcastType {
 }
 
 message DataBroadcastRequest {
-    DataBroadcastType messageType = 1;    
-    DataFillRequest fillRequest = 2;
-    DataListRequest listRequest = 3;
-    DataSearchRequest searchRequest = 4;
-    DataSplitRequest splitRequest = 5;
+    required DataBroadcastType messageType = 1;    
+    optional DataFillRequest fillRequest = 2;
+    optional DataListRequest listRequest = 3;
+    optional DataSearchRequest searchRequest = 4;
+    optional DataSplitRequest splitRequest = 5;
 }
 
 message DataBroadcastReply {
-    DataBroadcastType messageType = 1;    
+    required DataBroadcastType messageType = 1;    
     map<uint32, DataFillReply> fillReplies = 2;
     map<uint32, DataListReply> listReplies = 3;
     map<uint32, DataSearchReply> searchReplies = 4;
@@ -70,35 +70,35 @@ message DataBroadcastReply {
 
 // Fill Messages
 message DataFillRequest {
-    string band = 1;
-    string geohash = 2;
-    string platform = 3;
-    uint32 threadCount = 4;
-    int64 windowSeconds = 5;
+    optional string band = 1;
+    optional string geohash = 2;
+    optional string platform = 3;
+    required uint32 threadCount = 4;
+    required int64 windowSeconds = 5;
 }
 
 message DataFillReply {
-    uint64 taskId = 1;
+    required uint64 taskId = 1;
 }
 
 // List Messages
 message Image {
-    string band = 1;
-    float cloudCoverage = 2;
-    int64 endDate = 3;
-    string geohash = 4;
-    string path = 5;
-    float pixelCoverage = 6;
-    string platform = 7;
-    string source = 8;
-    int64 startDate = 9;
+    required string band = 1;
+    optional float cloudCoverage = 2;
+    required int64 endDate = 3;
+    required string geohash = 4;
+    required string path = 5;
+    required float pixelCoverage = 6;
+    required string platform = 7;
+    required string source = 8;
+    required int64 startDate = 9;
 }
 
 message DataListRequest {
-    string band = 1;
-    string geohash = 2;
-    string platform = 3;
-    string source = 4;
+    optional string band = 1;
+    optional string geohash = 2;
+    optional string platform = 3;
+    optional string source = 4;
 }
 
 message DataListReply {
@@ -112,31 +112,31 @@ enum LoadFormat {
 }
 
 message DataLoadRequest {
-    string directory = 1;
-    LoadFormat loadFormat = 2;
-    uint32 precision = 3;
-    uint32 threadCount = 4;
+    required string directory = 1;
+    required LoadFormat loadFormat = 2;
+    required uint32 precision = 3;
+    required uint32 threadCount = 4;
 }
 
 message DataLoadReply {
-    uint64 task_id = 1;
+    required uint64 task_id = 1;
 }
 
 // Search Messages
 message Extent {
-    string band = 1;
-    uint32 count = 2;
-    string geohash = 3;
-    string platform = 4;
-    uint32 precision = 5;
-    string source = 6;
+    required string band = 1;
+    required uint32 count = 2;
+    required string geohash = 3;
+    required string platform = 4;
+    required uint32 precision = 5;
+    required string source = 6;
 }
 
 message DataSearchRequest {
-    string band = 1;
-    string geohash = 2;
-    string platform = 3;
-    string source = 4;
+    optional string band = 1;
+    optional string geohash = 2;
+    optional string platform = 3;
+    optional string source = 4;
 }
 
 message DataSearchReply {
@@ -145,15 +145,15 @@ message DataSearchReply {
 
 // Split Messages
 message DataSplitRequest {
-    string band = 1;
-    string geohash = 2;
-    string platform = 3;
-    uint32 precision = 4;
-    uint32 threadCount = 5;
+    optional string band = 1;
+    optional string geohash = 2;
+    optional string platform = 3;
+    required uint32 precision = 4;
+    required uint32 threadCount = 5;
 }
 
 message DataSplitReply {
-    uint64 taskId = 1;
+    required uint64 taskId = 1;
 }
 
 /*
@@ -171,20 +171,20 @@ enum TaskBroadcastType {
 }
 
 message TaskBroadcastRequest {
-    TaskBroadcastType messageType = 1;    
-    TaskListRequest listRequest = 2;
+    required TaskBroadcastType messageType = 1;    
+    optional TaskListRequest listRequest = 2;
 }
 
 message TaskBroadcastReply {
-    TaskBroadcastType messageType = 1;    
+    required TaskBroadcastType messageType = 1;    
     map<uint32, TaskListReply> listReplies = 2;
 }
 
 // Task Messages
 message Task {
-    uint64 id = 1;    
-    float completion_percent = 2;
-    TaskStatus status = 3;
+    required uint64 id = 1;    
+    required float completion_percent = 2;
+    required TaskStatus status = 3;
 }
 
 enum TaskStatus {
@@ -201,9 +201,9 @@ message TaskListReply {
 }
 
 message TaskShowRequest {
-    uint64 id = 1;
+    required uint64 id = 1;
 }
 
 message TaskShowReply {
-    Task task = 1;
+    optional Task task = 1;
 }
