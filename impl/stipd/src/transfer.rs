@@ -63,12 +63,12 @@ impl StreamHandler for TransferStreamHandler {
                 let pixel_coverage = stream.read_f32::<BigEndian>()?;
 
                 // read image
-                let image = st_image::prelude::read(stream)?;
+                let mut dataset = st_image::prelude::read(stream)?;
 
                 // write image using ImageManager
                 self.image_manager.write(&platform, &geohash,
                     &band, RAW_SOURCE, &tile, start_date,
-                    end_date, pixel_coverage, &image)?;
+                    end_date, pixel_coverage, &mut dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,

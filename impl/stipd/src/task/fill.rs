@@ -203,7 +203,7 @@ fn process(image_manager: &Arc<ImageManager>,
     }
 
     // perform fill - TODO error
-    let dataset = st_image::prelude::fill(&datasets).unwrap();
+    let mut dataset = st_image::prelude::fill(&datasets).unwrap();
 
     // write mem_dataset - TODO error
     let image = &record[0];
@@ -214,7 +214,7 @@ fn process(image_manager: &Arc<ImageManager>,
     if pixel_coverage > image.pixel_coverage {
         image_manager.write(&image.platform, &image.geohash, 
             &image.band, FILLED_SOURCE, &tile_id, image.start_date,
-            image.end_date, pixel_coverage, &dataset)?;
+            image.end_date, pixel_coverage, &mut dataset)?;
     }
 
     Ok(())

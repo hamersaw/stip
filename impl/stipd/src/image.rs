@@ -1,9 +1,8 @@
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 
 use std::error::Error;
 use std::ffi::CString;
-use std::fs::File;
 use std::path::PathBuf;
 
 pub const FILLED_SOURCE: &'static str = "filled";
@@ -35,7 +34,7 @@ impl ImageManager {
 
     pub fn write(&self, platform: &str, geohash: &str, band: &str, 
             source: &str, tile: &str, start_date: i64, 
-            end_date: i64, pixel_coverage: f32, image: &Dataset)
+            end_date: i64, pixel_coverage: f32, dataset: &mut Dataset)
             -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/band/dataset'
         let mut path = self.directory.clone();
@@ -48,7 +47,7 @@ impl ImageManager {
 
         path.push(tile);
         path.set_extension("tif");
-        
+
         // open GeoTiff driver
         let driver = Driver::get("GTiff").unwrap();
 
@@ -58,9 +57,9 @@ impl ImageManager {
             std::ptr::null_mut()
         ];
 
-        // TODO - error
-        let _ = image.create_copy(&driver, &path.to_string_lossy(),
-            Some(c_options.as_mut_ptr())).unwrap();
+        // TODO error
+        let mut dataset_copy = dataset.create_copy(&driver,
+            &path.to_string_lossy(), Some(c_options.as_mut_ptr())).unwrap();
 
         // clean up potential memory leaks
         unsafe {
@@ -71,14 +70,15 @@ impl ImageManager {
             }
         }
 
-        // write metadata file
-        path.set_extension("meta");
-        let mut metadata_file = File::create(&path)?;
-
-        metadata_file.write_i64::<BigEndian>(start_date)?;
-        metadata_file.write_i64::<BigEndian>(end_date)?;
-        metadata_file.write_f32::<BigEndian>(pixel_coverage)?;
-        metadata_file.write_f32::<BigEndian>(std::f32::MAX)?;
+        // set dataset metadata attributes - TODO error
+        dataset_copy.set_metadata_item("START_DATE",
+            &start_date.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("END_DATE",
+            &end_date.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("PIXEL_COVERAGE",
+            &pixel_coverage.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("CLOUD_COVERAGE",
+            &format!("{}", std::f32::MAX), "STIP").unwrap();
 
         Ok(())
     }
@@ -92,7 +92,7 @@ impl ImageManager {
             false => geohash.to_string(),
         };
         
-        let directory = format!("{}/{}/{}/{}/{}/*meta",
+        let directory = format!("{}/{}/{}/{}/{}/*tif",
             self.directory.to_string_lossy(), platform,
             recurse_geohash, band, source);
 
@@ -100,16 +100,19 @@ impl ImageManager {
         let mut vec = Vec::new();
         for entry in glob::glob(&directory)? {
             let mut path = entry?;
-            let mut file = File::open(&path)?;
+            let dataset = Dataset::open(&path).unwrap();
 
-            // read metadata from file
-            let start_date = file.read_i64::<BigEndian>()?;
-            let end_date = file.read_i64::<BigEndian>()?;
-            let pixel_coverage = file.read_f32::<BigEndian>()?;
-            let cloud_coverage = file.read_f32::<BigEndian>()?;
+            // TODO - error
+            let start_date = dataset.metadata_item("START_DATE",
+                "STIP") .unwrap().parse::<i64>()?;
+            let end_date = dataset.metadata_item("END_DATE",
+                "STIP").unwrap().parse::<i64>()?;
+            let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE",
+                "STIP").unwrap().parse::<f32>()?;
+            let cloud_coverage = dataset.metadata_item("CLOUD_COVERAGE",
+                "STIP").unwrap().parse::<f32>()?;
 
             // parse platform and geohash from path
-            path.set_extension("tif");
             let path_str = path.to_string_lossy().to_string();
             let _ = path.pop();
             let source = path.file_name()

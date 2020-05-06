@@ -6,10 +6,10 @@ A distributed spatiotemporal image management framework designed specifically fo
 - abstract task functionality - lots of code copies
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
-- use GeoTiff metadata attributes instead of .meta files
-    - maybe instead use a secondary index?
+- __use an in-memory index instead of globbing .meta files__
 #### COMMANDS 
 - 'cloud coverage' - computation on images
+- __'data load' - implement for NAIP dataset__
 - 'data merge'?
-- 'data search' - add coverage (pixel and cloud) filters
+- **'data search' - add coverage (pixel and cloud) filters**
 - 'task stop'?
