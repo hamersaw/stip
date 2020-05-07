@@ -135,9 +135,9 @@ impl DataManagement for DataManagementImpl {
         // search for the requested images
         let images = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&request.band,
-                    &request.geohash, &request.platform,
-                    false, &request.source).iter()
+            image_manager.search(&request.band, &request.geohash,
+                &request.max_cloud_coverage, &request.min_pixel_coverage,
+                &request.platform, false, &request.source).iter()
                 .map(|x| Image {
                     band: x.band.clone(),
                     cloud_coverage: x.cloud_coverage,
@@ -196,8 +196,9 @@ impl DataManagement for DataManagementImpl {
 
         // search for the requested images - TODO error
         let image_manager = self.image_manager.read().unwrap();
-        let images = image_manager.search(&request.band,
-            &request.geohash, &request.platform, true, &request.source);
+        let images = image_manager.search(&request.band, &request.geohash,
+            &request.max_cloud_coverage, &request.min_pixel_coverage,
+            &request.platform, true, &request.source);
 
         // compile extents
         let mut platform_map = HashMap::new();

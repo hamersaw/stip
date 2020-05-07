@@ -44,8 +44,9 @@ impl Task for SplitTask {
         // search for images using ImageManager
         let base_records: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            let images = image_manager.search(&self.band, &self.geohash,
-                &self.platform, false, &Some(RAW_SOURCE.to_string()));
+            let images = image_manager.search(&self.band,
+                &self.geohash, &None, &None, &self.platform,
+                false, &Some(RAW_SOURCE.to_string()));
 
             images.into_iter().map(|x| x.clone()).collect()
         };

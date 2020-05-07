@@ -164,9 +164,11 @@ impl ImageManager {
     }
 
     pub fn search(&self, band: &Option<String>,
-            geohash: &Option<String>, platform: &Option<String>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f32>,
+            min_pixel_coverage: &Option<f32>, platform: &Option<String>,
             recurse: bool, source: &Option<String>)
             -> Vec<&ImageMetadata> {
+        // TODO - rearrange filters to improve performance
         let mut images: Vec<&ImageMetadata> =
             self.images.iter().collect();
 
@@ -184,6 +186,20 @@ impl ImageManager {
                 false => images.into_iter()
                     .filter(|x| &x.geohash == geohash).collect(),
             };
+        }
+ 
+        // if exists - filter on max_cloud_coverage
+        if let Some(max_cloud_coverage) = max_cloud_coverage {
+            images = images.into_iter().filter(|x| {
+                x.cloud_coverage.is_some()
+                    && &x.cloud_coverage.unwrap() <= max_cloud_coverage
+            }).collect();
+        }
+ 
+        // if exists - filter on min_pixel_coverage
+        if let Some(min_pixel_coverage) = min_pixel_coverage {
+            images = images.into_iter().filter(|x|
+                &x.pixel_coverage >= min_pixel_coverage).collect();
         }
 
         // if exists - filter on platform

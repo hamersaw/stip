@@ -8,6 +8,5 @@ A distributed spatiotemporal image management framework designed specifically fo
 - improve node logging
 #### COMMANDS 
 - __cloud coverage - computation on images__
-- **data list / search - add coverage (pixel and cloud) filters**
 - data merge?
 - task stop?
