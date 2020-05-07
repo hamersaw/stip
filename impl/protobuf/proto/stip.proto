@@ -107,7 +107,7 @@ message DataListReply {
 
 // Load Messages
 enum LoadFormat {
-    LANDSAT = 0;
+    NAIP = 0;
     SENTINEL = 1;
 }
 

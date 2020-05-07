@@ -94,7 +94,7 @@ subcommands:
                         index: 2
                         required: true
                         possible_values: 
-                            - landsat
+                            - naip
                             - sentinel
                         help: dataset load format
                     - precision:
