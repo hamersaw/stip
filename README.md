@@ -7,6 +7,5 @@ A distributed spatiotemporal image management framework designed specifically fo
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
 #### COMMANDS 
-- __cloud coverage - computation on images__
-- data merge?
+- **cloud coverage - computation on images**
 - task stop?

@@ -53,7 +53,7 @@ while read line; do
         echo $! > $projectdir/log/node-$nodeid.pid
     else
         # start application on remote host
-        ssh rammerd@$host -n "RUST_LOG=info \
+        ssh rammerd@$host -n "RUST_LOG=debug,h2=info,hyper=info,tower_buffer=info \
             $application $nodeid -i $host -p $gossipport \
             -r $rpcport -x $xferport $options \
                 > $projectdir/log/node-$nodeid.log 2>&1 & \
