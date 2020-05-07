@@ -73,8 +73,18 @@ subcommands:
                         long: geohash
                         short: g
                         takes_value: true
+                    - max_cloud_coverage:
+                        help: maximum image cloud coverage
+                        long: cloud_coverage
+                        short: c
+                        takes_value: true
+                    - min_pixel_coverage:
+                        help: minimum image pixel coverage
+                        long: pixel_coverage
+                        short: x
+                        takes_value: true
                     - platform:
-                        help: image platform (ex. SENTINEL-2B)
+                        help: image platform (ex. Sentinel-2A, NAIP)
                         long: platform
                         short: p
                         takes_value: true
@@ -121,6 +131,16 @@ subcommands:
                         help: image geohash boundary
                         long: geohash
                         short: g
+                        takes_value: true
+                    - max_cloud_coverage:
+                        help: maximum image cloud coverage
+                        long: cloud_coverage
+                        short: c
+                        takes_value: true
+                    - min_pixel_coverage:
+                        help: minimum image pixel coverage
+                        long: pixel_coverage
+                        short: x
                         takes_value: true
                     - platform:
                         help: image platform (ex. SENTINEL-2B)

@@ -6,6 +6,8 @@ mod cluster;
 mod data;
 mod task;
 
+use std::error::Error;
+
 fn main() {
     let yaml = load_yaml!("clap.yaml");
     let matches = App::from_yaml(yaml).get_matches();
@@ -22,9 +24,17 @@ fn main() {
     }
 }
 
-fn opt(value: Option<&str>) -> Option<String> {
+fn string_opt(value: Option<&str>) -> Option<String> {
     match value {
         Some(value) => Some(value.to_string()),
         None => None,
+    }
+}
+
+fn float_opt(value: Option<&str>)
+        -> Result<Option<f32>, Box<dyn Error>> {
+    match value {
+        Some(value) => Ok(Some(value.parse::<f32>()?)),
+        None => Ok(None),
     }
 }

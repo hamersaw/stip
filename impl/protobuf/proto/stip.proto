@@ -97,8 +97,10 @@ message Image {
 message DataListRequest {
     optional string band = 1;
     optional string geohash = 2;
-    optional string platform = 3;
-    optional string source = 4;
+    optional float maxCloudCoverage = 3;
+    optional float minPixelCoverage = 4;
+    optional string platform = 5;
+    optional string source = 6;
 }
 
 message DataListReply {
@@ -135,8 +137,10 @@ message Extent {
 message DataSearchRequest {
     optional string band = 1;
     optional string geohash = 2;
-    optional string platform = 3;
-    optional string source = 4;
+    optional float maxCloudCoverage = 3;
+    optional float minPixelCoverage = 4;
+    optional string platform = 5;
+    optional string source = 6;
 }
 
 message DataSearchReply {

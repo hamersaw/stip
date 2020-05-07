@@ -43,9 +43,9 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataFillRequest
     let fill_request = DataFillRequest {
-        band: crate::opt(fill_matches.value_of("band")),
-        geohash: crate::opt(fill_matches.value_of("geohash")),
-        platform: crate::opt(fill_matches.value_of("platform")),
+        band: crate::string_opt(fill_matches.value_of("band")),
+        geohash: crate::string_opt(fill_matches.value_of("geohash")),
+        platform: crate::string_opt(fill_matches.value_of("platform")),
         thread_count: fill_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
         window_seconds: fill_matches.value_of("window_seconds")
@@ -69,6 +69,57 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     for (node_id, fill_reply) in reply.fill_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, fill_reply.task_id);
+    }
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn list(matches: &ArgMatches, _: &ArgMatches,
+        list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = DataManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize DataListRequest
+    let list_request = DataListRequest {
+        band: crate::string_opt(list_matches.value_of("band")),
+        geohash: crate::string_opt(list_matches.value_of("geohash")),
+        max_cloud_coverage: crate::float_opt(
+            list_matches.value_of("max_cloud_coverage"))?,
+        min_pixel_coverage: crate::float_opt(
+            list_matches.value_of("min_pixel_coverage"))?,
+        platform: crate::string_opt(list_matches.value_of("platform")),
+        source: crate::string_opt(list_matches.value_of("source")),
+    };
+
+    // initialize request
+    let request = Request::new(DataBroadcastRequest {
+        message_type: DataBroadcastType::List as i32,
+        fill_request: None,
+        list_request: Some(list_request),
+        search_request: None,
+        split_request: None,
+    });
+
+    // retrieve reply
+    let reply = client.broadcast(request).await?;
+    let reply = reply.get_ref();
+
+    // print information
+    println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}",
+        "node_id", "path", "platform", "geohash", "band",
+        "source", "pixel_coverage", "cloud_coverage");
+    println!("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    for (node_id, list_reply) in reply.list_replies.iter() {
+        for image in list_reply.images.iter() {
+            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16?}", 
+                node_id, image.path, image.platform,
+                image.geohash, image.band, image.source,
+                image.pixel_coverage, image.cloud_coverage);
+        }
     }
 
     Ok(())
@@ -111,53 +162,6 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 }
 
 #[tokio::main]
-async fn list(matches: &ArgMatches, _: &ArgMatches,
-        list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initialize grpc client
-    let ip_address = matches.value_of("ip_address").unwrap();
-    let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
-        format!("http://{}:{}", ip_address, port)).await?;
-
-    // initialize DataListRequest
-    let list_request = DataListRequest {
-        band: crate::opt(list_matches.value_of("band")),
-        geohash: crate::opt(list_matches.value_of("geohash")),
-        platform: crate::opt(list_matches.value_of("platform")),
-        source: crate::opt(list_matches.value_of("source")),
-    };
-
-    // initialize request
-    let request = Request::new(DataBroadcastRequest {
-        message_type: DataBroadcastType::List as i32,
-        fill_request: None,
-        list_request: Some(list_request),
-        search_request: None,
-        split_request: None,
-    });
-
-    // retrieve reply
-    let reply = client.broadcast(request).await?;
-    let reply = reply.get_ref();
-
-    // print information
-    println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}",
-        "node_id", "path", "platform", "geohash", "band",
-        "source", "pixel_coverage", "cloud_coverage");
-    println!("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-    for (node_id, list_reply) in reply.list_replies.iter() {
-        for image in list_reply.images.iter() {
-            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16?}", 
-                node_id, image.path, image.platform,
-                image.geohash, image.band, image.source,
-                image.pixel_coverage, image.cloud_coverage);
-        }
-    }
-
-    Ok(())
-}
-
-#[tokio::main]
 async fn search(matches: &ArgMatches, _: &ArgMatches,
         search_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     // initialize grpc client
@@ -168,10 +172,14 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataSearchRequest
     let search_request = DataSearchRequest {
-        band: crate::opt(search_matches.value_of("band")),
-        geohash: crate::opt(search_matches.value_of("geohash")),
-        platform: crate::opt(search_matches.value_of("platform")),
-        source: crate::opt(search_matches.value_of("source")),
+        band: crate::string_opt(search_matches.value_of("band")),
+        geohash: crate::string_opt(search_matches.value_of("geohash")),
+        max_cloud_coverage: crate::float_opt(
+            search_matches.value_of("max_cloud_coverage"))?,
+        min_pixel_coverage: crate::float_opt(
+            search_matches.value_of("min_pixel_coverage"))?,
+        platform: crate::string_opt(search_matches.value_of("platform")),
+        source: crate::string_opt(search_matches.value_of("source")),
     };
 
     // initialize request
@@ -241,9 +249,9 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataSplitRequest
     let split_request = DataSplitRequest {
-        band: crate::opt(split_matches.value_of("band")),
-        geohash: crate::opt(split_matches.value_of("geohash")),
-        platform: crate::opt(split_matches.value_of("platform")),
+        band: crate::string_opt(split_matches.value_of("band")),
+        geohash: crate::string_opt(split_matches.value_of("geohash")),
+        platform: crate::string_opt(split_matches.value_of("platform")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
         thread_count: split_matches.value_of("thread_count")
