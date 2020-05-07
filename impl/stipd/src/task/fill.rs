@@ -37,7 +37,7 @@ impl FillTask {
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let images: Vec<ImageMetadata> = {
+        let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
             let images = image_manager.search(&self.band, &self.geohash,
                 &self.platform, false, &Some(RAW_SOURCE.to_string()));
@@ -45,11 +45,11 @@ impl Task for FillTask {
             images.into_iter().map(|x| x.clone()).collect()
         };
 
-        let mut filter_images: Vec<&ImageMetadata> = images.iter()
-            .filter(|x| x.pixel_coverage != 1f32).collect();
+        //let mut filter_images: Vec<&ImageMetadata> = images.iter()
+        //    .filter(|x| x.pixel_coverage != 1f32).collect();
 
         // order by platform, geohash, band
-        filter_images.sort_by(|a, b| {
+        images.sort_by(|a, b| {
             let platform_cmp = a.platform.cmp(&b.platform);
             if platform_cmp != CmpOrdering::Equal {
                 return platform_cmp;
@@ -76,7 +76,7 @@ impl Task for FillTask {
         let mut geohash = "";
         let mut band = "";
         let mut timestamp = 0i64;
-        for image in filter_images {
+        for image in images.iter() {
             if image.platform != platform || image.geohash != geohash
                     || image.band != band || image.start_date
                         - timestamp > self.window_seconds {
@@ -101,6 +101,17 @@ impl Task for FillTask {
         if images_buf.len() >= 2 {
             records.push(images_buf);
         }
+
+        // filter out vectors where a full pixel coverage image exists
+        let records: Vec<Vec<ImageMetadata>> = records.into_iter()
+            .filter(|x| {
+                let mut valid = true;
+                for image in x {
+                    valid = valid || image.pixel_coverage == 1f32;
+                }
+
+                valid
+            }).collect();
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -210,14 +221,22 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
     // perform fill - TODO error
     let mut dataset = st_image::prelude::fill(&datasets).unwrap();
-
-    // write mem_dataset - TODO error
-    let image = &record[0];
-    let path = Path::new(&record[0].path);
-    let tile_id = &path.file_name().unwrap().to_string_lossy();
     let pixel_coverage = st_image::coverage(&dataset).unwrap() as f32;
 
-    if pixel_coverage > image.pixel_coverage {
+    // check if pixel coverage is more than previous highest
+    let mut max_pixel_coverage = 0f32;
+    for image in record {
+        if image.pixel_coverage > max_pixel_coverage {
+            max_pixel_coverage = image.pixel_coverage;
+        }
+    }
+
+    if pixel_coverage > max_pixel_coverage {
+        // write mem_dataset - TODO error
+        let image = &record[0];
+        let path = Path::new(&record[0].path);
+        let tile_id = &path.file_name().unwrap().to_string_lossy();
+
         let mut image_manager = image_manager.write().unwrap();
         image_manager.write(&image.platform, &image.geohash, 
             &image.band, FILLED_SOURCE, &tile_id, image.start_date,
