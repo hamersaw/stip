@@ -39,13 +39,6 @@ fn main() {
     // initialize ImageManager and TaskManager
     let image_manager = Arc::new(RwLock::new(
         ImageManager::new(opt.directory)));
-    {
-        let mut image_manager = image_manager.write().unwrap();
-        if let Err(e) = image_manager.init() {
-            panic!("failed to initialize image manager: {}", e);
-        }
-    }
-
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
     // build swarm config
@@ -81,6 +74,14 @@ fn main() {
         50, transfer_stream_handler);
 
     server.start().expect("transfer server start");
+
+    // load existing data into ImageManager
+    {
+        let mut image_manager = image_manager.write().unwrap();
+        if let Err(e) = image_manager.init() {
+            panic!("failed to initialize image manager: {}", e);
+        }
+    }
 
     // start GRPC server
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
