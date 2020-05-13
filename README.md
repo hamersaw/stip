@@ -5,10 +5,9 @@ A distributed spatiotemporal image management framework designed specifically fo
 ## TODO
 - abstract task functionality - lots of code copies
 - **add timestamps - queries, return data, etc**
-- integrate query specific indexing data structures
+- integrate query indexing data structures - use sqlite on backend?
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
-- __load ImageManager data after RPC starts__
 #### COMMANDS 
 - __data load - support MODIS data__
 - **cloud coverage - computation on images**

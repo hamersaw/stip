@@ -76,12 +76,47 @@ fn main() {
     server.start().expect("transfer server start");
 
     // load existing data into ImageManager
-    {
-        let mut image_manager = image_manager.write().unwrap();
-        if let Err(e) = image_manager.init() {
-            panic!("failed to initialize image manager: {}", e);
+    let mut paths = {
+        let image_manager = image_manager.read().unwrap();
+        match image_manager.get_paths() {
+            Ok(paths) => paths,
+            Err(e) => panic!("failed to retrieve image paths: {}", e),
         }
-    }
+    };
+
+    let image_manager_clone = image_manager.clone();
+    std::thread::spawn(move || {
+        let mut images = Vec::new();
+        for mut path in paths.iter_mut() {
+            // parse image metadata
+            match crate::image::to_image_metadata(&mut path) {
+                Ok(image) => images.push(image),
+                Err(e) => warn!("failed to parse image metadata: {}", e),
+            }
+
+            // periodically load images into ImageManager
+            if images.len() >= 2500 {
+                let mut image_manager = image_manager_clone.write().unwrap();
+                for image in images {
+                    if let Err(e) = image_manager.load(image) {
+                        warn!("failed to load image: {}", e);
+                    }
+                }
+
+                images = Vec::new();
+            }
+        }
+
+        // load remaining images into ImageManager
+        if images.len() > 0 {
+            let mut image_manager = image_manager_clone.write().unwrap();
+            for image in images {
+                if let Err(e) = image_manager.load(image) {
+                    warn!("failed to load image: {}", e);
+                }
+            }
+        }
+    });
 
     // start GRPC server
     let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
@@ -90,6 +125,7 @@ fn main() {
     let data_management = DataManagementImpl::new(dht.clone(),
         image_manager, task_manager.clone());
     let task_management = TaskManagementImpl::new(dht, task_manager);
+
     if let Err(e) = start_rpc_server(addr, cluster_management,
             data_management, task_management) {
         panic!("failed to start rpc server: {}", e);

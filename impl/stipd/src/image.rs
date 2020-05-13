@@ -33,67 +33,24 @@ impl ImageManager {
             images: Vec::new(),
         }
     }
-    
-    pub fn init(&mut self) -> Result<(), Box<dyn Error>> {
+
+    pub fn get_paths(&self) -> Result<Vec<PathBuf>, Box<dyn Error>> {
         let glob_expression = format!("{}/*/*/*/*/*tif",
             self.directory.to_string_lossy());
 
         // iterate over existing images
+        let mut paths = Vec::new();
         for entry in glob::glob(&glob_expression)? {
-            let mut path = entry?;
-            let dataset = Dataset::open(&path).unwrap();
-
-            // TODO - error
-            let start_date = dataset.metadata_item("START_DATE",
-                "STIP") .unwrap().parse::<i64>()?;
-            let end_date = dataset.metadata_item("END_DATE",
-                "STIP").unwrap().parse::<i64>()?;
-            let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE",
-                "STIP").unwrap().parse::<f32>()?;
-            let cloud_coverage_dec = dataset.metadata_item("CLOUD_COVERAGE",
-                "STIP").unwrap().parse::<f32>()?;
-
-            let cloud_coverage = if cloud_coverage_dec == std::f32::MAX {
-                None
-            } else {
-                Some(cloud_coverage_dec)
-            };
-
-            // parse platform and geohash from path
-            let path_str = path.to_string_lossy().to_string();
-            let _ = path.pop();
-            let source = path.file_name()
-                .ok_or("source not found in path")?
-                .to_string_lossy().to_string();
-            let _ = path.pop();
-            let band = path.file_name()
-                .ok_or("band not found in path")?
-                .to_string_lossy().to_string();
-            let _ = path.pop();
-            let geohash = path.file_name()
-                .ok_or("geohash not found in path")?
-                .to_string_lossy().to_string();
-            let _ = path.pop();
-            let platform = path.file_name()
-                .ok_or("platform not found in path")?
-                .to_string_lossy().to_string();
-
-            // initialize ImageMetadata
-            let image_metadata = ImageMetadata {
-                band: band,
-                cloud_coverage: cloud_coverage,
-                end_date: end_date,
-                geohash: geohash,
-                path: path_str,
-                pixel_coverage: pixel_coverage,
-                platform: platform,
-                source: source,
-                start_date: start_date,
-            };
-
-            self.images.push(image_metadata);
+            paths.push(entry?);
         }
-        
+
+        Ok(paths)
+    }
+
+    pub fn load(&mut self, image: ImageMetadata)
+            -> Result<(), Box<dyn Error>> {
+        self.images.push(image);
+
         Ok(())
     }
 
@@ -147,7 +104,7 @@ impl ImageManager {
             &format!("{}", std::f32::MAX), "STIP").unwrap();
 
         // TODO - add image to self.images
-        self.images.push(
+        self.load(
             ImageMetadata {
                 band: band.to_string(),
                 cloud_coverage: None,
@@ -158,9 +115,7 @@ impl ImageManager {
                 platform: platform.to_string(),
                 source: source.to_string(),
                 start_date: start_date,
-            });
-
-        Ok(())
+            })
     }
 
     pub fn search(&self, band: &Option<String>,
@@ -216,4 +171,57 @@ impl ImageManager {
 
         images
     }
+}
+
+pub fn to_image_metadata(path: &mut PathBuf)
+        -> Result<ImageMetadata, Box<dyn Error>> {
+    let dataset = Dataset::open(&path).unwrap();
+
+    // TODO - error
+    let start_date = dataset.metadata_item("START_DATE","STIP")
+        .unwrap().parse::<i64>()?;
+    let end_date = dataset.metadata_item("END_DATE","STIP")
+        .unwrap().parse::<i64>()?;
+    let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
+        .unwrap().parse::<f32>()?;
+    let cloud_coverage_dec = dataset.metadata_item("CLOUD_COVERAGE",
+        "STIP").unwrap().parse::<f32>()?;
+
+    let cloud_coverage = if cloud_coverage_dec == std::f32::MAX {
+        None
+    } else {
+        Some(cloud_coverage_dec)
+    };
+
+    // parse platform and geohash from path
+    let path_str = path.to_string_lossy().to_string();
+    let _ = path.pop();
+    let source = path.file_name()
+        .ok_or("source not found in path")?
+        .to_string_lossy().to_string();
+    let _ = path.pop();
+    let band = path.file_name()
+        .ok_or("band not found in path")?
+        .to_string_lossy().to_string();
+    let _ = path.pop();
+    let geohash = path.file_name()
+        .ok_or("geohash not found in path")?
+        .to_string_lossy().to_string();
+    let _ = path.pop();
+    let platform = path.file_name()
+        .ok_or("platform not found in path")?
+        .to_string_lossy().to_string();
+
+    // return ImageMetadata
+    Ok(ImageMetadata {
+        band: band,
+        cloud_coverage: cloud_coverage,
+        end_date: end_date,
+        geohash: geohash,
+        path: path_str,
+        pixel_coverage: pixel_coverage,
+        platform: platform,
+        source: source,
+        start_date: start_date,
+    })
 }
