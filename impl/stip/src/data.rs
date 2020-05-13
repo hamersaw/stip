@@ -46,7 +46,7 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
         band: crate::string_opt(fill_matches.value_of("band")),
         geohash: crate::string_opt(fill_matches.value_of("geohash")),
         platform: crate::string_opt(fill_matches.value_of("platform")),
-        task_id: crate::u32_opt_or_rand(fill_matches.value_of("task_id"))?,
+        task_id: crate::u64_opt(fill_matches.value_of("task_id"))?,
         thread_count: fill_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
         window_seconds: fill_matches.value_of("window_seconds")
@@ -148,7 +148,7 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
         load_format: load_format,
         precision: load_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
-        task_id: crate::u32_opt_or_rand(load_matches.value_of("task_id"))?,
+        task_id: crate::u64_opt(load_matches.value_of("task_id"))?,
         thread_count: load_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
     });
@@ -256,7 +256,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
         platform: crate::string_opt(split_matches.value_of("platform")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
-        task_id: crate::u32_opt_or_rand(split_matches.value_of("task_id"))?,
+        task_id: crate::u64_opt(split_matches.value_of("task_id"))?,
         thread_count: split_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
     };

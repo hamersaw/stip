@@ -42,12 +42,12 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<12}{:<12}{:<24}{:<8}", "node_id",
+    println!("{:<12}{:<32}{:<24}{:<8}", "node_id",
         "task_id", "completion percent", "status");
-    println!("------------------------------------------------------------");
+    println!("--------------------------------------------------------------------------------");
     for (node_id, task_list_reply) in reply.list_replies.iter() {
         for task in task_list_reply.tasks.iter() {
-            println!("{:<12}{:<12}{:<24}{:<8}", node_id, task.id,
+            println!("{:<12}{:<32}{:<24}{:<8}", node_id, task.id,
                 task.completion_percent, convert_status(task.status));
         }
     }

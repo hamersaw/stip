@@ -56,6 +56,7 @@ impl DataManagement for DataManagementImpl {
         let mut search_replies = HashMap::new();
         let mut split_replies = HashMap::new();
 
+        let mut task_id = None;
         for (node_id, addr) in dht_nodes {
             // initialize grpc client - TODO error
             let mut client = DataManagementClient::connect(
@@ -64,10 +65,21 @@ impl DataManagement for DataManagementImpl {
             // execute message at dht node
             match DataBroadcastType::from_i32(request.message_type).unwrap() {
                 DataBroadcastType::Fill => {
-                    let reply = client.fill(request
-                        .fill_request.clone().unwrap()).await.unwrap();
+                    // compile new FillRequest
+                    let mut fill_request =
+                        request.fill_request.clone().unwrap();
+                    match task_id {
+                        None => task_id = fill_request.task_id,
+                        task_id => fill_request.task_id = task_id,
+                    }
+
+                    // submit request
+                    let reply = client.fill(fill_request).await.unwrap();
                     fill_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
+
+                    // process reply
+                    task_id = Some(reply.get_ref().task_id);
                 },
                 DataBroadcastType::List => {
                     let reply = client.list(request
@@ -82,10 +94,21 @@ impl DataManagement for DataManagementImpl {
                         reply.get_ref().to_owned());
                 },
                 DataBroadcastType::Split => {
-                    let reply = client.split(request
-                        .split_request.clone().unwrap()).await.unwrap();
+                    // compile new SplitRequest
+                    let mut split_request =
+                        request.split_request.clone().unwrap();
+                    match task_id {
+                        None => task_id = split_request.task_id,
+                        task_id => split_request.task_id = task_id,
+                    }
+
+                    // submit request
+                    let reply = client.split(split_request).await.unwrap();
                     split_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
+
+                    // process reply
+                    task_id = Some(reply.get_ref().task_id);
                 },
             };
         }
@@ -113,10 +136,10 @@ impl DataManagement for DataManagementImpl {
             request.platform.clone(), request.thread_count as u8,
             request.window_seconds);
 
-        // execute task using task manager
+        // execute task using task manager - TODO error
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            task_manager.execute(task).unwrap() // TODO - handle error
+            task_manager.execute(task, request.task_id).unwrap()
         };
 
         // initialize reply
@@ -175,10 +198,10 @@ impl DataManagement for DataManagementImpl {
             request.directory.clone(), load_format,
             request.precision as usize, request.thread_count as u8);
 
-        // execute task using task manager
+        // execute task using task manager - TODO error
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            task_manager.execute(task).unwrap() // TODO - handle error
+            task_manager.execute(task, request.task_id).unwrap()
         };
 
         // initialize reply
@@ -266,10 +289,10 @@ impl DataManagement for DataManagementImpl {
             self.image_manager.clone(), request.platform.clone(),
             request.precision as usize, request.thread_count as u8);
 
-        // execute task using task manager
+        // execute task using task manager - TODO error
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            task_manager.execute(task).unwrap() // TODO - handle error
+            task_manager.execute(task, request.task_id).unwrap()
         };
 
         // initialize reply

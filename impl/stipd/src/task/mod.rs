@@ -51,29 +51,30 @@ impl TaskHandle {
 }
 
 pub struct TaskManager {
-    current_id: u64,
     tasks: HashMap<u64, Arc<RwLock<TaskHandle>>>,
 }
 
 impl TaskManager {
     pub fn new() -> TaskManager {
         TaskManager {
-            current_id: 999,
             tasks: HashMap::new(),
         }
     }
 
-    pub fn execute(&mut self, t: impl Task)
+    pub fn execute(&mut self, t: impl Task, task_id: Option<u64>)
             -> Result<u64, Box<dyn Error>> {
-        // increment current id
-        self.current_id += 1;
+        // initialize task id
+        let task_id = match task_id {
+            Some(task_id) => task_id,
+            None => rand::random::<u64>(),
+        };
 
         // start task and add to map
         let task_handle = t.start()?;
-        self.tasks.insert(self.current_id, task_handle);
+        self.tasks.insert(task_id, task_handle);
 
         // return task id
-        Ok(self.current_id)
+        Ok(task_id)
     }
 
     pub fn get(&self, task_id: &u64) -> Option<&Arc<RwLock<TaskHandle>>> {

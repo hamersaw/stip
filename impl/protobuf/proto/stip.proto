@@ -73,7 +73,7 @@ message DataFillRequest {
     optional string band = 1;
     optional string geohash = 2;
     optional string platform = 3;
-    required uint32 taskId = 4;
+    optional uint64 taskId = 4;
     required uint32 threadCount = 5;
     required int64 windowSeconds = 6;
 }
@@ -118,7 +118,7 @@ message DataLoadRequest {
     required string directory = 1;
     required LoadFormat loadFormat = 2;
     required uint32 precision = 3;
-    required uint32 taskId = 4;
+    optional uint64 taskId = 4;
     required uint32 threadCount = 5;
 }
 
@@ -155,7 +155,7 @@ message DataSplitRequest {
     optional string geohash = 2;
     optional string platform = 3;
     required uint32 precision = 4;
-    required uint32 taskId = 5;
+    optional uint64 taskId = 5;
     required uint32 threadCount = 6;
 }
 
