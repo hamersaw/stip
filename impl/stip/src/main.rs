@@ -38,3 +38,11 @@ fn float_opt(value: Option<&str>)
         None => Ok(None),
     }
 }
+
+fn u32_opt_or_rand(value: Option<&str>)
+        -> Result<u32, Box<dyn Error>> {
+    match value {
+        Some(value) => Ok(value.parse::<u32>()?),
+        None => Ok(rand::random::<u32>()),
+    }
+}

@@ -48,6 +48,11 @@ subcommands:
                         long: platform
                         short: p
                         takes_value: true
+                    - task_id:
+                        help: manually set task identifier
+                        long: task_id
+                        short: d
+                        takes_value: true
                     - thread_count:
                         default_value: "4"
                         help: thread count for processing task
@@ -113,6 +118,11 @@ subcommands:
                         long: precision
                         short: r
                         takes_value: true
+                    - task_id:
+                        help: manually set task identifier
+                        long: task_id
+                        short: d
+                        takes_value: true
                     - thread_count:
                         default_value: "4"
                         help: thread count for processing task
@@ -175,6 +185,11 @@ subcommands:
                         help: geohash precision
                         long: precision
                         short: r
+                        takes_value: true
+                    - task_id:
+                        help: manually set task identifier
+                        long: task_id
+                        short: d
                         takes_value: true
                     - thread_count:
                         default_value: "4"
