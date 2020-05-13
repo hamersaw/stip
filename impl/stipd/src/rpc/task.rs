@@ -134,8 +134,9 @@ fn to_protobuf_task(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task
     // initialize task protobuf
     Task {
         id: task_id,
-        completion_percent: task_handle
-            .get_completion_percent().unwrap_or(1.0),
+        items_completed: task_handle.get_items_completed(),
+        items_skipped: task_handle.get_items_skipped(),
+        items_total: task_handle.get_items_total(),
         status: status as i32,
     }
 }

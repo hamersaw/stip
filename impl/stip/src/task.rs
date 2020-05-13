@@ -3,6 +3,7 @@ use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskManagementClient, Ta
 use tonic::Request;
 
 use std::{error, io};
+use std::collections::HashMap;
 
 pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
@@ -41,15 +42,33 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
-    // print information
-    println!("{:<12}{:<32}{:<24}{:<8}", "node_id",
-        "task_id", "completion percent", "status");
-    println!("--------------------------------------------------------------------------------");
-    for (node_id, task_list_reply) in reply.list_replies.iter() {
+    // compute an agglomerated view of data
+    let mut tasks = HashMap::new();
+    for (_node_id, task_list_reply) in reply.list_replies.iter() {
         for task in task_list_reply.tasks.iter() {
-            println!("{:<12}{:<32}{:<24}{:<8}", node_id, task.id,
-                task.completion_percent, convert_status(task.status));
+            let mut task_tuple = tasks.entry(task.id).or_insert(
+                (0u16, 0u16, 0u16, 0u32, 0u32, 0u32));
+
+            match TaskStatus::from_i32(task.status).unwrap() {
+                TaskStatus::Complete => task_tuple.0 += 1,
+                TaskStatus::Failure => task_tuple.1 += 1,
+                TaskStatus::Running => task_tuple.2 += 1,
+            }
+
+            task_tuple.3 += task.items_completed;
+            task_tuple.4 += task.items_skipped;
+            task_tuple.5 += task.items_total;
         }
+    }
+
+    // print information
+    println!("{:<24}{:<12}{:<12}{:<12}{:<24}", "task_id",
+        "completed", "failure", "running", "progress");
+    println!("------------------------------------------------------------------------------------");
+    for (task_id, task_tuple) in tasks.iter() {
+        println!("{:<24}{:<12}{:<12}{:<12}{:<24}", task_id,
+            task_tuple.0, task_tuple.1, task_tuple.2,
+            compute_progress(task_tuple.3, task_tuple.4, task_tuple.5));
     }
 
     Ok(())
@@ -78,7 +97,9 @@ async fn show(matches: &ArgMatches, _: &ArgMatches,
     match &reply.task {
         Some(task) => {
             println!("task_id: {}", task.id);
-            println!("completion_percent: {}", task.completion_percent);
+            println!("items_completed: {}", task.items_completed);
+            println!("items_skipped: {}", task.items_skipped);
+            println!("items_total: {}", task.items_total);
             println!("status: {}", convert_status(task.status));
         },
         None => println!("task with id '{}' does not exist", task_id),
@@ -87,10 +108,19 @@ async fn show(matches: &ArgMatches, _: &ArgMatches,
     Ok(())
 }
 
-fn convert_status(id: i32) -> String {
-    match TaskStatus::from_i32(id).unwrap() {
-        TaskStatus::Complete => String::from("complete"),
-        TaskStatus::Failure => String::from("failure"),
-        TaskStatus::Running => String::from("running"),
+fn convert_status(status: i32) -> String {
+    match TaskStatus::from_i32(status).unwrap() {
+        TaskStatus::Complete => "completed".to_string(),
+        TaskStatus::Failure => "failure".to_string(),
+        TaskStatus::Running => "running".to_string(),
+    }
+}
+
+fn compute_progress(items_completed: u32,
+        items_skipped: u32, items_total: u32) -> f32 {
+    let done_count = items_completed + items_skipped;
+    match done_count {
+        0 => 1f32,
+        _ => done_count as f32 / items_total as f32,
     }
 }

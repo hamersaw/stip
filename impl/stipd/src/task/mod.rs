@@ -30,15 +30,16 @@ impl TaskHandle {
         }
     }
 
-    pub fn get_completion_percent(&self) -> Option<f32> {
-        match self.items_total {
-            0 => None,
-            x => {
-                let done_count = self.items_completed.load(Ordering::SeqCst)
-                    + self.items_skipped.load(Ordering::SeqCst);
-                Some(done_count as f32 / x as f32)
-            },
-        }
+    pub fn get_items_completed(&self) -> u32 {
+        self.items_completed.load(Ordering::SeqCst)
+    }
+
+    pub fn get_items_skipped(&self) -> u32 {
+        self.items_skipped.load(Ordering::SeqCst)
+    }
+
+    pub fn get_items_total(&self) -> u32 {
+        self.items_total
     }
 
     pub fn get_status(&self) -> &TaskStatus {

@@ -10,8 +10,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 - improve node logging
 - __load ImageManager data after RPC starts__
 #### COMMANDS 
-- data _ - include a -d option to set task_id on execute
 - __data load - support MODIS data__
 - **cloud coverage - computation on images**
-- task list - reformat output
 - task stop?

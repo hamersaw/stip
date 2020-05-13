@@ -68,9 +68,8 @@ impl DataManagement for DataManagementImpl {
                     // compile new FillRequest
                     let mut fill_request =
                         request.fill_request.clone().unwrap();
-                    match task_id {
-                        None => task_id = fill_request.task_id,
-                        task_id => fill_request.task_id = task_id,
+                    if let Some(task_id) = task_id {
+                        fill_request.task_id = Some(task_id);
                     }
 
                     // submit request
@@ -97,9 +96,8 @@ impl DataManagement for DataManagementImpl {
                     // compile new SplitRequest
                     let mut split_request =
                         request.split_request.clone().unwrap();
-                    match task_id {
-                        None => task_id = split_request.task_id,
-                        task_id => split_request.task_id = task_id,
+                    if let Some(task_id) = task_id {
+                        split_request.task_id = Some(task_id);
                     }
 
                     // submit request

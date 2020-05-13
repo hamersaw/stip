@@ -190,8 +190,10 @@ message TaskBroadcastReply {
 // Task Messages
 message Task {
     required uint64 id = 1;    
-    required float completion_percent = 2;
-    required TaskStatus status = 3;
+    required uint32 itemsCompleted = 2;
+    required uint32 itemsSkipped = 3;
+    required uint32 itemsTotal = 4;
+    required TaskStatus status = 5;
 }
 
 enum TaskStatus {
