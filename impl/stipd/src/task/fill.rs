@@ -11,23 +11,27 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct FillTask {
     band: Option<String>,
+    end_timestamp: Option<i64>,
     geohash: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
+    start_timestamp: Option<i64>,
     thread_count: u8,
     window_seconds: i64,
 }
 
 impl FillTask {
-    pub fn new(band: Option<String>, geohash: Option<String>,
-            image_manager: Arc<RwLock<ImageManager>>,
-            platform: Option<String>, thread_count: u8,
-            window_seconds: i64) -> FillTask {
+    pub fn new(band: Option<String>, end_timestamp: Option<i64>,
+            geohash: Option<String>, image_manager: Arc<RwLock<ImageManager>>,
+            platform: Option<String>, start_timestamp: Option<i64>,
+            thread_count: u8, window_seconds: i64) -> FillTask {
         FillTask {
             band: band,
+            end_timestamp: end_timestamp,
             geohash: geohash,
             image_manager: image_manager,
             platform: platform,
+            start_timestamp: start_timestamp,
             thread_count: thread_count,
             window_seconds: window_seconds,
         }
@@ -40,8 +44,9 @@ impl Task for FillTask {
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
             let images = image_manager.search(&self.band,
-                &self.geohash, &None, &None, &self.platform,
-                false, &Some(RAW_SOURCE.to_string()));
+                &self.end_timestamp, &self.geohash, &None,
+                &None, &self.platform, false,
+                &Some(RAW_SOURCE.to_string()), &self.start_timestamp);
 
             images.into_iter().map(|x| x.clone()).collect()
         };

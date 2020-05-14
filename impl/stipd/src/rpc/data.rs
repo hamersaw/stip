@@ -115,8 +115,9 @@ impl DataManagement for DataManagementImpl {
 
         // initialize task
         let task = FillTask::new(request.band.clone(),
-            request.geohash.clone(), self.image_manager.clone(),
-            request.platform.clone(), request.thread_count as u8,
+            request.end_timestamp.clone(), request.geohash.clone(),
+            self.image_manager.clone(), request.platform.clone(),
+            request.start_timestamp.clone(), request.thread_count as u8,
             request.window_seconds);
 
         // execute task using task manager - TODO error
@@ -142,9 +143,10 @@ impl DataManagement for DataManagementImpl {
         // search for requested images
         let images: Vec<Image> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&request.band, &request.geohash,
-                &request.max_cloud_coverage, &request.min_pixel_coverage,
-                &request.platform, false, &request.source).iter()
+            image_manager.search(&request.band, &request.end_timestamp,
+                &request.geohash, &request.max_cloud_coverage,
+                &request.min_pixel_coverage, &request.platform, false,
+                &request.source, &request.start_timestamp).iter()
                 .map(|x| Image {
                     band: x.band.clone(),
                     cloud_coverage: x.cloud_coverage,
@@ -206,9 +208,11 @@ impl DataManagement for DataManagementImpl {
 
         // search for the requested images - TODO error
         let image_manager = self.image_manager.read().unwrap();
-        let images = image_manager.search(&request.band, &request.geohash,
+        let images = image_manager.search(&request.band,
+            &request.end_timestamp, &request.geohash,
             &request.max_cloud_coverage, &request.min_pixel_coverage,
-            &request.platform, true, &request.source);
+            &request.platform, true, &request.source,
+            &request.start_timestamp);
 
         // compile extents
         let mut platform_map = HashMap::new();
@@ -274,10 +278,11 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = SplitTask::new(request.band.clone(),
-            self.dht.clone(), request.geohash.clone(),
+        let task = SplitTask::new(request.band.clone(), self.dht.clone(),
+            request.end_timestamp.clone(), request.geohash.clone(),
             self.image_manager.clone(), request.platform.clone(),
-            request.precision as usize, request.thread_count as u8);
+            request.precision as usize, request.start_timestamp.clone(),
+            request.thread_count as u8);
 
         // execute task using task manager - TODO error
         let task_id = {

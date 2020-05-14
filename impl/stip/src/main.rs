@@ -39,6 +39,13 @@ fn float_opt(value: Option<&str>)
     }
 }
 
+fn i64_opt(value: Option<&str>) -> Result<Option<i64>, Box<dyn Error>> {
+    match value {
+        Some(value) => Ok(Some(value.parse::<i64>()?)),
+        None => Ok(None),
+    }
+}
+
 fn u64_opt(value: Option<&str>) -> Result<Option<u64>, Box<dyn Error>> {
     match value {
         Some(value) => Ok(Some(value.parse::<u64>()?)),

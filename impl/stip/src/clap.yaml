@@ -38,6 +38,11 @@ subcommands:
                         long: band
                         short: b
                         takes_value: true
+                    - end_timestamp:
+                        help: end timestamp for temporal range
+                        long: end_timestamp
+                        short: e
+                        takes_value: true
                     - geohash:
                         help: image geohash boundary
                         long: geohash
@@ -47,6 +52,11 @@ subcommands:
                         help: image platform (ex. SENTINEL-2B)
                         long: platform
                         short: p
+                        takes_value: true
+                    - start_timestamp:
+                        help: start timestamp for temporal range
+                        long: start_timestamp
+                        short: a
                         takes_value: true
                     - task_id:
                         help: manually set task identifier
@@ -73,6 +83,11 @@ subcommands:
                         long: band
                         short: b
                         takes_value: true
+                    - end_timestamp:
+                        help: end timestamp for temporal range
+                        long: end_timestamp
+                        short: e
+                        takes_value: true
                     - geohash:
                         help: image geohash boundary
                         long: geohash
@@ -97,6 +112,11 @@ subcommands:
                         help: image source
                         long: source
                         short: s
+                        takes_value: true
+                    - start_timestamp:
+                        help: start timestamp for temporal range
+                        long: start_timestamp
+                        short: a
                         takes_value: true
             - load:
                 about: initialize load data task
@@ -137,6 +157,11 @@ subcommands:
                         long: band
                         short: b
                         takes_value: true
+                    - end_timestamp:
+                        help: end timestamp for temporal range
+                        long: end_timestamp
+                        short: e
+                        takes_value: true
                     - geohash:
                         help: image geohash boundary
                         long: geohash
@@ -162,6 +187,11 @@ subcommands:
                         long: source
                         short: s
                         takes_value: true
+                    - start_timestamp:
+                        help: start timestamp for temporal range
+                        long: start_timestamp
+                        short: a
+                        takes_value: true
             - split:
                 about: split images with a new geohash precision
                 args:
@@ -169,6 +199,11 @@ subcommands:
                         help: image band
                         long: band
                         short: b
+                        takes_value: true
+                    - end_timestamp:
+                        help: end timestamp for temporal range
+                        long: end_timestamp
+                        short: e
                         takes_value: true
                     - geohash:
                         help: image geohash boundary
@@ -185,6 +220,11 @@ subcommands:
                         help: geohash precision
                         long: precision
                         short: r
+                        takes_value: true
+                    - start_timestamp:
+                        help: start timestamp for temporal range
+                        long: start_timestamp
+                        short: a
                         takes_value: true
                     - task_id:
                         help: manually set task identifier

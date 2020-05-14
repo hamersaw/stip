@@ -118,9 +118,8 @@ fn convert_status(status: i32) -> String {
 
 fn compute_progress(items_completed: u32,
         items_skipped: u32, items_total: u32) -> f32 {
-    let done_count = items_completed + items_skipped;
-    match done_count {
+    match items_total {
         0 => 1f32,
-        _ => done_count as f32 / items_total as f32,
+        _ => (items_completed + items_skipped) as f32 / items_total as f32,
     }
 }

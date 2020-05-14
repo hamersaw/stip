@@ -122,11 +122,11 @@ impl ImageManager {
             })
     }
 
-    pub fn search(&self, band: &Option<String>,
+    pub fn search(&self, band: &Option<String>, end_timestamp: &Option<i64>,
             geohash: &Option<String>, max_cloud_coverage: &Option<f32>,
             min_pixel_coverage: &Option<f32>, platform: &Option<String>,
-            recurse: bool, source: &Option<String>)
-            -> Vec<&ImageMetadata> {
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>) -> Vec<&ImageMetadata> {
         // TODO - rearrange filters to improve performance
         let mut images: Vec<&ImageMetadata> =
             self.images.iter().collect();
@@ -135,6 +135,12 @@ impl ImageManager {
         if let Some(band) = band {
             images = images.into_iter()
                 .filter(|x| &x.band == band).collect();
+        }
+ 
+        // if exists - filter on end_timestamp
+        if let Some(end_timestamp) = end_timestamp {
+            images = images.into_iter()
+                .filter(|x| &x.timestamp <= end_timestamp).collect();
         }
 
         // if exists - filter on geohash
@@ -171,6 +177,12 @@ impl ImageManager {
         if let Some(source) = source {
             images = images.into_iter()
                 .filter(|x| &x.source == source).collect();
+        }
+
+        // if exists - filter on start_timestamp
+        if let Some(start_timestamp) = start_timestamp {
+            images = images.into_iter()
+                .filter(|x| &x.timestamp >= start_timestamp).collect();
         }
 
         images

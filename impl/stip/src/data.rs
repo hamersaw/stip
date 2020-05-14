@@ -44,8 +44,12 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataFillRequest
     let fill_request = DataFillRequest {
         band: crate::string_opt(fill_matches.value_of("band")),
+        end_timestamp: crate::i64_opt(
+            fill_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(fill_matches.value_of("geohash")),
         platform: crate::string_opt(fill_matches.value_of("platform")),
+        start_timestamp: crate::i64_opt(
+            fill_matches.value_of("start_timestamp"))?,
         task_id: crate::u64_opt(fill_matches.value_of("task_id"))?,
         thread_count: fill_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
@@ -92,6 +96,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataListRequest
     let request = DataListRequest {
         band: crate::string_opt(list_matches.value_of("band")),
+        end_timestamp: crate::i64_opt(
+            list_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(list_matches.value_of("geohash")),
         max_cloud_coverage: crate::float_opt(
             list_matches.value_of("max_cloud_coverage"))?,
@@ -99,13 +105,15 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
             list_matches.value_of("min_pixel_coverage"))?,
         platform: crate::string_opt(list_matches.value_of("platform")),
         source: crate::string_opt(list_matches.value_of("source")),
+        start_timestamp: crate::i64_opt(
+            list_matches.value_of("start_timestamp"))?,
     };
 
     // iterate over each available node
-    println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}",
+    println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}{:<16}",
         "node_id", "path", "platform", "geohash", "band",
-        "source", "pixel_coverage", "cloud_coverage");
-    println!("----------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+        "source", "timestamp", "pixel_coverage", "cloud_coverage");
+    println!("--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for node in node_list_reply.nodes.iter() {
         // initialize DataManagement grpc client
         let mut client = DataManagementClient::connect(
@@ -115,9 +123,9 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         let mut stream = client.list(Request::new(request.clone()))
             .await?.into_inner();
         while let Some(image) = stream.message().await? {
-            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16?}", 
-                node.id, image.path, image.platform,
-                image.geohash, image.band, image.source,
+            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}{:<16?}", 
+                node.id, image.path, image.platform, image.geohash,
+                image.band, image.source, image.timestamp,
                 image.pixel_coverage, image.cloud_coverage);
         }
     }
@@ -181,6 +189,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataSearchRequest
     let request = DataSearchRequest {
         band: crate::string_opt(search_matches.value_of("band")),
+        end_timestamp: crate::i64_opt(
+            search_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(search_matches.value_of("geohash")),
         max_cloud_coverage: crate::float_opt(
             search_matches.value_of("max_cloud_coverage"))?,
@@ -188,6 +198,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             search_matches.value_of("min_pixel_coverage"))?,
         platform: crate::string_opt(search_matches.value_of("platform")),
         source: crate::string_opt(search_matches.value_of("source")),
+        start_timestamp: crate::i64_opt(
+            search_matches.value_of("start_timestamp"))?,
     };
 
     // iterate over each available node
@@ -252,10 +264,14 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataSplitRequest
     let split_request = DataSplitRequest {
         band: crate::string_opt(split_matches.value_of("band")),
+        end_timestamp: crate::i64_opt(
+            split_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(split_matches.value_of("geohash")),
         platform: crate::string_opt(split_matches.value_of("platform")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
+        start_timestamp: crate::i64_opt(
+            split_matches.value_of("start_timestamp"))?,
         task_id: crate::u64_opt(split_matches.value_of("task_id"))?,
         thread_count: split_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,

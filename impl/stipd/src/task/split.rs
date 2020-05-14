@@ -15,25 +15,30 @@ use std::sync::atomic::{AtomicU32, Ordering};
 pub struct SplitTask {
     band: Option<String>,
     dht: Arc<RwLock<Dht>>,
+    end_timestamp: Option<i64>,
     geohash: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     precision: usize,
+    start_timestamp: Option<i64>,
     thread_count: u8,
 }
 
 impl SplitTask {
-    pub fn new(band: Option<String>, dht: Arc<RwLock<Dht>>, 
-            geohash: Option<String>,
-            image_manager: Arc<RwLock<ImageManager>>, platform: Option<String>, 
-            precision: usize, thread_count: u8) -> SplitTask {
+    pub fn new(band: Option<String>, dht: Arc<RwLock<Dht>>,
+            end_timestamp: Option<i64>, geohash: Option<String>,
+            image_manager: Arc<RwLock<ImageManager>>,
+            platform: Option<String>,precision: usize,
+            start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
             band: band,
             dht: dht,
+            end_timestamp: end_timestamp,
             geohash: geohash,
             image_manager: image_manager,
             platform: platform,
             precision: precision,
+            start_timestamp: start_timestamp,
             thread_count: thread_count,
         }
     }
@@ -45,8 +50,9 @@ impl Task for SplitTask {
         let base_records: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
             let images = image_manager.search(&self.band,
-                &self.geohash, &None, &None, &self.platform,
-                false, &Some(RAW_SOURCE.to_string()));
+                &self.end_timestamp, &self.geohash, &None,
+                &None, &self.platform, false,
+                &Some(RAW_SOURCE.to_string()), &self.start_timestamp);
 
             images.into_iter().map(|x| x.clone()).collect()
         };

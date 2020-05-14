@@ -65,11 +65,13 @@ message DataBroadcastReply {
 // Fill Messages
 message DataFillRequest {
     optional string band = 1;
-    optional string geohash = 2;
-    optional string platform = 3;
-    optional uint64 taskId = 4;
-    required uint32 threadCount = 5;
-    required int64 windowSeconds = 6;
+    optional int64 endTimestamp = 2;
+    optional string geohash = 3;
+    optional string platform = 4;
+    optional int64 startTimestamp = 5;
+    optional uint64 taskId = 6;
+    required uint32 threadCount = 7;
+    required int64 windowSeconds = 8;
 }
 
 message DataFillReply {
@@ -80,22 +82,23 @@ message DataFillReply {
 message Image {
     required string band = 1;
     optional float cloudCoverage = 2;
-    required int64 endDate = 3;
-    required string geohash = 4;
-    required string path = 5;
-    required float pixelCoverage = 6;
-    required string platform = 7;
-    required string source = 8;
-    required int64 startDate = 9;
+    required string geohash = 3;
+    required string path = 4;
+    required float pixelCoverage = 5;
+    required string platform = 6;
+    required string source = 7;
+    required int64 timestamp = 8;
 }
 
 message DataListRequest {
     optional string band = 1;
-    optional string geohash = 2;
-    optional float maxCloudCoverage = 3;
-    optional float minPixelCoverage = 4;
-    optional string platform = 5;
-    optional string source = 6;
+    optional int64 endTimestamp = 2;
+    optional string geohash = 3;
+    optional float maxCloudCoverage = 4;
+    optional float minPixelCoverage = 5;
+    optional string platform = 6;
+    optional string source = 7;
+    optional int64 startTimestamp = 8;
 }
 
 // Load Messages
@@ -128,21 +131,25 @@ message Extent {
 
 message DataSearchRequest {
     optional string band = 1;
-    optional string geohash = 2;
-    optional float maxCloudCoverage = 3;
-    optional float minPixelCoverage = 4;
-    optional string platform = 5;
-    optional string source = 6;
+    optional int64 endTimestamp = 2;
+    optional string geohash = 3;
+    optional float maxCloudCoverage = 4;
+    optional float minPixelCoverage = 5;
+    optional string platform = 6;
+    optional string source = 7;
+    optional int64 startTimestamp = 8;
 }
 
 // Split Messages
 message DataSplitRequest {
     optional string band = 1;
-    optional string geohash = 2;
-    optional string platform = 3;
-    required uint32 precision = 4;
-    optional uint64 taskId = 5;
-    required uint32 threadCount = 6;
+    optional int64 endTimestamp = 2;
+    optional string geohash = 3;
+    optional string platform = 4;
+    required uint32 precision = 5;
+    optional int64 startTimestamp = 6;
+    optional uint64 taskId = 7;
+    required uint32 threadCount = 8;
 }
 
 message DataSplitReply {
