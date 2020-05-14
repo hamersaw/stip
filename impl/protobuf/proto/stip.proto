@@ -38,7 +38,7 @@ message NodeShowReply {
 service DataManagement {
     rpc Broadcast (DataBroadcastRequest) returns (DataBroadcastReply);
     rpc Fill (DataFillRequest) returns (DataFillReply);
-    rpc List (DataListRequest) returns (DataListReply);
+    rpc List (DataListRequest) returns (stream Image);
     rpc Load (DataLoadRequest) returns (DataLoadReply);
     rpc Search (DataSearchRequest) returns (DataSearchReply);
     rpc Split (DataSplitRequest) returns (DataSplitReply);

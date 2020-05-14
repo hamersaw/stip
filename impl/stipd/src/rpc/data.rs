@@ -1,5 +1,6 @@
 use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataListReply, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchReply, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, Image, LoadFormat as ProtoLoadFormat};
 use swarm::prelude::Dht;
+use tokio::sync::mpsc::Receiver;
 use tonic::{Request, Response, Status};
 
 use crate::image::ImageManager;
@@ -83,8 +84,9 @@ impl DataManagement for DataManagementImpl {
                 DataBroadcastType::List => {
                     let reply = client.list(request
                         .list_request.clone().unwrap()).await.unwrap();
-                    list_replies.insert(node_id as u32,
-                        reply.get_ref().to_owned());
+                    // TODO - fix
+                    //list_replies.insert(node_id as u32,
+                    //    reply.get_ref().to_owned());
                 },
                 DataBroadcastType::Search => {
                     let reply = client.search(request
@@ -148,13 +150,14 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
+    type ListStream = Receiver<Result<Image, Status>>;
     async fn list(&self, request: Request<DataListRequest>)
-            -> Result<Response<DataListReply>, Status> {
+            -> Result<Response<Self::ListStream>, Status> {
         trace!("DataListRequest: {:?}", request);
         let request = request.get_ref();
 
-        // search for the requested images
-        let images = {
+        // search for requested images
+        let images: Vec<Image> = {
             let image_manager = self.image_manager.read().unwrap();
             image_manager.search(&request.band, &request.geohash,
                 &request.max_cloud_coverage, &request.min_pixel_coverage,
@@ -172,12 +175,15 @@ impl DataManagement for DataManagementImpl {
                 }).collect()
         };
 
-        // initialize reply
-        let reply = DataListReply {
-            images: images,
-        };
+        // send images though Sender channel
+        let (mut tx, rx) = tokio::sync::mpsc::channel(4);
+        tokio::spawn(async move {
+            for image in images {
+                tx.send(Ok(image)).await.unwrap(); // TODO - error
+            }
+        });
 
-        Ok(Response::new(reply))
+        Ok(Response::new(rx))
     }
 
     async fn load(&self, request: Request<DataLoadRequest>)

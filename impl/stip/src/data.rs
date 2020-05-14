@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest};
+use protobuf::{ClusterManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -78,14 +78,21 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
 #[tokio::main]
 async fn list(matches: &ArgMatches, _: &ArgMatches,
         list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initialize grpc client
+    // initialize ClusterManagement grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = ClusterManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
+    // initialize NodeListRequest
+    let node_list_request = Request::new(NodeListRequest {});
+
+    // retrieve NodeListReply
+    let node_list_reply = client.node_list(node_list_request).await?;
+    let node_list_reply = node_list_reply.get_ref();
+
     // initialize DataListRequest
-    let list_request = DataListRequest {
+    let request = DataListRequest {
         band: crate::string_opt(list_matches.value_of("band")),
         geohash: crate::string_opt(list_matches.value_of("geohash")),
         max_cloud_coverage: crate::float_opt(
@@ -96,28 +103,22 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         source: crate::string_opt(list_matches.value_of("source")),
     };
 
-    // initialize request
-    let request = Request::new(DataBroadcastRequest {
-        message_type: DataBroadcastType::List as i32,
-        fill_request: None,
-        list_request: Some(list_request),
-        search_request: None,
-        split_request: None,
-    });
-
-    // retrieve reply
-    let reply = client.broadcast(request).await?;
-    let reply = reply.get_ref();
-
-    // print information
+    // iterate over each available node
     println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}",
         "node_id", "path", "platform", "geohash", "band",
         "source", "pixel_coverage", "cloud_coverage");
     println!("----------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-    for (node_id, list_reply) in reply.list_replies.iter() {
-        for image in list_reply.images.iter() {
+    for node in node_list_reply.nodes.iter() {
+        // initialize DataManagement grpc client
+        let mut client = DataManagementClient::connect(
+            format!("http://{}", node.rpc_addr)).await?;
+
+        // iterate over image stream
+        let mut stream = client.list(Request::new(request.clone()))
+            .await?.into_inner();
+        while let Some(image) = stream.message().await? {
             println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16?}", 
-                node_id, image.path, image.platform,
+                node.id, image.path, image.platform,
                 image.geohash, image.band, image.source,
                 image.pixel_coverage, image.cloud_coverage);
         }
