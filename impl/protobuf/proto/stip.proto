@@ -47,25 +47,22 @@ service DataManagement {
 // Broadcast Messages
 enum DataBroadcastType {
     FILL = 0;
-    LIST = 1;
-    SEARCH = 2;
-    SPLIT = 3;
+    SEARCH = 1;
+    SPLIT = 2;
 }
 
 message DataBroadcastRequest {
     required DataBroadcastType messageType = 1;    
     optional DataFillRequest fillRequest = 2;
-    optional DataListRequest listRequest = 3;
-    optional DataSearchRequest searchRequest = 4;
-    optional DataSplitRequest splitRequest = 5;
+    optional DataSearchRequest searchRequest = 3;
+    optional DataSplitRequest splitRequest = 4;
 }
 
 message DataBroadcastReply {
     required DataBroadcastType messageType = 1;    
     map<uint32, DataFillReply> fillReplies = 2;
-    map<uint32, DataListReply> listReplies = 3;
-    map<uint32, DataSearchReply> searchReplies = 4;
-    map<uint32, DataSplitReply> splitReplies = 5;
+    map<uint32, DataSearchReply> searchReplies = 3;
+    map<uint32, DataSplitReply> splitReplies = 4;
 }
 
 // Fill Messages
@@ -102,10 +99,6 @@ message DataListRequest {
     optional float minPixelCoverage = 4;
     optional string platform = 5;
     optional string source = 6;
-}
-
-message DataListReply {
-    repeated Image images = 1;
 }
 
 // Load Messages

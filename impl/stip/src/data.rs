@@ -57,7 +57,6 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(DataBroadcastRequest {
         message_type: DataBroadcastType::Fill as i32,
         fill_request: Some(fill_request),
-        list_request: None,
         search_request: None,
         split_request: None,
     });
@@ -189,7 +188,6 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(DataBroadcastRequest {
         message_type: DataBroadcastType::Search as i32,
         fill_request: None,
-        list_request: None,
         search_request: Some(search_request),
         split_request: None,
     });
@@ -266,7 +264,6 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(DataBroadcastRequest {
         message_type: DataBroadcastType::Split as i32,
         fill_request: None,
-        list_request: None,
         search_request: None,
         split_request: Some(split_request),
     });
