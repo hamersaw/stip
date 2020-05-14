@@ -5,7 +5,7 @@ A distributed spatiotemporal image management framework designed specifically fo
 ## TODO
 - abstract task functionality - lots of code copies
 - **add timestamps - queries, return data, etc**
-- **integrate query indexing data structures - use sqlite on backend?**
+- __integrate query indexing data structures - use sqlite on backend?__
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
 - **set read all permissions on created directories and files**

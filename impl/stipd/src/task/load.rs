@@ -179,8 +179,7 @@ pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize,
     let day = date_string[6..8].parse::<u32>()?;
     let datetime = Utc.ymd(year, month, day).and_hms(0, 0, 0);
 
-    let start_time = datetime.timestamp();
-    let end_time = datetime.timestamp();
+    let timestamp = datetime.timestamp();
 
     let tile_path = record.with_extension("");
     let tile = tile_path.file_name()
@@ -230,8 +229,8 @@ pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image("NAIP",
-                &geohash, "TCI", &tile, start_time,
-                end_time, pixel_coverage, &dataset, &addr) {
+                &geohash, "TCI", &tile, timestamp,
+                pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
     }
@@ -287,14 +286,9 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
         None => return Err("spacecraft metadata not found".into()),
     };
 
-    let start_time = match dataset.metadata_item("PRODUCT_START_TIME", "") {
+    let timestamp = match dataset.metadata_item("PRODUCT_START_TIME", "") {
         Some(time) => time.parse::<DateTime<Utc>>()?.timestamp(),
         None => return Err("start time metadata not found".into()),
-    };
-
-    let end_time = match dataset.metadata_item("PRODUCT_STOP_TIME", "") {
-        Some(time) => time.parse::<DateTime<Utc>>()?.timestamp(),
-        None => return Err("end time metadata not found".into()),
     };
 
     //let uri = dataset.metadata_item("PRODUCT_URI", ""));
@@ -358,8 +352,8 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&platform,
-                    &geohash, &band, &tile, start_time,
-                    end_time, pixel_coverage, &dataset, &addr) {
+                    &geohash, &band, &tile, timestamp,
+                    pixel_coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }

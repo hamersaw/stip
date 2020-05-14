@@ -66,7 +66,7 @@ impl Task for FillTask {
                 return band_cmp;
             }
 
-            a.start_date.cmp(&b.start_date)
+            a.timestamp.cmp(&b.timestamp)
         });
 
         // initialize fill image vectors
@@ -79,7 +79,7 @@ impl Task for FillTask {
         let mut timestamp = 0i64;
         for image in images.iter() {
             if image.platform != platform || image.geohash != geohash
-                    || image.band != band || image.start_date
+                    || image.band != band || image.timestamp
                         - timestamp > self.window_seconds {
                 // process images_buf
                 if images_buf.len() >= 2 {
@@ -93,7 +93,7 @@ impl Task for FillTask {
                 platform = &image.platform;
                 geohash = &image.geohash;
                 band = &image.band;
-                timestamp = image.start_date;
+                timestamp = image.timestamp;
             }
 
             images_buf.push(image.clone());
@@ -240,8 +240,8 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
         let mut image_manager = image_manager.write().unwrap();
         image_manager.write(&image.platform, &image.geohash, 
-            &image.band, FILLED_SOURCE, &tile_id, image.start_date,
-            image.end_date, pixel_coverage, &mut dataset)?;
+            &image.band, FILLED_SOURCE, &tile_id, image.timestamp,
+            pixel_coverage, &mut dataset)?;
     }
 
     Ok(())

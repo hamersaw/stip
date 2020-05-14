@@ -148,13 +148,12 @@ impl DataManagement for DataManagementImpl {
                 .map(|x| Image {
                     band: x.band.clone(),
                     cloud_coverage: x.cloud_coverage,
-                    end_date: x.end_date,
                     geohash: x.geohash.clone(),
                     path: x.path.clone(),
                     pixel_coverage: x.pixel_coverage,
                     platform: x.platform.clone(),
                     source: x.source.clone(),
-                    start_date: x.start_date,
+                    timestamp: x.timestamp,
                 }).collect()
         };
 

@@ -12,13 +12,12 @@ pub const RAW_SOURCE: &'static str = "raw";
 pub struct ImageMetadata {
     pub band: String,
     pub cloud_coverage: Option<f32>,
-    pub end_date: i64,
     pub geohash: String,
     pub path: String,
     pub pixel_coverage: f32,
     pub platform: String,
     pub source: String,
-    pub start_date: i64,
+    pub timestamp: i64,
 }
 
 pub struct ImageManager {
@@ -55,8 +54,8 @@ impl ImageManager {
     }
 
     pub fn write(&mut self, platform: &str, geohash: &str, band: &str, 
-            source: &str, tile: &str, start_date: i64, 
-            end_date: i64, pixel_coverage: f32, dataset: &mut Dataset)
+            source: &str, tile: &str, timestamp: i64,
+            pixel_coverage: f32, dataset: &mut Dataset)
             -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/band/dataset'
         let mut path = self.directory.clone();
@@ -94,27 +93,32 @@ impl ImageManager {
         }
 
         // set dataset metadata attributes - TODO error
-        dataset_copy.set_metadata_item("START_DATE",
-            &start_date.to_string(), "STIP").unwrap();
-        dataset_copy.set_metadata_item("END_DATE",
-            &end_date.to_string(), "STIP").unwrap();
-        dataset_copy.set_metadata_item("PIXEL_COVERAGE",
-            &pixel_coverage.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("BAND",
+            &band.to_string(), "STIP").unwrap();
         dataset_copy.set_metadata_item("CLOUD_COVERAGE",
             &format!("{}", std::f32::MAX), "STIP").unwrap();
+        dataset_copy.set_metadata_item("GEOHASH",
+            &geohash.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("PIXEL_COVERAGE",
+            &pixel_coverage.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("PLATFORM",
+            &platform.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("SOURCE",
+            &source.to_string(), "STIP").unwrap();
+        dataset_copy.set_metadata_item("TIMESTAMP",
+            &timestamp.to_string(), "STIP").unwrap();
 
         // TODO - add image to self.images
         self.load(
             ImageMetadata {
                 band: band.to_string(),
                 cloud_coverage: None,
-                end_date: end_date,
                 geohash: geohash.to_string(),
                 path: path_str.to_string(),
                 pixel_coverage: pixel_coverage,
                 platform: platform.to_string(),
                 source: source.to_string(),
-                start_date: start_date,
+                timestamp: timestamp,
             })
     }
 
@@ -178,9 +182,7 @@ pub fn to_image_metadata(path: &mut PathBuf)
     let dataset = Dataset::open(&path).unwrap();
 
     // TODO - error
-    let start_date = dataset.metadata_item("START_DATE","STIP")
-        .unwrap().parse::<i64>()?;
-    let end_date = dataset.metadata_item("END_DATE","STIP")
+    let timestamp = dataset.metadata_item("TIMESTAMP","STIP")
         .unwrap().parse::<i64>()?;
     let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
         .unwrap().parse::<f32>()?;
@@ -216,12 +218,11 @@ pub fn to_image_metadata(path: &mut PathBuf)
     Ok(ImageMetadata {
         band: band,
         cloud_coverage: cloud_coverage,
-        end_date: end_date,
         geohash: geohash,
         path: path_str,
         pixel_coverage: pixel_coverage,
         platform: platform,
         source: source,
-        start_date: start_date,
+        timestamp: timestamp,
     })
 }

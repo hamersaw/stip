@@ -208,8 +208,8 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
         // send image to new host
         let tile_id = &path.file_name().unwrap().to_string_lossy();
         if let Err(e) = crate::transfer::send_image(&record.platform, 
-                &geohash, &record.band, &tile_id, record.start_date,
-                record.end_date, pixel_coverage, &dataset, &addr) {
+                &geohash, &record.band, &tile_id, record.timestamp,
+                pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
     }
