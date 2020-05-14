@@ -67,6 +67,7 @@ impl ImageManager {
                 let mut permissions =
                     std::fs::metadata(&path)?.permissions();
                 permissions.set_mode(0o755);
+                std::fs::set_permissions(&path, permissions)?;
             }
         }
 
@@ -99,6 +100,7 @@ impl ImageManager {
         // set image permissions
         let mut permissions = std::fs::metadata(&path)?.permissions();
         permissions.set_mode(0o644);
+        std::fs::set_permissions(&path, permissions)?;
 
         // set dataset metadata attributes - TODO error
         dataset_copy.set_metadata_item("BAND",
