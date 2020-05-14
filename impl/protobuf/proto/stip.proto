@@ -40,29 +40,26 @@ service DataManagement {
     rpc Fill (DataFillRequest) returns (DataFillReply);
     rpc List (DataListRequest) returns (stream Image);
     rpc Load (DataLoadRequest) returns (DataLoadReply);
-    rpc Search (DataSearchRequest) returns (DataSearchReply);
+    rpc Search (DataSearchRequest) returns (stream Extent);
     rpc Split (DataSplitRequest) returns (DataSplitReply);
 }
 
 // Broadcast Messages
 enum DataBroadcastType {
     FILL = 0;
-    SEARCH = 1;
-    SPLIT = 2;
+    SPLIT = 1;
 }
 
 message DataBroadcastRequest {
     required DataBroadcastType messageType = 1;    
     optional DataFillRequest fillRequest = 2;
-    optional DataSearchRequest searchRequest = 3;
-    optional DataSplitRequest splitRequest = 4;
+    optional DataSplitRequest splitRequest = 3;
 }
 
 message DataBroadcastReply {
     required DataBroadcastType messageType = 1;    
     map<uint32, DataFillReply> fillReplies = 2;
-    map<uint32, DataSearchReply> searchReplies = 3;
-    map<uint32, DataSplitReply> splitReplies = 4;
+    map<uint32, DataSplitReply> splitReplies = 3;
 }
 
 // Fill Messages
@@ -136,10 +133,6 @@ message DataSearchRequest {
     optional float minPixelCoverage = 4;
     optional string platform = 5;
     optional string source = 6;
-}
-
-message DataSearchReply {
-    repeated Extent extents = 1;
 }
 
 // Split Messages

@@ -11,7 +11,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 - **set read all permissions on created directories and files**
 - open listening sockets on 0.0.0.0
 #### COMMANDS 
-- **data list - convert to streaming API**
 - __data load - support MODIS data__
 - **cloud coverage - computation on images**
 - task stop?

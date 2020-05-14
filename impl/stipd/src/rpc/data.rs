@@ -1,4 +1,4 @@
-use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchReply, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, Image, LoadFormat as ProtoLoadFormat};
+use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, Image, LoadFormat as ProtoLoadFormat};
 use swarm::prelude::Dht;
 use tokio::sync::mpsc::Receiver;
 use tonic::{Request, Response, Status};
@@ -53,7 +53,6 @@ impl DataManagement for DataManagementImpl {
 
         // send broadcast message to each dht node
         let mut fill_replies = HashMap::new();
-        let mut search_replies = HashMap::new();
         let mut split_replies = HashMap::new();
 
         let mut task_id = None;
@@ -80,12 +79,6 @@ impl DataManagement for DataManagementImpl {
                     // process reply
                     task_id = Some(reply.get_ref().task_id);
                 },
-                DataBroadcastType::Search => {
-                    let reply = client.search(request
-                        .search_request.clone().unwrap()).await.unwrap();
-                    search_replies.insert(node_id as u32,
-                        reply.get_ref().to_owned());
-                },
                 DataBroadcastType::Split => {
                     // compile new SplitRequest
                     let mut split_request =
@@ -109,7 +102,6 @@ impl DataManagement for DataManagementImpl {
         let reply = DataBroadcastReply {
             message_type: request.message_type,
             fill_replies: fill_replies,
-            search_replies: search_replies,
             split_replies: split_replies,
         };
 
@@ -207,8 +199,9 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
+    type SearchStream = Receiver<Result<Extent, Status>>;
     async fn search(&self, request: Request<DataSearchRequest>)
-            -> Result<Response<DataSearchReply>, Status> {
+            -> Result<Response<Self::SearchStream>, Status> {
         trace!("DataSearchRequest: {:?}", request);
         let request = request.get_ref();
 
@@ -265,12 +258,15 @@ impl DataManagement for DataManagementImpl {
             }
         }
 
-        // initialize reply
-        let reply = DataSearchReply {
-            extents: extents,
-        };
+        // send extents though Sender channel
+        let (mut tx, rx) = tokio::sync::mpsc::channel(4);
+        tokio::spawn(async move {
+            for extent in extents {
+                tx.send(Ok(extent)).await.unwrap(); // TODO - error
+            }
+        });
 
-        Ok(Response::new(reply))
+        Ok(Response::new(rx))
     }
 
     async fn split(&self, request: Request<DataSplitRequest>)

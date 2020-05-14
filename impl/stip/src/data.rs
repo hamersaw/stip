@@ -57,7 +57,6 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(DataBroadcastRequest {
         message_type: DataBroadcastType::Fill as i32,
         fill_request: Some(fill_request),
-        search_request: None,
         split_request: None,
     });
 
@@ -166,14 +165,21 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 #[tokio::main]
 async fn search(matches: &ArgMatches, _: &ArgMatches,
         search_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initialize grpc client
+    // initialize ClusterManagement grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = ClusterManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
+    // initialize NodeListRequest
+    let node_list_request = Request::new(NodeListRequest {});
+
+    // retrieve NodeListReply
+    let node_list_reply = client.node_list(node_list_request).await?;
+    let node_list_reply = node_list_reply.get_ref();
+
     // initialize DataSearchRequest
-    let search_request = DataSearchRequest {
+    let request = DataSearchRequest {
         band: crate::string_opt(search_matches.value_of("band")),
         geohash: crate::string_opt(search_matches.value_of("geohash")),
         max_cloud_coverage: crate::float_opt(
@@ -184,22 +190,17 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         source: crate::string_opt(search_matches.value_of("source")),
     };
 
-    // initialize request
-    let request = Request::new(DataBroadcastRequest {
-        message_type: DataBroadcastType::Search as i32,
-        fill_request: None,
-        search_request: Some(search_request),
-        split_request: None,
-    });
-
-    // retrieve reply
-    let reply = client.broadcast(request).await?;
-    let reply = reply.get_ref();
-
-    // compile agglomerate view of data
+    // iterate over each available node
     let mut platform_map = BTreeMap::new();
-    for (_, search_reply) in reply.search_replies.iter() {
-        for extent in search_reply.extents.iter() {
+    for node in node_list_reply.nodes.iter() {
+        // initialize DataManagement grpc client
+        let mut client = DataManagementClient::connect(
+            format!("http://{}", node.rpc_addr)).await?;
+
+        // iterate over image stream
+        let mut stream = client.search(Request::new(request.clone()))
+            .await?.into_inner();
+        while let Some(extent) = stream.message().await? {
             let geohash_map = platform_map.entry(
                 extent.platform.clone()).or_insert(BTreeMap::new());
 
@@ -264,7 +265,6 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(DataBroadcastRequest {
         message_type: DataBroadcastType::Split as i32,
         fill_request: None,
-        search_request: None,
         split_request: Some(split_request),
     });
 
