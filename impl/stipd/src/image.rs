@@ -3,6 +3,7 @@ use gdal::raster::{Dataset, Driver};
 
 use std::error::Error;
 use std::ffi::CString;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 pub const FILLED_SOURCE: &'static str = "filled";
@@ -59,12 +60,15 @@ impl ImageManager {
             -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/band/dataset'
         let mut path = self.directory.clone();
-        path.push(platform);
-        path.push(geohash);
-        path.push(band);
-        path.push(source);
-
-        std::fs::create_dir_all(&path)?;
+        for filename in vec!(platform, geohash, band, source) {
+            path.push(filename);
+            if !path.exists() {
+                std::fs::create_dir(&path)?;
+                let mut permissions =
+                    std::fs::metadata(&path)?.permissions();
+                permissions.set_mode(0o755);
+            }
+        }
 
         path.push(tile);
         path.set_extension("tif");
@@ -92,6 +96,10 @@ impl ImageManager {
             }
         }
 
+        // set image permissions
+        let mut permissions = std::fs::metadata(&path)?.permissions();
+        permissions.set_mode(0o644);
+
         // set dataset metadata attributes - TODO error
         dataset_copy.set_metadata_item("BAND",
             &band.to_string(), "STIP").unwrap();
@@ -108,7 +116,7 @@ impl ImageManager {
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
-        // TODO - add image to self.images
+        // load image into internal store
         self.load(
             ImageMetadata {
                 band: band.to_string(),
