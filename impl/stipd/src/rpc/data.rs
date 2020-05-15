@@ -117,8 +117,8 @@ impl DataManagement for DataManagementImpl {
         let task = FillTask::new(request.band.clone(),
             request.end_timestamp.clone(), request.geohash.clone(),
             self.image_manager.clone(), request.platform.clone(),
-            request.start_timestamp.clone(), request.thread_count as u8,
-            request.window_seconds);
+            request.recurse, request.start_timestamp.clone(),
+            request.thread_count as u8, request.window_seconds);
 
         // execute task using task manager - TODO error
         let task_id = {
@@ -281,8 +281,8 @@ impl DataManagement for DataManagementImpl {
         let task = SplitTask::new(request.band.clone(), self.dht.clone(),
             request.end_timestamp.clone(), request.geohash.clone(),
             self.image_manager.clone(), request.platform.clone(),
-            request.precision as usize, request.start_timestamp.clone(),
-            request.thread_count as u8);
+            request.precision as usize, request.recurse,
+            request.start_timestamp.clone(), request.thread_count as u8);
 
         // execute task using task manager - TODO error
         let task_id = {

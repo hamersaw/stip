@@ -48,6 +48,8 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
             fill_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(fill_matches.value_of("geohash")),
         platform: crate::string_opt(fill_matches.value_of("platform")),
+        recurse: fill_matches.value_of("recurse")
+            .unwrap().parse::<bool>()?,
         start_timestamp: crate::i64_opt(
             fill_matches.value_of("start_timestamp"))?,
         task_id: crate::u64_opt(fill_matches.value_of("task_id"))?,
@@ -270,6 +272,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
         platform: crate::string_opt(split_matches.value_of("platform")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
+        recurse: split_matches.value_of("recurse")
+            .unwrap().parse::<bool>()?,
         start_timestamp: crate::i64_opt(
             split_matches.value_of("start_timestamp"))?,
         task_id: crate::u64_opt(split_matches.value_of("task_id"))?,

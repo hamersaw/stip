@@ -1,6 +1,6 @@
 use gdal::raster::Dataset;
 
-use crate::image::{FILLED_SOURCE, ImageManager, ImageMetadata, RAW_SOURCE};
+use crate::image::{FILLED_SOURCE, ImageManager, ImageMetadata};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;
@@ -15,6 +15,7 @@ pub struct FillTask {
     geohash: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
+    recurse: bool,
     start_timestamp: Option<i64>,
     thread_count: u8,
     window_seconds: i64,
@@ -23,14 +24,16 @@ pub struct FillTask {
 impl FillTask {
     pub fn new(band: Option<String>, end_timestamp: Option<i64>,
             geohash: Option<String>, image_manager: Arc<RwLock<ImageManager>>,
-            platform: Option<String>, start_timestamp: Option<i64>,
-            thread_count: u8, window_seconds: i64) -> FillTask {
+            platform: Option<String>, recurse: bool,
+            start_timestamp: Option<i64>, thread_count: u8,
+            window_seconds: i64) -> FillTask {
         FillTask {
             band: band,
             end_timestamp: end_timestamp,
             geohash: geohash,
             image_manager: image_manager,
             platform: platform,
+            recurse: recurse,
             start_timestamp: start_timestamp,
             thread_count: thread_count,
             window_seconds: window_seconds,
@@ -44,15 +47,11 @@ impl Task for FillTask {
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
             let images = image_manager.search(&self.band,
-                &self.end_timestamp, &self.geohash, &None,
-                &None, &self.platform, false,
-                &Some(RAW_SOURCE.to_string()), &self.start_timestamp);
+                &self.end_timestamp, &self.geohash, &None, &None,
+                &self.platform, self.recurse, &None, &self.start_timestamp);
 
             images.into_iter().map(|x| x.clone()).collect()
         };
-
-        //let mut filter_images: Vec<&ImageMetadata> = images.iter()
-        //    .filter(|x| x.pixel_coverage != 1f32).collect();
 
         // order by platform, geohash, band
         images.sort_by(|a, b| {
@@ -136,14 +135,14 @@ impl Task for FillTask {
                 // iterate over records
                 loop {
                     // fetch next record
-                    let record: Vec<ImageMetadata> = 
+                    let mut record: Vec<ImageMetadata> = 
                             match receiver_clone.recv() {
                         Ok(record) => record,
                         Err(_) => break,
                     };
 
                     // process record
-                    match process(&image_manager, &record) {
+                    match process(&image_manager, &mut record) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
                             warn!("skipping record '{:?}': {}",
@@ -209,7 +208,18 @@ impl Task for FillTask {
 }
 
 fn process(image_manager: &Arc<RwLock<ImageManager>>,
-        record: &Vec<ImageMetadata>) -> Result<(), Box<dyn Error>> {
+        record: &mut Vec<ImageMetadata>) -> Result<(), Box<dyn Error>> {
+    // sort records by pixel_coverage
+    record.sort_by(|a, b| {
+        if a.pixel_coverage > b.pixel_coverage {
+            CmpOrdering::Greater
+        } else if a.pixel_coverage > b.pixel_coverage {
+            CmpOrdering::Less
+        } else {
+            CmpOrdering::Equal
+        }
+    });
+
     // read datasets
     let mut datasets = Vec::new();
     for image in record.iter() {
@@ -231,7 +241,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
     // check if pixel coverage is more than previous highest
     let mut max_pixel_coverage = 0f32;
-    for image in record {
+    for image in record.iter() {
         if image.pixel_coverage > max_pixel_coverage {
             max_pixel_coverage = image.pixel_coverage;
         }

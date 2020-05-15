@@ -24,13 +24,6 @@ fn main() {
     }
 }
 
-fn string_opt(value: Option<&str>) -> Option<String> {
-    match value {
-        Some(value) => Some(value.to_string()),
-        None => None,
-    }
-}
-
 fn float_opt(value: Option<&str>)
         -> Result<Option<f32>, Box<dyn Error>> {
     match value {
@@ -43,6 +36,13 @@ fn i64_opt(value: Option<&str>) -> Result<Option<i64>, Box<dyn Error>> {
     match value {
         Some(value) => Ok(Some(value.parse::<i64>()?)),
         None => Ok(None),
+    }
+}
+
+fn string_opt(value: Option<&str>) -> Option<String> {
+    match value {
+        Some(value) => Some(value.to_string()),
+        None => None,
     }
 }
 

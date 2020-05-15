@@ -10,5 +10,6 @@ A distributed spatiotemporal image management framework designed specifically fo
 - open listening sockets on 0.0.0.0?
 #### COMMANDS 
 - __data load - support MODIS data__
+- data merge - combine images into higher level images
 - **cloud coverage - computation on images**
 - task stop?

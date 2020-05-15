@@ -20,6 +20,7 @@ pub struct SplitTask {
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     precision: usize,
+    recurse: bool,
     start_timestamp: Option<i64>,
     thread_count: u8,
 }
@@ -28,7 +29,7 @@ impl SplitTask {
     pub fn new(band: Option<String>, dht: Arc<RwLock<Dht>>,
             end_timestamp: Option<i64>, geohash: Option<String>,
             image_manager: Arc<RwLock<ImageManager>>,
-            platform: Option<String>,precision: usize,
+            platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
             band: band,
@@ -38,6 +39,7 @@ impl SplitTask {
             image_manager: image_manager,
             platform: platform,
             precision: precision,
+            recurse: recurse,
             start_timestamp: start_timestamp,
             thread_count: thread_count,
         }
@@ -51,7 +53,7 @@ impl Task for SplitTask {
             let image_manager = self.image_manager.read().unwrap();
             let images = image_manager.search(&self.band,
                 &self.end_timestamp, &self.geohash, &None,
-                &None, &self.platform, true,
+                &None, &self.platform, self.recurse,
                 &Some(RAW_SOURCE.to_string()), &self.start_timestamp);
 
             images.into_iter().map(|x| x.clone()).collect()

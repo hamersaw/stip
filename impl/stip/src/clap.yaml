@@ -53,6 +53,12 @@ subcommands:
                         long: platform
                         short: p
                         takes_value: true
+                    - recurse:
+                        default_value: "true"
+                        help: recurse through geohashes
+                        long: recurse
+                        short: r
+                        takes_value: true
                     - start_timestamp:
                         help: start timestamp for temporal range
                         long: start_timestamp
@@ -136,7 +142,7 @@ subcommands:
                         default_value: "4"
                         help: geohash precision
                         long: precision
-                        short: r
+                        short: l
                         takes_value: true
                     - task_id:
                         help: manually set task identifier
@@ -219,6 +225,12 @@ subcommands:
                         default_value: "4"
                         help: geohash precision
                         long: precision
+                        short: l
+                        takes_value: true
+                    - recurse:
+                        default_value: "true"
+                        help: recurse through geohashes
+                        long: recurse
                         short: r
                         takes_value: true
                     - start_timestamp:

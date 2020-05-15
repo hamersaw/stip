@@ -68,10 +68,11 @@ message DataFillRequest {
     optional int64 endTimestamp = 2;
     optional string geohash = 3;
     optional string platform = 4;
-    optional int64 startTimestamp = 5;
-    optional uint64 taskId = 6;
-    required uint32 threadCount = 7;
-    required int64 windowSeconds = 8;
+    required bool recurse = 5;
+    optional int64 startTimestamp = 6;
+    optional uint64 taskId = 7;
+    required uint32 threadCount = 8;
+    required int64 windowSeconds = 9;
 }
 
 message DataFillReply {
@@ -147,9 +148,10 @@ message DataSplitRequest {
     optional string geohash = 3;
     optional string platform = 4;
     required uint32 precision = 5;
-    optional int64 startTimestamp = 6;
-    optional uint64 taskId = 7;
-    required uint32 threadCount = 8;
+    required bool recurse = 6;
+    optional int64 startTimestamp = 7;
+    optional uint64 taskId = 8;
+    required uint32 threadCount = 9;
 }
 
 message DataSplitReply {

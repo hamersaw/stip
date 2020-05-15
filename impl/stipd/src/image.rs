@@ -72,8 +72,13 @@ impl ImageManager {
             }
         }
 
+        // check if image path exists
         path.push(tile);
         path.set_extension("tif");
+
+        if path.exists() { // attempting to rewrite existing file
+            return Ok(());
+        }
 
         // open GeoTiff driver
         let driver = Driver::get("GTiff").unwrap();
