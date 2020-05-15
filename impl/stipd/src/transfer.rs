@@ -4,7 +4,7 @@ use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::image::{RAW_SOURCE, ImageManager};
+use crate::image::ImageManager;
 
 use std::error::Error;
 use std::io::{Read, Write};
@@ -58,6 +58,11 @@ impl StreamHandler for TransferStreamHandler {
                 stream.read_exact(&mut tile_buf)?;
                 let tile = String::from_utf8(tile_buf)?;
 
+                let source_len = stream.read_u8()?;
+                let mut source_buf = vec![0u8; source_len as usize];
+                stream.read_exact(&mut source_buf)?;
+                let source = String::from_utf8(source_buf)?;
+
                 let timestamp = stream.read_i64::<BigEndian>()?;
 
                 let pixel_coverage = stream.read_f32::<BigEndian>()?;
@@ -68,8 +73,8 @@ impl StreamHandler for TransferStreamHandler {
                 // write image using ImageManager
                 let mut image_manager =
                     self.image_manager.write().unwrap();
-                image_manager.write(&platform, &geohash, &band,
-                    RAW_SOURCE, &tile, timestamp, pixel_coverage, &mut dataset)?;
+                image_manager.write(&platform, &geohash, &band, &source,
+                    &tile, timestamp, pixel_coverage, &mut dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -81,8 +86,8 @@ impl StreamHandler for TransferStreamHandler {
 }
 
 pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
-        timestamp: i64, pixel_coverage: f32, image: &Dataset,
-        addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
+        source: &str, timestamp: i64, pixel_coverage: f32,
+        image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::Write as u8)?;
@@ -99,6 +104,9 @@ pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
 
     stream.write_u8(tile.len() as u8)?;
     stream.write(tile.as_bytes())?;
+
+    stream.write_u8(source.len() as u8)?;
+    stream.write(source.as_bytes())?;
 
     stream.write_i64::<BigEndian>(timestamp)?;
 

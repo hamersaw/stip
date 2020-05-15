@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
 
-use crate::image::{ImageManager, ImageMetadata, RAW_SOURCE};
+use crate::image::{ImageManager, ImageMetadata, RAW_SOURCE, SPLIT_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -51,7 +51,7 @@ impl Task for SplitTask {
             let image_manager = self.image_manager.read().unwrap();
             let images = image_manager.search(&self.band,
                 &self.end_timestamp, &self.geohash, &None,
-                &None, &self.platform, false,
+                &None, &self.platform, true,
                 &Some(RAW_SOURCE.to_string()), &self.start_timestamp);
 
             images.into_iter().map(|x| x.clone()).collect()
@@ -214,8 +214,8 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
         // send image to new host
         let tile_id = &path.file_name().unwrap().to_string_lossy();
         if let Err(e) = crate::transfer::send_image(&record.platform, 
-                &geohash, &record.band, &tile_id, record.timestamp,
-                pixel_coverage, &dataset, &addr) {
+                &geohash, &record.band, &tile_id, &SPLIT_SOURCE,
+                record.timestamp, pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
     }

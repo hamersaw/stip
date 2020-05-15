@@ -5,6 +5,7 @@ use geohash::Coordinate;
 use swarm::prelude::Dht;
 use zip::ZipArchive;
 
+use crate::image::RAW_SOURCE;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -229,7 +230,7 @@ pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image("NAIP",
-                &geohash, "TCI", &tile, timestamp,
+                &geohash, "TCI", &tile, &RAW_SOURCE, timestamp,
                 pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
@@ -352,7 +353,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&platform,
-                    &geohash, &band, &tile, timestamp,
+                    &geohash, &band, &tile, &RAW_SOURCE, timestamp,
                     pixel_coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }

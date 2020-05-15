@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 pub const FILLED_SOURCE: &'static str = "filled";
 pub const RAW_SOURCE: &'static str = "raw";
+pub const SPLIT_SOURCE: &'static str = "split";
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
