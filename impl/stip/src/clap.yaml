@@ -137,9 +137,9 @@ subcommands:
                             - sentinel
                         help: dataset load format
                     - precision:
-                        default_value: "4"
                         help: geohash precision
                         long: precision
+                        required: true
                         short: l
                         takes_value: true
                     - task_id:
@@ -220,9 +220,9 @@ subcommands:
                         short: p
                         takes_value: true
                     - precision:
-                        default_value: "4"
                         help: geohash precision
                         long: precision
+                        required: true
                         short: l
                         takes_value: true
                     - recurse:
@@ -240,7 +240,7 @@ subcommands:
                         short: d
                         takes_value: true
                     - thread_count:
-                        default_value: "4"
+                        default_value: "1"
                         help: thread count for processing task
                         long: threads
                         short: t

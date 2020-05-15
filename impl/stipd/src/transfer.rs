@@ -65,7 +65,7 @@ impl StreamHandler for TransferStreamHandler {
 
                 let timestamp = stream.read_i64::<BigEndian>()?;
 
-                let pixel_coverage = stream.read_f32::<BigEndian>()?;
+                let pixel_coverage = stream.read_f64::<BigEndian>()?;
 
                 // read image
                 let mut dataset = st_image::prelude::read(stream)?;
@@ -86,7 +86,7 @@ impl StreamHandler for TransferStreamHandler {
 }
 
 pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
-        source: &str, timestamp: i64, pixel_coverage: f32,
+        source: &str, timestamp: i64, pixel_coverage: f64,
         image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
@@ -110,7 +110,7 @@ pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
 
     stream.write_i64::<BigEndian>(timestamp)?;
 
-    stream.write_f32::<BigEndian>(pixel_coverage)?;
+    stream.write_f64::<BigEndian>(pixel_coverage)?;
 
     // write dataset
     st_image::prelude::write(&image, &mut stream)?;

@@ -195,9 +195,8 @@ pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize,
             .expect("compute window geohash");
 
         // if image has 0.0 coverage -> don't process - TODO error
-        let pixel_coverage =
-            st_image::coverage(&dataset).unwrap() as f32;
-        if pixel_coverage == 0f32 {
+        let pixel_coverage = st_image::coverage(&dataset).unwrap();
+        if pixel_coverage == 0f64 {
             continue;
         }
 
@@ -317,9 +316,8 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             let geohash = geohash::encode(coordinate, precision)?;
 
             // if image has 0.0 coverage -> don't process - TODO error
-            let pixel_coverage =
-                st_image::coverage(&dataset).unwrap() as f32;
-            if pixel_coverage == 0f32 {
+            let pixel_coverage = st_image::coverage(&dataset).unwrap();
+            if pixel_coverage == 0f64 {
                 continue;
             }
 

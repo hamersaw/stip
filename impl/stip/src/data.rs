@@ -100,9 +100,9 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         end_timestamp: crate::i64_opt(
             list_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(list_matches.value_of("geohash")),
-        max_cloud_coverage: crate::float_opt(
+        max_cloud_coverage: crate::f64_opt(
             list_matches.value_of("max_cloud_coverage"))?,
-        min_pixel_coverage: crate::float_opt(
+        min_pixel_coverage: crate::f64_opt(
             list_matches.value_of("min_pixel_coverage"))?,
         platform: crate::string_opt(list_matches.value_of("platform")),
         source: crate::string_opt(list_matches.value_of("source")),
@@ -193,9 +193,9 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         end_timestamp: crate::i64_opt(
             search_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(search_matches.value_of("geohash")),
-        max_cloud_coverage: crate::float_opt(
+        max_cloud_coverage: crate::f64_opt(
             search_matches.value_of("max_cloud_coverage"))?,
-        min_pixel_coverage: crate::float_opt(
+        min_pixel_coverage: crate::f64_opt(
             search_matches.value_of("min_pixel_coverage"))?,
         platform: crate::string_opt(search_matches.value_of("platform")),
         source: crate::string_opt(search_matches.value_of("source")),

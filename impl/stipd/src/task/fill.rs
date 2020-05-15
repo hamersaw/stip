@@ -46,11 +46,9 @@ impl Task for FillTask {
         // search for images using ImageManager
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            let images = image_manager.search(&self.band,
-                &self.end_timestamp, &self.geohash, &None, &None,
-                &self.platform, self.recurse, &None, &self.start_timestamp);
-
-            images.into_iter().map(|x| x.clone()).collect()
+            image_manager.search(&self.band, &self.end_timestamp,
+                &self.geohash, &None, &None, &self.platform,
+                self.recurse, &None, &self.start_timestamp)
         };
 
         // order by platform, geohash, band
@@ -112,7 +110,7 @@ impl Task for FillTask {
             .filter(|x| {
                 let mut valid = true;
                 for image in x {
-                    valid = valid || image.pixel_coverage == 1f32;
+                    valid = valid || image.pixel_coverage == 1f64;
                 }
 
                 valid
@@ -237,10 +235,10 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
     // perform fill - TODO error
     let mut dataset = st_image::prelude::fill(&datasets).unwrap();
-    let pixel_coverage = st_image::coverage(&dataset).unwrap() as f32;
+    let pixel_coverage = st_image::coverage(&dataset).unwrap();
 
     // check if pixel coverage is more than previous highest
-    let mut max_pixel_coverage = 0f32;
+    let mut max_pixel_coverage = 0f64;
     for image in record.iter() {
         if image.pixel_coverage > max_pixel_coverage {
             max_pixel_coverage = image.pixel_coverage;

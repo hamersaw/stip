@@ -1,6 +1,6 @@
 [package]
 name = "protobuf"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Daniel Rammer <hamersaw@protonmail.com>"]
 edition = "2018"
 

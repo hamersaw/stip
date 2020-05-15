@@ -24,10 +24,10 @@ fn main() {
     }
 }
 
-fn float_opt(value: Option<&str>)
-        -> Result<Option<f32>, Box<dyn Error>> {
+fn f64_opt(value: Option<&str>)
+        -> Result<Option<f64>, Box<dyn Error>> {
     match value {
-        Some(value) => Ok(Some(value.parse::<f32>()?)),
+        Some(value) => Ok(Some(value.parse::<f64>()?)),
         None => Ok(None),
     }
 }

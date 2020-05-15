@@ -82,10 +82,10 @@ message DataFillReply {
 // List Messages
 message Image {
     required string band = 1;
-    optional float cloudCoverage = 2;
+    optional double cloudCoverage = 2;
     required string geohash = 3;
     required string path = 4;
-    required float pixelCoverage = 5;
+    required double pixelCoverage = 5;
     required string platform = 6;
     required string source = 7;
     required int64 timestamp = 8;
@@ -95,8 +95,8 @@ message DataListRequest {
     optional string band = 1;
     optional int64 endTimestamp = 2;
     optional string geohash = 3;
-    optional float maxCloudCoverage = 4;
-    optional float minPixelCoverage = 5;
+    optional double maxCloudCoverage = 4;
+    optional double minPixelCoverage = 5;
     optional string platform = 6;
     optional string source = 7;
     optional int64 startTimestamp = 8;
@@ -134,8 +134,8 @@ message DataSearchRequest {
     optional string band = 1;
     optional int64 endTimestamp = 2;
     optional string geohash = 3;
-    optional float maxCloudCoverage = 4;
-    optional float minPixelCoverage = 5;
+    optional double maxCloudCoverage = 4;
+    optional double minPixelCoverage = 5;
     optional string platform = 6;
     optional string source = 7;
     optional int64 startTimestamp = 8;

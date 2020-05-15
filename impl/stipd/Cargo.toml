@@ -1,6 +1,6 @@
 [package]
 name = "stipd"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Daniel Rammer <hamersaw@protonmail.com>"]
 edition = "2018"
 
@@ -20,8 +20,10 @@ num-derive = "0.2"
 num-traits = "0.2"
 protobuf = { path = "../protobuf" }
 rand = "0.7"
+rusqlite = "0.23"
 st-image = { path = "../../../st-image" }
 structopt = { version = "0.3", default-features = false }
+#sqlite = "0.25"
 swarm = { path = "../../../swarm-rs" }
 tokio = { version = "0.2", features = ["macros"] }
 tonic = "0.1"

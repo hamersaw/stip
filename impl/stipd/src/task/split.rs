@@ -51,12 +51,10 @@ impl Task for SplitTask {
         // search for images using ImageManager
         let base_records: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            let images = image_manager.search(&self.band,
-                &self.end_timestamp, &self.geohash, &None,
-                &None, &self.platform, self.recurse,
-                &Some(RAW_SOURCE.to_string()), &self.start_timestamp);
-
-            images.into_iter().map(|x| x.clone()).collect()
+            image_manager.search(&self.band, &self.end_timestamp,
+                &self.geohash, &None, &None, &self.platform,
+                self.recurse, &Some(RAW_SOURCE.to_string()),
+                &self.start_timestamp)
         };
 
         let records: Vec<ImageMetadata> = base_records.into_iter()
@@ -182,9 +180,8 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
         }
 
         // if image has 0.0 coverage -> don't process - TODO error
-        let pixel_coverage =
-            st_image::coverage(&dataset).unwrap() as f32;
-        if pixel_coverage == 0f32 {
+        let pixel_coverage = st_image::coverage(&dataset).unwrap();
+        if pixel_coverage == 0f64 {
             continue;
         }
 
