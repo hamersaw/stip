@@ -24,6 +24,9 @@ const CREATE_TABLE_STMT: &str =
     timestamp       BIGINT NOT NULL
 )";
 
+const CREATE_INDEX_STMT: &str =
+"CREATE INDEX idx_images ON images(platform, band, pixel_coverage)";
+
 const INSERT_STMT: &str =
 "INSERT INTO images (band, cloud_coverage, geohash, 
         path, pixel_coverage, platform, source, timestamp)
@@ -71,6 +74,7 @@ impl ImageManager {
         // initialize sqlite connection - TODO error
         let conn = Connection::open_in_memory().unwrap();
         conn.execute(CREATE_TABLE_STMT, rusqlite::params![]).unwrap();
+        conn.execute(CREATE_INDEX_STMT, rusqlite::params![]).unwrap();
 
         ImageManager {
             conn: Mutex::new(conn),
