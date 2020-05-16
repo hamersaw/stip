@@ -51,7 +51,7 @@ impl Task for SplitTask {
         // search for images using ImageManager
         let base_records: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&self.band, &self.end_timestamp,
+            image_manager.list(&self.band, &self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
                 self.recurse, &Some(RAW_SOURCE.to_string()),
                 &self.start_timestamp)

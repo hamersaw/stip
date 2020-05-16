@@ -106,6 +106,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         min_pixel_coverage: crate::f64_opt(
             list_matches.value_of("min_pixel_coverage"))?,
         platform: crate::string_opt(list_matches.value_of("platform")),
+        recurse: list_matches.is_present("recurse"),
         source: crate::string_opt(list_matches.value_of("source")),
         start_timestamp: crate::i64_opt(
             list_matches.value_of("start_timestamp"))?,

@@ -112,6 +112,10 @@ subcommands:
                         long: platform
                         short: p
                         takes_value: true
+                    - recurse:
+                        help: recurse through geohashes
+                        long: recurse
+                        short: r
                     - source:
                         help: image source
                         long: source

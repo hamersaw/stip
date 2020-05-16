@@ -143,20 +143,21 @@ impl DataManagement for DataManagementImpl {
         // search for requested images
         let images: Vec<Image> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&request.band, &request.end_timestamp,
+            image_manager.list(&request.band, &request.end_timestamp,
                 &request.geohash, &request.max_cloud_coverage,
-                &request.min_pixel_coverage, &request.platform, false,
-                &request.source, &request.start_timestamp).iter()
-                .map(|x| Image {
-                    band: x.band.clone(),
-                    cloud_coverage: x.cloud_coverage,
-                    geohash: x.geohash.clone(),
-                    path: x.path.clone(),
-                    pixel_coverage: x.pixel_coverage,
-                    platform: x.platform.clone(),
-                    source: x.source.clone(),
-                    timestamp: x.timestamp,
-                }).collect()
+                &request.min_pixel_coverage, &request.platform,
+                request.recurse, &request.source,
+                &request.start_timestamp).iter()
+                    .map(|x| Image {
+                        band: x.band.clone(),
+                        cloud_coverage: x.cloud_coverage,
+                        geohash: x.geohash.clone(),
+                        path: x.path.clone(),
+                        pixel_coverage: x.pixel_coverage,
+                        platform: x.platform.clone(),
+                        source: x.source.clone(),
+                        timestamp: x.timestamp,
+                    }).collect()
         };
 
         // send images though Sender channel

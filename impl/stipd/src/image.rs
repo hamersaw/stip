@@ -29,7 +29,7 @@ const INSERT_STMT: &str =
         path, pixel_coverage, platform, source, timestamp)
     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
 
-const SELECT_STMT: &str =
+const LIST_SELECT_STMT: &str =
 "SELECT band, cloud_coverage, geohash, path, 
     pixel_coverage, platform, source, timestamp FROM images";
 
@@ -85,6 +85,64 @@ impl ImageManager {
         Ok(paths)
     }
 
+    pub fn list(&self, band: &Option<String>, end_timestamp: &Option<i64>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>) -> Vec<ImageMetadata> {
+        // lock the sqlite connection
+        let conn = self.conn.lock().unwrap();
+
+        // compile the select command and parameters
+        let mut stmt_str = LIST_SELECT_STMT.to_string();
+        let mut params: Vec<&dyn ToSql> = Vec::new();
+
+        // append existing filters to stmt_str
+        append_stmt_filter("band", band,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("timestamp", end_timestamp,
+            &mut stmt_str, "<=", &mut params);
+        append_stmt_filter("cloud_coverage", max_cloud_coverage,
+            &mut stmt_str, "<=", &mut params);
+        append_stmt_filter("pixel_coverage", min_pixel_coverage,
+            &mut stmt_str, ">=", &mut params);
+        append_stmt_filter("platform", platform,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("source", source,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("timestamp", start_timestamp,
+            &mut stmt_str, ">=", &mut params);
+
+        let geohash_glob = match geohash {
+            Some(geohash) => Some(format!("{}%", geohash)),
+            None => None,
+        };
+
+        match recurse {
+            true => append_stmt_filter("geohash", &geohash_glob,
+                &mut stmt_str, "LIKE", &mut params),
+            false => append_stmt_filter("geohash", geohash,
+                &mut stmt_str, "=", &mut params),
+        }
+
+        // execute query - TODO error
+        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        let images_iter = stmt.query_map(&params, |row| {
+            Ok(ImageMetadata {
+                band: row.get(0)?,
+                cloud_coverage: row.get(1)?,
+                geohash: row.get(2)?,
+                path: row.get(3)?,
+                pixel_coverage: row.get(4)?,
+                platform: row.get(5)?,
+                source: row.get(6)?,
+                timestamp: row.get(7)?,
+            })
+        }).unwrap();
+
+        images_iter.map(|x| x.unwrap()).collect()
+    }
+
     pub fn load(&mut self, image: ImageMetadata)
             -> Result<(), Box<dyn Error>> {
         let conn = self.conn.lock().unwrap();
@@ -95,6 +153,35 @@ impl ImageManager {
             ])?;
 
         Ok(())
+    }
+
+    pub fn search_new(&self, band: &Option<String>, end_timestamp: &Option<i64>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>) -> Vec<Extent> {
+        // lock the sqlite connection
+        let conn = self.conn.lock().unwrap();
+
+        // compile the select command and parameters
+        //let mut stmt_str = SELECT_STMT.to_string();
+        let mut stmt_str = "SELECT platform, SUBSTR(geohash, 0, 2) as geohash_search, band, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images GROUP BY platform, geohash_search, band, source, precision".to_string();
+        let mut params: Vec<&dyn ToSql> = Vec::new();
+
+        // execute query - TODO error
+        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        let extent_iter = stmt.query_map(&params, |row| {
+            Ok(Extent {
+                platform: row.get(0)?,
+                geohash: row.get(1)?,
+                band: row.get(2)?,
+                source: row.get(3)?,
+                precision: row.get(4)?,
+                count: row.get(5)?,
+            })
+        }).unwrap();
+
+        extent_iter.map(|x| x.unwrap()).collect()
     }
 
     pub fn write(&mut self, platform: &str, geohash: &str, band: &str, 
@@ -179,164 +266,18 @@ impl ImageManager {
                 timestamp: timestamp,
             })
     }
+}
 
-    pub fn search(&self, band: &Option<String>, end_timestamp: &Option<i64>,
-            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
-            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
-            recurse: bool, source: &Option<String>,
-            start_timestamp: &Option<i64>) -> Vec<ImageMetadata> {
-        // lock the sqlite connection
-        let conn = self.conn.lock().unwrap();
+fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
+        stmt: &mut String, op: &str, params: &mut Vec<&'a dyn ToSql>) {
+    if let Some(_) = filter {
+        params.push(filter);
+        let filter_str = match params.len() {
+            1 => format!(" WHERE {} {} ?{}", feature, op, params.len()),
+            _ => format!(" AND {} {} ?{}", feature, op, params.len()),
+        };
 
-        // compile the select command and parameters
-        let mut stmt_str = SELECT_STMT.to_string();
-        let mut params: Vec<&dyn ToSql> = Vec::new();
-
-        // if exists - filter on band
-        if let Some(_) = band {
-            params.push(&band);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} band=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} band=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // if exists - filter on end_timestamp
-        if let Some(_) = end_timestamp {
-            params.push(&end_timestamp);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} timestamp<=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} timestamp<=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // if exists - filter on geohash
-        let geohash_glob = format!("{}%",
-            geohash.as_ref().unwrap_or(&"".to_string()));
-        if let Some(_) = geohash {
-            if recurse {
-                params.push(&geohash_glob);
-                stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                    true => format!("{} {} geohash LIKE ?{}",
-                        stmt_str, "WHERE", params.len()),
-                    false => format!("{} {} geohash LIKE ?{}",
-                        stmt_str, "AND", params.len()),
-                };
-            } else {
-                params.push(&geohash);
-                stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                    true => format!("{} {} geohash=?{}",
-                        stmt_str, "WHERE", params.len()),
-                    false => format!("{} {} geohash=?{}",
-                        stmt_str, "AND", params.len()),
-                };
-            }
-        }
-
-        // if exists - filter on max_cloud_coverage
-        if let Some(_) = max_cloud_coverage {
-            params.push(&max_cloud_coverage);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} cloud_coverage<=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} cloud_coverage<=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // if exists - filter on min_pixel_coverage
-        if let Some(_) = min_pixel_coverage {
-            params.push(&min_pixel_coverage);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} pixel_coverage>=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} pixel_coverage>=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // if exists - filter on platform
-        if let Some(_) = platform {
-            params.push(&platform);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} platform=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} platform=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // if exists - filter on source
-        if let Some(_) = source {
-            params.push(&source);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} source=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} source=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // if exists - filter on start_timestamp
-        if let Some(_) = start_timestamp {
-            params.push(&start_timestamp);
-            stmt_str = match stmt_str.len() == SELECT_STMT.len() {
-                true => format!("{} {} timestamp>=?{}",
-                    stmt_str, "WHERE", params.len()),
-                false => format!("{} {} timestamp>=?{}",
-                    stmt_str, "AND", params.len()),
-            };
-        }
-
-        // execute query - TODO error
-        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
-        let images_iter = stmt.query_map(&params, |row| {
-            Ok(ImageMetadata {
-                band: row.get(0)?,
-                cloud_coverage: row.get(1)?,
-                geohash: row.get(2)?,
-                path: row.get(3)?,
-                pixel_coverage: row.get(4)?,
-                platform: row.get(5)?,
-                source: row.get(6)?,
-                timestamp: row.get(7)?,
-            })
-        }).unwrap();
-
-        images_iter.map(|x| x.unwrap()).collect()
-    }
-
-    pub fn search_new(&self, band: &Option<String>, end_timestamp: &Option<i64>,
-            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
-            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
-            recurse: bool, source: &Option<String>,
-            start_timestamp: &Option<i64>) -> Vec<Extent> {
-        // lock the sqlite connection
-        let conn = self.conn.lock().unwrap();
-
-        // compile the select command and parameters
-        //let mut stmt_str = SELECT_STMT.to_string();
-        let mut stmt_str = "SELECT platform, SUBSTR(geohash, 0, 2) as geohash_search, band, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images GROUP BY platform, geohash_search, band, source, precision".to_string();
-        let mut params: Vec<&dyn ToSql> = Vec::new();
-
-        // execute query - TODO error
-        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
-        let extent_iter = stmt.query_map(&params, |row| {
-            Ok(Extent {
-                platform: row.get(0)?,
-                geohash: row.get(1)?,
-                band: row.get(2)?,
-                source: row.get(3)?,
-                precision: row.get(4)?,
-                count: row.get(5)?,
-            })
-        }).unwrap();
-
-        extent_iter.map(|x| x.unwrap()).collect()
+        stmt.push_str(&filter_str);
     }
 }
 

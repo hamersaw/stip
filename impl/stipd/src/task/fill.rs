@@ -46,7 +46,7 @@ impl Task for FillTask {
         // search for images using ImageManager
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&self.band, &self.end_timestamp,
+            image_manager.list(&self.band, &self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
                 self.recurse, &None, &self.start_timestamp)
         };

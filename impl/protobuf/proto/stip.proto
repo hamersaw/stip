@@ -98,8 +98,9 @@ message DataListRequest {
     optional double maxCloudCoverage = 4;
     optional double minPixelCoverage = 5;
     optional string platform = 6;
-    optional string source = 7;
-    optional int64 startTimestamp = 8;
+    required bool recurse = 7;
+    optional string source = 8;
+    optional int64 startTimestamp = 9;
 }
 
 // Load Messages
