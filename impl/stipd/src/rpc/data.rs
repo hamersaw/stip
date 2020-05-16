@@ -207,76 +207,22 @@ impl DataManagement for DataManagementImpl {
         trace!("DataSearchRequest: {:?}", request);
         let request = request.get_ref();
 
-        /*// search for the requested images - TODO error
-        let image_manager = self.image_manager.read().unwrap();
-        let images = image_manager.search(&request.band,
-            &request.end_timestamp, &request.geohash,
-            &request.max_cloud_coverage, &request.min_pixel_coverage,
-            &request.platform, true, &request.source,
-            &request.start_timestamp);
-
-        // compile extents
-        let mut platform_map = HashMap::new();
-        let precision = match &request.geohash {
-            Some(geohash) => geohash.len() + 1,
-            None => 1,
-        };
-
-        for image in images {
-            let geohash_map = platform_map.entry(
-                image.platform.clone()).or_insert(HashMap::new());
-
-            let geohash = image.geohash[..std::cmp::min(precision, image.geohash.len())].to_string();
-            let band_map = geohash_map.entry(geohash)
-                .or_insert(HashMap::new());
-
-            let source_map = band_map.entry(image.band.clone())
-                .or_insert(HashMap::new());
-
-            let count_map = source_map.entry(
-                image.source.clone()).or_insert(HashMap::new());
-
-            let count = count_map.entry(image.geohash.len())
-                .or_insert(0);
-            *count += 1;
-        }
-
-        // convert to protobuf format
-        let mut extents = Vec::new();
-        for (platform, geohash_map) in platform_map.iter() {
-            for (geohash, band_map) in geohash_map.iter() {
-                for (band, source_map) in band_map.iter() {
-                    for (source, count_map) in source_map.iter() {
-                        for (precision, count) in count_map.iter() {
-                            extents.push(Extent {
-                                band: band.clone(),
-                                count: *count,
-                                geohash: geohash.clone(),
-                                platform: platform.clone(),
-                                precision: *precision as u32,
-                                source: source.clone(),
-                            });
-                        }
-                    }
-                }
-            }
-        }*/
-
         // search for requested images
         let extents: Vec<Extent> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search_new(&request.band, &request.end_timestamp,
+            image_manager.search(&request.band, &request.end_timestamp,
                 &request.geohash, &request.max_cloud_coverage,
-                &request.min_pixel_coverage, &request.platform, false,
-                &request.source, &request.start_timestamp).iter()
-                .map(|x| Extent {
-                    band: x.band.clone(),
-                    count: x.count as u32,
-                    geohash: x.geohash.clone(),
-                    platform: x.platform.clone(),
-                    precision: x.precision as u32,
-                    source: x.source.clone(),
-                }).collect()
+                &request.min_pixel_coverage, &request.platform,
+                request.recurse, &request.source,
+                &request.start_timestamp).iter()
+                    .map(|x| Extent {
+                        band: x.band.clone(),
+                        count: x.count as u32,
+                        geohash: x.geohash.clone(),
+                        platform: x.platform.clone(),
+                        precision: x.precision as u32,
+                        source: x.source.clone(),
+                    }).collect()
         };
 
         // send extents though Sender channel

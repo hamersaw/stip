@@ -33,6 +33,12 @@ const LIST_SELECT_STMT: &str =
 "SELECT band, cloud_coverage, geohash, path, 
     pixel_coverage, platform, source, timestamp FROM images";
 
+const SEARCH_SELECT_STMT: &str =
+"SELECT platform, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, band, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images";
+
+const SEARCH_GROUP_BY_STMT: &str = "
+GROUP BY platform, geohash_search, band, source, precision";
+
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
     pub band: String,
@@ -93,7 +99,7 @@ impl ImageManager {
         // lock the sqlite connection
         let conn = self.conn.lock().unwrap();
 
-        // compile the select command and parameters
+        // initialize the SELECT command and parameters
         let mut stmt_str = LIST_SELECT_STMT.to_string();
         let mut params: Vec<&dyn ToSql> = Vec::new();
 
@@ -155,18 +161,54 @@ impl ImageManager {
         Ok(())
     }
 
-    pub fn search_new(&self, band: &Option<String>, end_timestamp: &Option<i64>,
+    pub fn search(&self, band: &Option<String>, end_timestamp: &Option<i64>,
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
             start_timestamp: &Option<i64>) -> Vec<Extent> {
         // lock the sqlite connection
         let conn = self.conn.lock().unwrap();
+ 
+        // initialize the SELECT command and parameters
+        let replace_length = match geohash {
+            Some(geohash) => format!("{}", geohash.len() + 2),
+            None => "2".to_string(),
+        };
 
-        // compile the select command and parameters
-        //let mut stmt_str = SELECT_STMT.to_string();
-        let mut stmt_str = "SELECT platform, SUBSTR(geohash, 0, 2) as geohash_search, band, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images GROUP BY platform, geohash_search, band, source, precision".to_string();
+        let mut stmt_str = SEARCH_SELECT_STMT
+            .replace("REPLACE_LENGTH", &replace_length);
         let mut params: Vec<&dyn ToSql> = Vec::new();
+
+        // append existing filters to stmt_str
+        append_stmt_filter("band", band,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("timestamp", end_timestamp,
+            &mut stmt_str, "<=", &mut params);
+        append_stmt_filter("cloud_coverage", max_cloud_coverage,
+            &mut stmt_str, "<=", &mut params);
+        append_stmt_filter("pixel_coverage", min_pixel_coverage,
+            &mut stmt_str, ">=", &mut params);
+        append_stmt_filter("platform", platform,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("source", source,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("timestamp", start_timestamp,
+            &mut stmt_str, ">=", &mut params);
+
+        let geohash_glob = match geohash {
+            Some(geohash) => Some(format!("{}%", geohash)),
+            None => None,
+        };
+
+        match recurse {
+            true => append_stmt_filter("geohash", &geohash_glob,
+                &mut stmt_str, "LIKE", &mut params),
+            false => append_stmt_filter("geohash", geohash,
+                &mut stmt_str, "=", &mut params),
+        }
+
+        // append SEARCH_GROUP_BY_STMT to stmt_str
+        stmt_str.push_str(SEARCH_GROUP_BY_STMT);
 
         // execute query - TODO error
         let mut stmt = conn.prepare(&stmt_str).expect("prepare select");

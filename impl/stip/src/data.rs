@@ -204,6 +204,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         min_pixel_coverage: crate::f64_opt(
             search_matches.value_of("min_pixel_coverage"))?,
         platform: crate::string_opt(search_matches.value_of("platform")),
+        recurse: search_matches.is_present("recurse"),
         source: crate::string_opt(search_matches.value_of("source")),
         start_timestamp: crate::i64_opt(
             search_matches.value_of("start_timestamp"))?,
