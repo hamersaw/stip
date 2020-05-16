@@ -119,7 +119,7 @@ fn main() {
     });
 
     // start GRPC server
-    let addr = SocketAddr::new(opt.ip_addr, opt.rpc_port);
+    let addr = SocketAddr::new("0.0.0.0".parse().unwrap(), opt.rpc_port);
 
     let cluster_management = ClusterManagementImpl::new(dht.clone());
     let data_management = DataManagementImpl::new(dht.clone(),
