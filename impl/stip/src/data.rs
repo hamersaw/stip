@@ -153,7 +153,7 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataLoadRequest
     let request = Request::new(DataLoadRequest {
-        directory: load_matches.value_of("DIRECTORY").unwrap().to_string(),
+        glob: load_matches.value_of("GLOB").unwrap().to_string(),
         load_format: load_format,
         precision: load_matches.value_of("precision")
             .unwrap().parse::<u32>()?,

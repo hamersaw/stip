@@ -184,7 +184,7 @@ impl DataManagement for DataManagementImpl {
         };
 
         let task = LoadEarthExplorerTask::new(self.dht.clone(),
-            request.directory.clone(), load_format,
+            request.glob.clone(), load_format,
             request.precision as usize, request.thread_count as u8);
 
         // execute task using task manager - TODO error

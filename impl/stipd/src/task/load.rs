@@ -26,19 +26,19 @@ pub enum LoadFormat {
 
 pub struct LoadEarthExplorerTask {
     dht: Arc<RwLock<Dht>>,
-    directory: String,
+    glob: String,
     load_format: LoadFormat,
     precision: usize,
     thread_count: u8,
 }
 
 impl LoadEarthExplorerTask {
-    pub fn new(dht: Arc<RwLock<Dht>>, directory: String,
+    pub fn new(dht: Arc<RwLock<Dht>>, glob: String,
             load_format: LoadFormat, precision: usize,
             thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
             dht: dht,
-            directory: directory,
+            glob: glob,
             load_format: load_format,
             precision: precision,
             thread_count: thread_count,
@@ -48,12 +48,9 @@ impl LoadEarthExplorerTask {
 
 impl Task for LoadEarthExplorerTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // read file records
-        let directory = format!("/{}*", self.directory);
-
         // search for image files
         let mut records = Vec::new();
-        for entry in glob::glob(&directory)? {
+        for entry in glob::glob(&self.glob)? {
             records.push(entry?);
         }
 

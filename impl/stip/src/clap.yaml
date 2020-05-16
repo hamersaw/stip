@@ -129,10 +129,10 @@ subcommands:
             - load:
                 about: initialize load data task
                 args:
-                    - DIRECTORY:
+                    - GLOB:
                         index: 1
                         required: true
-                        help: image directory location
+                        help: images location glob
                     - LOAD_FORMAT:
                         index: 2
                         required: true
