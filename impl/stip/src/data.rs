@@ -1,9 +1,10 @@
 use clap::ArgMatches;
-use protobuf::{ClusterManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
+use protobuf::{ClusterManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, Extent, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
 use tonic::Request;
 
 use std::{error, io};
 use std::collections::BTreeMap;
+use std::time::Instant; // TODO - remove
 
 pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
@@ -174,6 +175,7 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 #[tokio::main]
 async fn search(matches: &ArgMatches, _: &ArgMatches,
         search_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    let cc_start = Instant::now();
     // initialize ClusterManagement grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
@@ -186,6 +188,9 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     // retrieve NodeListReply
     let node_list_reply = client.node_list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
+
+    let cc_elapsed = cc_start.elapsed();
+    println!("cluster list request: {}", cc_elapsed.as_millis());
 
     // initialize DataSearchRequest
     let request = DataSearchRequest {
@@ -203,8 +208,68 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             search_matches.value_of("start_timestamp"))?,
     };
 
-    // iterate over each available node
+    // TODO - maintains streams vector
+    let c_start = Instant::now();
+    let mut clients = Vec::new();
+    for node in node_list_reply.nodes.iter() {
+        // initialize DataManagement grpc client
+        let client = DataManagementClient::connect(
+            format!("http://{}", node.rpc_addr)).await?;
+
+        clients.push(client);
+    }
+    let c_elapsed = c_start.elapsed();
+    println!("clients: {}", c_elapsed.as_millis());
+
+    let r_start = Instant::now();
+    let mut replies = Vec::new();
+    for client in clients.iter_mut() {
+        // iterate over image stream
+        let reply = client.search(Request::new(request.clone()));
+        replies.push(reply);
+    }
+    let r_elapsed = r_start.elapsed();
+    println!("replies: {}", r_elapsed.as_millis());
+
+    let s_start = Instant::now();
+    let mut streams: Vec<tonic::codec::Streaming<Extent>> = Vec::new();
+    for reply in replies {
+        let stream = reply.await?.into_inner();
+        streams.push(stream);
+    }
+    let s_elapsed = s_start.elapsed();
+    println!("streams: {}", s_elapsed.as_millis());
+
+    let p_start = Instant::now();
+    let mut stream_index = streams.len();
     let mut platform_map = BTreeMap::new();
+    while streams.len() != 0 {
+        stream_index = (stream_index + 1) % streams.len();
+        if let Some(extent) = streams[stream_index].message().await? {
+            let geohash_map = platform_map.entry(
+                extent.platform.clone()).or_insert(BTreeMap::new());
+
+            let band_map = geohash_map.entry(
+                extent.geohash.clone()).or_insert(BTreeMap::new());
+
+            let source_map = band_map.entry(extent.band.clone())
+                .or_insert(BTreeMap::new());
+
+            let count_map = source_map.entry(
+                extent.source.clone()).or_insert(BTreeMap::new());
+
+            let count = count_map.entry(extent.precision)
+                .or_insert(0);
+            *count += extent.count;
+        } else {
+            let _ = streams.remove(stream_index);
+        }
+    }
+    let p_elapsed = p_start.elapsed();
+    println!("processing: {}", p_elapsed.as_millis());
+
+    // iterate over each available node
+    /*let mut platform_map = BTreeMap::new();
     for node in node_list_reply.nodes.iter() {
         // initialize DataManagement grpc client
         let mut client = DataManagementClient::connect(
@@ -230,7 +295,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
                 .or_insert(0);
             *count += extent.count;
         }
-    }
+    }*/
 
     // print summarized data
     println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}", "platform",

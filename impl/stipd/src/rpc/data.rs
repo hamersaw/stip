@@ -206,7 +206,7 @@ impl DataManagement for DataManagementImpl {
         trace!("DataSearchRequest: {:?}", request);
         let request = request.get_ref();
 
-        // search for the requested images - TODO error
+        /*// search for the requested images - TODO error
         let image_manager = self.image_manager.read().unwrap();
         let images = image_manager.search(&request.band,
             &request.end_timestamp, &request.geohash,
@@ -259,7 +259,24 @@ impl DataManagement for DataManagementImpl {
                     }
                 }
             }
-        }
+        }*/
+
+        // search for requested images
+        let extents: Vec<Extent> = {
+            let image_manager = self.image_manager.read().unwrap();
+            image_manager.search_new(&request.band, &request.end_timestamp,
+                &request.geohash, &request.max_cloud_coverage,
+                &request.min_pixel_coverage, &request.platform, false,
+                &request.source, &request.start_timestamp).iter()
+                .map(|x| Extent {
+                    band: x.band.clone(),
+                    count: x.count as u32,
+                    geohash: x.geohash.clone(),
+                    platform: x.platform.clone(),
+                    precision: x.precision as u32,
+                    source: x.source.clone(),
+                }).collect()
+        };
 
         // send extents though Sender channel
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);

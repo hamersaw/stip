@@ -45,6 +45,16 @@ pub struct ImageMetadata {
     pub timestamp: i64,
 }
 
+#[derive(Clone, Debug)]
+pub struct Extent {
+    pub platform: String,
+    pub geohash: String,
+    pub band: String,
+    pub source: String,
+    pub precision: u8,
+    pub count: i64,
+}
+
 pub struct ImageManager {
     conn: Mutex<Connection>,
     directory: PathBuf,
@@ -298,6 +308,35 @@ impl ImageManager {
         }).unwrap();
 
         images_iter.map(|x| x.unwrap()).collect()
+    }
+
+    pub fn search_new(&self, band: &Option<String>, end_timestamp: &Option<i64>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>) -> Vec<Extent> {
+        // lock the sqlite connection
+        let conn = self.conn.lock().unwrap();
+
+        // compile the select command and parameters
+        //let mut stmt_str = SELECT_STMT.to_string();
+        let mut stmt_str = "SELECT platform, SUBSTR(geohash, 0, 2) as geohash_search, band, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images GROUP BY platform, geohash_search, band, source, precision".to_string();
+        let mut params: Vec<&dyn ToSql> = Vec::new();
+
+        // execute query - TODO error
+        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        let extent_iter = stmt.query_map(&params, |row| {
+            Ok(Extent {
+                platform: row.get(0)?,
+                geohash: row.get(1)?,
+                band: row.get(2)?,
+                source: row.get(3)?,
+                precision: row.get(4)?,
+                count: row.get(5)?,
+            })
+        }).unwrap();
+
+        extent_iter.map(|x| x.unwrap()).collect()
     }
 }
 
