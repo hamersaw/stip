@@ -13,11 +13,22 @@ This crate defines a stip node. It contains the bulk of the implementation; defi
 
 ## COMMANDS
 ### STIPD
-stipd is the cluster node application.
 #### START CLUSTER
-TODO
+The cluster deployment is provided in the ./etc/hosts.txt file, where each row defines a single cluster node. Each row is formatted as 'IpAddress GossipPort RpcPort XferPort FLAGS...'. An example row is:
+ 
+    127.0.0.1 15605 15606 15607 -d /tmp/STIP/0 -t 0 -t 6148914691236516864 -t 12297829382473033728
+
+This row defines a stipd node running at the provided IP address (127.0.0.1) and ports (15605 15606 15607). Additionally it defines a variety of command line arguments including: -d <directory> to define the storage directory and -t <token> to initialize this node with the provided DHT tokens. 
+
+Starting the cluster leverages the provided ./sbin/start-all.sh script. This script simply iterates over nodes defined in ./etc/hosts.txt and starts a node instance on the provided machine. It should be noted that starting nodes on remote hosts requires ssh access.
+
+    # terminal command to start stip cluster from root project
+    ./sbin/start-all.sh
 #### STOP CLUSTER
-TODO
+Similar to starting the cluster, the ./sbin/stop-all.sh script has been provided to stop a stip cluster. Again, this script leverages the ./etc/hosts.txt file to iterate over node definitions.
+
+    # terminal command to stop stip cluster from root project
+    ./sbin/stop-all.sh
 ### STIP
 #### CLUSTER LIST / SHOW
 TODO
