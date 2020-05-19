@@ -83,7 +83,6 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - add Filter protobuf -> use everywhere
 - image replication? - one replica on geohash of length (x - 1)
 - improve node logging
-- __multithread image loading - cpu usage is very low__
 - refactor task implementations - facilitate code reuse
 #### COMMANDS 
 - __data load - support MODIS data__

@@ -75,8 +75,8 @@ fn main() {
 
     server.start().expect("transfer server start");
 
-    // load existing data into ImageManager
-    let mut paths = {
+    // compile vector is existing image paths
+    let paths = {
         let image_manager = image_manager.read().unwrap();
         match image_manager.get_paths() {
             Ok(paths) => paths,
@@ -84,38 +84,46 @@ fn main() {
         }
     };
 
-    let image_manager_clone = image_manager.clone();
-    std::thread::spawn(move || {
-        let mut images = Vec::new();
-        for mut path in paths.iter_mut() {
-            // parse image metadata
-            match crate::image::to_image_metadata(&mut path) {
-                Ok(image) => images.push(image),
-                Err(e) => warn!("failed to parse image metadata: {}", e),
-            }
+    // initialize image load channel
+    let (sender, receiver) = crossbeam_channel::bounded(256);
 
-            // periodically load images into ImageManager
-            if images.len() >= 2500 {
-                let mut image_manager = image_manager_clone.write().unwrap();
-                for image in images {
-                    if let Err(e) = image_manager.load(image) {
-                        warn!("failed to load image: {}", e);
-                    }
+    // start load theads
+    for _ in 0..opt.load_thread_count {
+        let image_manager_clone = image_manager.clone();
+        let receiver_clone = receiver.clone();
+
+        std::thread::spawn(move || {
+            loop {
+                // fetch next record
+                let mut path: PathBuf = match receiver_clone.recv() {
+                    Ok(record) => record,
+                    Err(_) => break,
+                };
+
+                // parse image metadata
+                match crate::image::to_image_metadata(&mut path) {
+                    Ok(image) => {
+                        let mut image_manager = 
+                            image_manager_clone.write().unwrap();
+                        if let Err(e) = image_manager.load(image) {
+                            warn!("failed to load image: {}", e);
+                        }
+                    },
+                    Err(e) => warn!("failed to parse image metadata: {}", e),
                 }
-
-                images = Vec::new();
+            }
+        });
+    }
+ 
+    // send existing image paths to image load channel
+    let _ = std::thread::spawn(move || {
+        for path in paths {
+            if let Err(e) = sender.send(path) {
+                warn!("failed to load image path: {}", e);
             }
         }
 
-        // load remaining images into ImageManager
-        if images.len() > 0 {
-            let mut image_manager = image_manager_clone.write().unwrap();
-            for image in images {
-                if let Err(e) = image_manager.load(image) {
-                    warn!("failed to load image: {}", e);
-                }
-            }
-        }
+        drop(sender);
     });
 
     // start GRPC server
@@ -158,6 +166,10 @@ struct Opt {
 
     #[structopt(short="d", long="directory", help="data storage directory.")]
     directory: PathBuf,
+
+    #[structopt(short="l", long="load-thread-count",
+        help="thread count to load existing data.", default_value="4")]
+    load_thread_count: u8,
 
     #[structopt(short="i", long="ip-address",
         help="gossip ip address.", default_value="127.0.0.1")]
