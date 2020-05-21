@@ -1,6 +1,6 @@
 [package]
 name = "stipd"
-version = "0.2.8"
+version = "0.2.9"
 authors = ["Daniel Rammer <hamersaw@protonmail.com>"]
 edition = "2018"
 

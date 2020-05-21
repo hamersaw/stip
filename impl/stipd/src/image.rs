@@ -286,8 +286,6 @@ impl ImageManager {
         // set dataset metadata attributes - TODO error
         dataset_copy.set_metadata_item("BAND",
             &band.to_string(), "STIP").unwrap();
-        dataset_copy.set_metadata_item("CLOUD_COVERAGE",
-            &format!("{}", std::f32::MAX), "STIP").unwrap();
         dataset_copy.set_metadata_item("GEOHASH",
             &geohash.to_string(), "STIP").unwrap();
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
@@ -336,13 +334,10 @@ pub fn to_image_metadata(path: &mut PathBuf)
         .unwrap().parse::<i64>()?;
     let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
         .unwrap().parse::<f64>()?;
-    let cloud_coverage_dec = dataset.metadata_item("CLOUD_COVERAGE",
-        "STIP").unwrap().parse::<f64>()?;
-
-    let cloud_coverage = if cloud_coverage_dec == std::f64::MAX {
-        None
-    } else {
-        Some(cloud_coverage_dec)
+    let cloud_coverage =
+            match dataset.metadata_item("CLOUD_COVERAGE", "STIP") {
+        Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
+        None => None,
     };
 
     // parse platform and geohash from path
