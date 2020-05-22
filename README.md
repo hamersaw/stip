@@ -85,6 +85,7 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - improve node logging
 - refactor task implementations - facilitate code reuse
 #### COMMANDS 
+- data list / search - allow mulitple bands?
 - __data load - support MODIS data__
 - data merge - combine images into higher level images
 - **cloud coverage - computation on images**

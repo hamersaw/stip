@@ -2,12 +2,16 @@
 
 import gdal
 import math
+import multiprocessing
 import numpy as np
+import os
 import pathlib
 import s2cloudless
 import sys
 
-sys.path.append('../stippy/')
+# import realative 'stippy' python project
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir + '/../../stippy/')
 import stippy
 
 BANDS = ['B01', 'B02', 'B04', 'B05',
@@ -67,9 +71,27 @@ def compute_cloud_coverage(directory, platform, geohash, source, tile):
     #print(str(cloud_pixels) + ' ' + str(clear_pixels))
     return cloud_pixels / (cloud_pixels + clear_pixels)
 
+def process(image):
+    # compute path of image
+    path = pathlib.Path(image.path)
+
+    # compute cloud coverage percentage
+    tile = path.name
+    directory = str(path.parents[4])
+    cloud_coverage = compute_cloud_coverage(directory,
+        image.platform, image.geohash, image.source, tile)
+
+    print(image.geohash + ' ' + path.name
+        + ' ' + str(cloud_coverage))
+
+    # update all existing image bands
+    for path in path.parents[2].glob('*/' + image.source + '/' + tile):
+        gdal_dataset = gdal.Open(str(path))
+        gdal_dataset.SetMetadataItem("CLOUD_COVERAGE",
+            str(cloud_coverage), "STIP")
+
 if __name__ == "__main__":
     host_addr = '127.0.0.1:15606'
-
     image_iter = stippy.list_node_images(host_addr,
         platform='Sentinel-2A', band='TCI')
 
@@ -77,14 +99,5 @@ if __name__ == "__main__":
     for (node, image) in image_iter:
         images.append(image)
 
-    for image in images:
-        path = pathlib.PurePath(image.path)
-        print(image.geohash + ' ' + path.name)
-
-        # compute cloud coverage percentage
-        tile = path.name
-        directory = str(path.parents[4])
-        cloud_coverage = compute_cloud_coverage(directory,
-            image.platform, image.geohash, image.source, tile)
-
-        print('  cloud coverage: ' + str(cloud_coverage))
+    with multiprocessing.Pool(4) as pool:
+        pool.map(process, images)
