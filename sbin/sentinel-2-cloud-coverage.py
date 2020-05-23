@@ -1,5 +1,6 @@
 #!/bin/python3
 
+import argparse
 import gdal
 import math
 import multiprocessing
@@ -91,13 +92,31 @@ def process(image):
             str(cloud_coverage), "STIP")
 
 if __name__ == "__main__":
-    host_addr = '127.0.0.1:15606'
+    # parse arguments
+    parser = argparse.ArgumentParser(description='compute cloud coverage')
+    parser.add_argument('-i', '--ip-address', type=str,
+        help='stip host ip address', default='127.0.0.1')
+    parser.add_argument('-p', '--port', type=int,
+        help='stip host rpc port', default='15606')
+    parser.add_argument('-t', '--thread-count', type=int,
+        help='worker thread count', default='4')
+
+    args = parser.parse_args()
+
+    # compile list of processing images
+    host_addr = args.ip_address + ':' + str(args.port)
     image_iter = stippy.list_node_images(host_addr,
         platform='Sentinel-2A', band='TCI')
-
     images = []
-    for (node, image) in image_iter:
+
+    for (node, image) in stippy.list_node_images(host_addr,
+            platform='Sentinel-2A', band='TCI'):
         images.append(image)
 
-    with multiprocessing.Pool(4) as pool:
+    for (node, image) in stippy.list_node_images(host_addr,
+            platform='Sentinel-2B', band='TCI'):
+        images.append(image)
+
+    # process images
+    with multiprocessing.Pool(args.thread_count) as pool:
         pool.map(process, images)
