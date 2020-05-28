@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{ClusterManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, Extent, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
+use protobuf::{ClusterManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, Extent, Filter, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -190,10 +190,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let node_list_reply = client.node_list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
 
-    // TODO - fix search
-    /*// initialize DataSearchRequest
-    let request = DataSearchRequest {
-        band: crate::string_opt(search_matches.value_of("band")),
+    // initialize Filter
+    let filter = Filter {
         end_timestamp: crate::i64_opt(
             search_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(search_matches.value_of("geohash")),
@@ -206,6 +204,11 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         source: crate::string_opt(search_matches.value_of("source")),
         start_timestamp: crate::i64_opt(
             search_matches.value_of("start_timestamp"))?,
+    };
+
+    // initialize DataSearchRequest
+    let request = DataSearchRequest {
+        filter: filter,
     };
 
     // TODO - maintains streams vector
@@ -266,7 +269,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
                 }
             }
         }
-    }*/
+    }
 
     Ok(())
 }

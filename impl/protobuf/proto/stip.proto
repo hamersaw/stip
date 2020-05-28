@@ -50,7 +50,7 @@ message Filter {
     optional double maxCloudCoverage = 3;
     optional double minPixelCoverage = 4;
     optional string platform = 5;
-    optional bool recurse = 6;
+    required bool recurse = 6;
     optional string source = 7;
     optional int64 startTimestamp = 8;
 }

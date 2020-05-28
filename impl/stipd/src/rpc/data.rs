@@ -208,33 +208,31 @@ impl DataManagement for DataManagementImpl {
             -> Result<Response<Self::SearchStream>, Status> {
         trace!("DataSearchRequest: {:?}", request);
         let request = request.get_ref();
+        let filter = &request.filter;
 
-        // TODO - fix search
         // search for requested images
-        /*let extents: Vec<Extent> = {
+        let extents: Vec<Extent> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&request.band, &request.end_timestamp,
-                &request.geohash, &request.max_cloud_coverage,
-                &request.min_pixel_coverage, &request.platform,
-                request.recurse, &request.source,
-                &request.start_timestamp).iter()
+            image_manager.search(&filter.end_timestamp, &filter.geohash,
+                &filter.max_cloud_coverage, &filter.min_pixel_coverage,
+                &filter.platform, filter.recurse, &filter.source,
+                &filter.start_timestamp).iter()
                     .map(|x| Extent {
-                        band: x.band.clone(),
                         count: x.count as u32,
                         geohash: x.geohash.clone(),
                         platform: x.platform.clone(),
                         precision: x.precision as u32,
                         source: x.source.clone(),
                     }).collect()
-        };*/
+        };
 
         // send extents though Sender channel
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);
-        /*tokio::spawn(async move {
+        tokio::spawn(async move {
             for extent in extents {
                 tx.send(Ok(extent)).await.unwrap(); // TODO - error
             }
-        });*/
+        });
 
         Ok(Response::new(rx))
     }

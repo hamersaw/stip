@@ -101,7 +101,7 @@ fn main() {
                 };
 
                 // TODO - load data
-                /*// parse image metadata
+                // parse image metadata
                 match crate::image::to_image_metadata(&mut path) {
                     Ok(image) => {
                         let mut image_manager = 
@@ -111,7 +111,7 @@ fn main() {
                         }
                     },
                     Err(e) => warn!("failed to parse image metadata: {}", e),
-                }*/
+                }
             }
         });
     }
