@@ -1,9 +1,11 @@
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 use rusqlite::{Connection, ToSql};
 
 use std::error::Error;
 use std::ffi::CString;
+use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -154,8 +156,9 @@ impl ImageManager {
         unimplemented!();
     }
 
-    pub fn load(&mut self, image: ImageMetadata)
-            -> Result<(), Box<dyn Error>> {
+    pub fn load(&mut self, platform: &str, geohash: &str, source: &str,
+            tile: &str, timestamp: i64, pixel_coverage: f64,
+            files: &Vec<(String, String)>) -> Result<(), Box<dyn Error>> {
         // TODO - load data into sqlite
         /*let conn = self.conn.lock().unwrap();
         conn.execute(INSERT_STMT, rusqlite::params![
@@ -163,6 +166,7 @@ impl ImageManager {
                 image.path, image.pixel_coverage as f64,
                 image.platform, image.source, image.timestamp
             ])?;*/
+        println!("LOAD {} {} {} {}", platform, geohash, source, tile);
 
         Ok(())
     }
@@ -293,17 +297,55 @@ impl ImageManager {
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
-        // TODO - load image into internal store
-        /*self.load(
-            ImageMetadata {
-                cloud_coverage: None,
-                geohash: geohash.to_string(),
-                path: path_str.to_string(),
-                pixel_coverage: pixel_coverage,
-                platform: platform.to_string(),
-                source: source.to_string(),
-                timestamp: timestamp,
-            })*/
+        Ok(())
+    }
+
+    pub fn write_metadata(&mut self, platform: &str, geohash: &str,
+            source: &str, tile: &str, timestamp: i64, pixel_coverage: f64,
+            files: &Vec<(String, String)>) -> Result<(), Box<dyn Error>> {
+        // TODO - replicated code
+        // create directory 'self.directory/platform/geohash/source'
+        let mut path = self.directory.clone();
+        for filename in vec!(platform, geohash, source) {
+            path.push(filename);
+            if !path.exists() {
+                std::fs::create_dir(&path)?;
+                let mut permissions =
+                    std::fs::metadata(&path)?.permissions();
+                permissions.set_mode(0o755);
+                std::fs::set_permissions(&path, permissions)?;
+            }
+        }
+
+        // check if image path exists
+        path.push(tile);
+        path.set_extension("tif");
+
+        if path.exists() { // attempting to rewrite existing file
+            return Ok(());
+        }
+
+        // open output file
+        let mut file = File::create(&path)?;
+ 
+        // write metadata
+        crate::transfer::write_string(&platform, &mut file)?;
+        crate::transfer::write_string(&geohash, &mut file)?;
+        crate::transfer::write_string(&source, &mut file)?;
+        crate::transfer::write_string(&tile, &mut file)?;
+        file.write_i64::<BigEndian>(timestamp)?;
+        file.write_f64::<BigEndian>(pixel_coverage)?;
+
+        // write files
+        file.write_u8(files.len() as u8)?;
+        for (path, description) in files.iter() {
+            crate::transfer::write_string(&path, &mut file)?;
+            crate::transfer::write_string(&description, &mut file)?;
+        }
+
+        // load image into internal store
+        self.load(&platform, &geohash, &source, &tile,
+            timestamp, pixel_coverage, files)?;
 
         Ok(())
     }
@@ -322,46 +364,30 @@ fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
     }
 }
 
-pub fn to_image_metadata(path: &mut PathBuf)
+/*pub fn to_image_metadata(path: &mut PathBuf)
         -> Result<ImageMetadata, Box<dyn Error>> {
-    let dataset = Dataset::open(&path).unwrap();
+    // open input file
+    let mut file = File::open(&path)?;
 
-    // TODO - error
-    let timestamp = dataset.metadata_item("TIMESTAMP","STIP")
-        .unwrap().parse::<i64>()?;
-    let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
-        .unwrap().parse::<f64>()?;
-    let cloud_coverage =
-            match dataset.metadata_item("CLOUD_COVERAGE", "STIP") {
-        Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
-        None => None,
-    };
+    // read metdaata
+    let platform = crate::transfer::read_string(&mut file)?;
+    let geohash = crate::transfer::read_string(&mut file)?;
+    let source = crate::transfer::read_string(&mut file)?;
+    let tile = crate::transfer::read_string(&mut file)?;
+    let timestamp = file.read_i64::<BigEndian>()?;
+    let pixel_coverage = file.read_f64::<BigEndian>()?;
 
-    // parse platform and geohash from path
-    let path_str = path.to_string_lossy().to_string();
-    let _ = path.pop();
-    let source = path.file_name()
-        .ok_or("source not found in path")?
-        .to_string_lossy().to_string();
-    let _ = path.pop();
-    let geohash = path.file_name()
-        .ok_or("geohash not found in path")?
-        .to_string_lossy().to_string();
-    let _ = path.pop();
-    let platform = path.file_name()
-        .ok_or("platform not found in path")?
-        .to_string_lossy().to_string();
+    // read files
+    let mut files = Vec::new();
+    for _ in 0..file.read_u8() {
+        let path = crate::transfer::read_string(&mut file)?;
+        let description = crate::transfer::read_string(&mut file)?;
+        files.push((path, description));
+    }
 
-    /*// TODO - return ImageMetadata
-    Ok(ImageMetadata {
-        cloud_coverage: cloud_coverage,
-        geohash: geohash,
-        path: path_str,
-        pixel_coverage: pixel_coverage,
-        platform: platform,
-        source: source,
-        timestamp: timestamp,
-    })*/
+    // load image into internal store
+    self.load(&platform, &geohash, &source, &tile,
+        timestamp, pixel_coverage, files)?;
 
-    unimplemented!();
-}
+    Ok(())
+}*/

@@ -42,8 +42,8 @@ impl StreamHandler for TransferStreamHandler {
                 // read metadata
                 let platform = read_string(stream)?;
                 let geohash = read_string(stream)?;
-                let tile = read_string(stream)?;
                 let source = read_string(stream)?;
+                let tile = read_string(stream)?;
                 let timestamp = stream.read_i64::<BigEndian>()?;
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
 
@@ -51,8 +51,7 @@ impl StreamHandler for TransferStreamHandler {
                 let mut dataset = st_image::prelude::read(stream)?;
 
                 // write image using ImageManager
-                let mut image_manager =
-                    self.image_manager.read().unwrap();
+                let mut image_manager = self.image_manager.read().unwrap();
                 image_manager.write(&platform, &geohash, &source,
                     &tile, timestamp, pixel_coverage, &mut dataset)?;
             },
@@ -61,8 +60,8 @@ impl StreamHandler for TransferStreamHandler {
                 // read metadata
                 let platform = read_string(stream)?;
                 let geohash = read_string(stream)?;
-                let tile = read_string(stream)?;
                 let source = read_string(stream)?;
+                let tile = read_string(stream)?;
                 let timestamp = stream.read_i64::<BigEndian>()?;
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
 
@@ -74,11 +73,10 @@ impl StreamHandler for TransferStreamHandler {
                     files.push((path, description));
                 }
 
-                // write image using ImageManager
-                let mut image_manager =
-                    self.image_manager.write().unwrap();
-                /*image_manager.write(&platform, &geohash, &source,
-                    &tile, timestamp, pixel_coverage, &mut dataset)?;*/
+                // write image metadata using ImageManager
+                let mut image_manager = self.image_manager.write().unwrap();
+                image_manager.write_metadata(&platform, &geohash, &source,
+                    &tile, timestamp, pixel_coverage, &files)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -89,15 +87,15 @@ impl StreamHandler for TransferStreamHandler {
     }
 }
 
-fn read_string<T: Read>(reader: &mut T) -> Result<String, Box<dyn Error>> {
+pub fn read_string<T: Read>(reader: &mut T) -> Result<String, Box<dyn Error>> {
     let len = reader.read_u8()?;
     let mut buf = vec![0u8; len as usize];
     reader.read_exact(&mut buf)?;
     Ok(String::from_utf8(buf)?)
 }
 
-pub fn send_image(platform: &str, geohash: &str, tile: &str,
-        source: &str, timestamp: i64, pixel_coverage: f64,
+pub fn send_image(platform: &str, geohash: &str, source: &str,
+        tile: &str, timestamp: i64, pixel_coverage: f64,
         image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
@@ -106,8 +104,8 @@ pub fn send_image(platform: &str, geohash: &str, tile: &str,
     // write metadata
     write_string(&platform, &mut stream)?;
     write_string(&geohash, &mut stream)?;
-    write_string(&tile, &mut stream)?;
     write_string(&source, &mut stream)?;
+    write_string(&tile, &mut stream)?;
     stream.write_i64::<BigEndian>(timestamp)?;
     stream.write_f64::<BigEndian>(pixel_coverage)?;
 
@@ -117,8 +115,8 @@ pub fn send_image(platform: &str, geohash: &str, tile: &str,
     Ok(())
 }
 
-pub fn send_metadata(platform: &str, geohash: &str, tile: &str,
-        source: &str, timestamp: i64, pixel_coverage: f64,
+pub fn send_metadata(platform: &str, geohash: &str, source: &str,
+        tile: &str, timestamp: i64, pixel_coverage: f64,
         files: &Vec<(String, String)>, addr: &SocketAddr)
         -> Result<(), Box<dyn Error>> {
     // open connection
@@ -128,8 +126,8 @@ pub fn send_metadata(platform: &str, geohash: &str, tile: &str,
     // write metadata
     write_string(&platform, &mut stream)?;
     write_string(&geohash, &mut stream)?;
-    write_string(&tile, &mut stream)?;
     write_string(&source, &mut stream)?;
+    write_string(&tile, &mut stream)?;
     stream.write_i64::<BigEndian>(timestamp)?;
     stream.write_f64::<BigEndian>(pixel_coverage)?;
 
@@ -143,7 +141,7 @@ pub fn send_metadata(platform: &str, geohash: &str, tile: &str,
     Ok(())
 }
 
-fn write_string<T: Write>(value: &str, writer: &mut T)
+pub fn write_string<T: Write>(value: &str, writer: &mut T)
         -> Result<(), Box<dyn Error>> {
     writer.write_u8(value.len() as u8)?;
     writer.write(value.as_bytes())?;

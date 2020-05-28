@@ -365,7 +365,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image("Sentinel-2",
-                    &geohash, &format!("{}-{}", tile, i), &RAW_SOURCE,
+                    &geohash, &RAW_SOURCE, &format!("{}-{}", tile, i),
                     timestamp, pixel_coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
