@@ -13,8 +13,10 @@ use std::sync::{Arc, RwLock};
 
 #[derive(FromPrimitive)]
 enum TransferOp {
-    Read = 0,
-    Write = 1,
+    ReadImage = 0,
+    WriteImage = 1,
+    ReadMetadata = 2,
+    WriteMetadata = 3,
 }
 
 pub struct TransferStreamHandler {
@@ -35,31 +37,14 @@ impl StreamHandler for TransferStreamHandler {
         // read operation type
         let op_type = stream.read_u8()?;
         match FromPrimitive::from_u8(op_type) {
-            Some(TransferOp::Read) => unimplemented!(),
-            Some(TransferOp::Write) => {
+            Some(TransferOp::ReadImage) => unimplemented!(),
+            Some(TransferOp::WriteImage) => {
                 // read metadata
-                let platform_len = stream.read_u8()?;
-                let mut platform_buf = vec![0u8; platform_len as usize];
-                stream.read_exact(&mut platform_buf)?;
-                let platform = String::from_utf8(platform_buf)?;
-
-                let geohash_len = stream.read_u8()?;
-                let mut geohash_buf = vec![0u8; geohash_len as usize];
-                stream.read_exact(&mut geohash_buf)?;
-                let geohash = String::from_utf8(geohash_buf)?;
-
-                let tile_len = stream.read_u8()?;
-                let mut tile_buf = vec![0u8; tile_len as usize];
-                stream.read_exact(&mut tile_buf)?;
-                let tile = String::from_utf8(tile_buf)?;
-
-                let source_len = stream.read_u8()?;
-                let mut source_buf = vec![0u8; source_len as usize];
-                stream.read_exact(&mut source_buf)?;
-                let source = String::from_utf8(source_buf)?;
-
+                let platform = read_string(stream)?;
+                let geohash = read_string(stream)?;
+                let tile = read_string(stream)?;
+                let source = read_string(stream)?;
                 let timestamp = stream.read_i64::<BigEndian>()?;
-
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
 
                 // read image
@@ -67,9 +52,33 @@ impl StreamHandler for TransferStreamHandler {
 
                 // write image using ImageManager
                 let mut image_manager =
-                    self.image_manager.write().unwrap();
+                    self.image_manager.read().unwrap();
                 image_manager.write(&platform, &geohash, &source,
                     &tile, timestamp, pixel_coverage, &mut dataset)?;
+            },
+            Some(TransferOp::ReadMetadata) => unimplemented!(),
+            Some(TransferOp::WriteMetadata) => {
+                // read metadata
+                let platform = read_string(stream)?;
+                let geohash = read_string(stream)?;
+                let tile = read_string(stream)?;
+                let source = read_string(stream)?;
+                let timestamp = stream.read_i64::<BigEndian>()?;
+                let pixel_coverage = stream.read_f64::<BigEndian>()?;
+
+                // read files
+                let mut files = Vec::new();
+                for i in 0..stream.read_u8()? {
+                    let path = read_string(stream)?;
+                    let description = read_string(stream)?;
+                    files.push((path, description));
+                }
+
+                // write image using ImageManager
+                let mut image_manager =
+                    self.image_manager.write().unwrap();
+                /*image_manager.write(&platform, &geohash, &source,
+                    &tile, timestamp, pixel_coverage, &mut dataset)?;*/
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -80,32 +89,63 @@ impl StreamHandler for TransferStreamHandler {
     }
 }
 
+fn read_string<T: Read>(reader: &mut T) -> Result<String, Box<dyn Error>> {
+    let len = reader.read_u8()?;
+    let mut buf = vec![0u8; len as usize];
+    reader.read_exact(&mut buf)?;
+    Ok(String::from_utf8(buf)?)
+}
+
 pub fn send_image(platform: &str, geohash: &str, tile: &str,
         source: &str, timestamp: i64, pixel_coverage: f64,
         image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
-    stream.write_u8(TransferOp::Write as u8)?;
+    stream.write_u8(TransferOp::WriteImage as u8)?;
 
     // write metadata
-    stream.write_u8(platform.len() as u8)?;
-    stream.write(platform.as_bytes())?;
-
-    stream.write_u8(geohash.len() as u8)?;
-    stream.write(geohash.as_bytes())?;
-
-    stream.write_u8(tile.len() as u8)?;
-    stream.write(tile.as_bytes())?;
-
-    stream.write_u8(source.len() as u8)?;
-    stream.write(source.as_bytes())?;
-
+    write_string(&platform, &mut stream)?;
+    write_string(&geohash, &mut stream)?;
+    write_string(&tile, &mut stream)?;
+    write_string(&source, &mut stream)?;
     stream.write_i64::<BigEndian>(timestamp)?;
-
     stream.write_f64::<BigEndian>(pixel_coverage)?;
 
     // write dataset
     st_image::prelude::write(&image, &mut stream)?;
 
+    Ok(())
+}
+
+pub fn send_metadata(platform: &str, geohash: &str, tile: &str,
+        source: &str, timestamp: i64, pixel_coverage: f64,
+        files: &Vec<(String, String)>, addr: &SocketAddr)
+        -> Result<(), Box<dyn Error>> {
+    // open connection
+    let mut stream = TcpStream::connect(addr)?;
+    stream.write_u8(TransferOp::WriteMetadata as u8)?;
+
+    // write metadata
+    write_string(&platform, &mut stream)?;
+    write_string(&geohash, &mut stream)?;
+    write_string(&tile, &mut stream)?;
+    write_string(&source, &mut stream)?;
+    stream.write_i64::<BigEndian>(timestamp)?;
+    stream.write_f64::<BigEndian>(pixel_coverage)?;
+
+    // write files
+    stream.write_u8(files.len() as u8)?;
+    for (path, description) in files {
+        write_string(&path, &mut stream)?;
+        write_string(&description, &mut stream)?;
+    }
+
+    Ok(())
+}
+
+fn write_string<T: Write>(value: &str, writer: &mut T)
+        -> Result<(), Box<dyn Error>> {
+    writer.write_u8(value.len() as u8)?;
+    writer.write(value.as_bytes())?;
     Ok(())
 }

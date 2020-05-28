@@ -45,11 +45,17 @@ GROUP BY platform, geohash_search, source, precision";
 pub struct ImageMetadata {
     pub cloud_coverage: Option<f64>,
     pub geohash: String,
-    pub path: String,
+    pub files: Vec<FileMetadata>,
     pub pixel_coverage: f64,
     pub platform: String,
     pub source: String,
     pub timestamp: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct FileMetadata {
+    pub description: String,
+    pub path: String,
 }
 
 #[derive(Clone, Debug)]
@@ -130,8 +136,8 @@ impl ImageManager {
                 &mut stmt_str, "=", &mut params),
         }
 
-        // execute query - TODO error
-        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        // TODO - execute query - TODO error
+        /*let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let images_iter = stmt.query_map(&params, |row| {
             Ok(ImageMetadata {
                 cloud_coverage: row.get(0)?,
@@ -144,7 +150,8 @@ impl ImageManager {
             })
         }).unwrap();
 
-        images_iter.map(|x| x.unwrap()).collect()
+        images_iter.map(|x| x.unwrap()).collect()*/
+        unimplemented!();
     }
 
     pub fn load(&mut self, image: ImageMetadata)
@@ -222,10 +229,9 @@ impl ImageManager {
         extent_iter.map(|x| x.unwrap()).collect()
     }
 
-    pub fn write(&mut self, platform: &str, geohash: &str, 
-            source: &str, tile: &str, timestamp: i64,
-            pixel_coverage: f64, dataset: &mut Dataset)
-            -> Result<(), Box<dyn Error>> {
+    pub fn write(&self, platform: &str, geohash: &str, source: &str,
+            tile: &str, timestamp: i64, pixel_coverage: f64,
+            dataset: &mut Dataset) -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/source'
         let mut path = self.directory.clone();
         for filename in vec!(platform, geohash, source) {
@@ -287,8 +293,8 @@ impl ImageManager {
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
-        // load image into internal store
-        self.load(
+        // TODO - load image into internal store
+        /*self.load(
             ImageMetadata {
                 cloud_coverage: None,
                 geohash: geohash.to_string(),
@@ -297,7 +303,9 @@ impl ImageManager {
                 platform: platform.to_string(),
                 source: source.to_string(),
                 timestamp: timestamp,
-            })
+            })*/
+
+        Ok(())
     }
 }
 
@@ -344,7 +352,7 @@ pub fn to_image_metadata(path: &mut PathBuf)
         .ok_or("platform not found in path")?
         .to_string_lossy().to_string();
 
-    // return ImageMetadata
+    /*// TODO - return ImageMetadata
     Ok(ImageMetadata {
         cloud_coverage: cloud_coverage,
         geohash: geohash,
@@ -353,5 +361,7 @@ pub fn to_image_metadata(path: &mut PathBuf)
         platform: platform,
         source: source,
         timestamp: timestamp,
-    })
+    })*/
+
+    unimplemented!();
 }

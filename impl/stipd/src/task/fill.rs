@@ -213,8 +213,8 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
     // read datasets
     let mut datasets = Vec::new();
     for image in record.iter() {
-        // check if path exists
-        let path = Path::new(&image.path);
+        // TODO check if path exists
+        /*let path = Path::new(&image.path);
         if !path.exists() {
             // TODO - log
             continue;
@@ -222,7 +222,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
         // open image - TODO  error
         let dataset = Dataset::open(&path).unwrap();
-        datasets.push(dataset);
+        datasets.push(dataset);*/
     }
 
     // perform fill - TODO error
@@ -238,7 +238,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
     }
 
     if pixel_coverage > max_pixel_coverage {
-        // write mem_dataset - TODO error
+        /*// TODO - write mem_dataset - TODO error
         let image = &record[0];
         let path = Path::new(&record[0].path);
         let tile_id = &path.file_name().unwrap().to_string_lossy();
@@ -246,7 +246,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
         let mut image_manager = image_manager.write().unwrap();
         image_manager.write(&image.platform, &image.geohash, 
             FILLED_SOURCE, &tile_id, image.timestamp,
-            pixel_coverage, &mut dataset)?;
+            pixel_coverage, &mut dataset)?;*/
     }
 
     Ok(())

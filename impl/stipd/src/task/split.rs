@@ -154,8 +154,8 @@ impl Task for SplitTask {
 
 fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
         x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
-    // check if path exists
-    let path = Path::new(&record.path);
+    // TODO - check if path exists
+    /*let path = Path::new(&record.path);
     if !path.exists() {
         return Err(format!("image path '{}' does not exist",
             path.to_string_lossy()).into());
@@ -215,7 +215,8 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
                 pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
-    }
+    }*/
 
+    unimplemented!();
     Ok(())
 }
