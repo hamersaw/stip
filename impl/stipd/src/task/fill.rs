@@ -46,7 +46,7 @@ impl Task for FillTask {
         // search for images using ImageManager
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.list(&self.band, &self.end_timestamp,
+            image_manager.list(&self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
                 self.recurse, &None, &self.start_timestamp)
         };
@@ -63,11 +63,6 @@ impl Task for FillTask {
                 return geohash_cmp;
             }
 
-            let band_cmp = a.band.cmp(&b.band);
-            if band_cmp != CmpOrdering::Equal {
-                return band_cmp;
-            }
-
             a.timestamp.cmp(&b.timestamp)
         });
 
@@ -77,12 +72,10 @@ impl Task for FillTask {
 
         let mut platform = "";
         let mut geohash = "";
-        let mut band = "";
         let mut timestamp = 0i64;
         for image in images.iter() {
             if image.platform != platform || image.geohash != geohash
-                    || image.band != band || image.timestamp
-                        - timestamp > self.window_seconds {
+                    || image.timestamp - timestamp > self.window_seconds {
                 // process images_buf
                 if images_buf.len() >= 2 {
                     records.push(images_buf);
@@ -94,7 +87,6 @@ impl Task for FillTask {
                 // reset geohash and timestamp
                 platform = &image.platform;
                 geohash = &image.geohash;
-                band = &image.band;
                 timestamp = image.timestamp;
             }
 
@@ -253,7 +245,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
         let mut image_manager = image_manager.write().unwrap();
         image_manager.write(&image.platform, &image.geohash, 
-            &image.band, FILLED_SOURCE, &tile_id, image.timestamp,
+            FILLED_SOURCE, &tile_id, image.timestamp,
             pixel_coverage, &mut dataset)?;
     }
 

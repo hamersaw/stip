@@ -13,7 +13,6 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct SplitTask {
-    band: Option<String>,
     dht: Arc<RwLock<Dht>>,
     end_timestamp: Option<i64>,
     geohash: Option<String>,
@@ -26,13 +25,12 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(band: Option<String>, dht: Arc<RwLock<Dht>>,
-            end_timestamp: Option<i64>, geohash: Option<String>,
+    pub fn new(dht: Arc<RwLock<Dht>>, end_timestamp: Option<i64>,
+            geohash: Option<String>,
             image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
-            band: band,
             dht: dht,
             end_timestamp: end_timestamp,
             geohash: geohash,
@@ -51,7 +49,7 @@ impl Task for SplitTask {
         // search for images using ImageManager
         let base_records: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.list(&self.band, &self.end_timestamp,
+            image_manager.list(&self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
                 self.recurse, &Some(RAW_SOURCE.to_string()),
                 &self.start_timestamp)
@@ -212,9 +210,9 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
 
         // send image to new host
         let tile_id = &path.file_name().unwrap().to_string_lossy();
-        if let Err(e) = crate::transfer::send_image(&record.platform, 
-                &geohash, &record.band, &tile_id, &SPLIT_SOURCE,
-                record.timestamp, pixel_coverage, &dataset, &addr) {
+        if let Err(e) = crate::transfer::send_image(&record.platform,
+                &geohash, &tile_id, &SPLIT_SOURCE, record.timestamp,
+                pixel_coverage, &dataset, &addr) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
     }

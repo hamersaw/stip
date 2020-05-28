@@ -114,7 +114,7 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = FillTask::new(request.band.clone(),
+        /*let task = FillTask::new(
             request.end_timestamp.clone(), request.geohash.clone(),
             self.image_manager.clone(), request.platform.clone(),
             request.recurse, request.start_timestamp.clone(),
@@ -124,7 +124,8 @@ impl DataManagement for DataManagementImpl {
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
             task_manager.execute(task, request.task_id).unwrap()
-        };
+        };*/
+        let task_id = 0; // TODO - fix fill
 
         // initialize reply
         let reply = DataFillReply {
@@ -140,10 +141,11 @@ impl DataManagement for DataManagementImpl {
         trace!("DataListRequest: {:?}", request);
         let request = request.get_ref();
 
+        // TODO - fix list
         // search for requested images
-        let images: Vec<Image> = {
+        /*let images: Vec<Image> = {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.list(&request.band, &request.end_timestamp,
+            image_manager.list(&request.end_timestamp,
                 &request.geohash, &request.max_cloud_coverage,
                 &request.min_pixel_coverage, &request.platform,
                 request.recurse, &request.source,
@@ -158,15 +160,15 @@ impl DataManagement for DataManagementImpl {
                         source: x.source.clone(),
                         timestamp: x.timestamp,
                     }).collect()
-        };
+        };*/
 
         // send images though Sender channel
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);
-        tokio::spawn(async move {
+        /*tokio::spawn(async move {
             for image in images {
                 tx.send(Ok(image)).await.unwrap(); // TODO - error
             }
-        });
+        });*/
 
         Ok(Response::new(rx))
     }
@@ -207,8 +209,9 @@ impl DataManagement for DataManagementImpl {
         trace!("DataSearchRequest: {:?}", request);
         let request = request.get_ref();
 
+        // TODO - fix search
         // search for requested images
-        let extents: Vec<Extent> = {
+        /*let extents: Vec<Extent> = {
             let image_manager = self.image_manager.read().unwrap();
             image_manager.search(&request.band, &request.end_timestamp,
                 &request.geohash, &request.max_cloud_coverage,
@@ -223,15 +226,15 @@ impl DataManagement for DataManagementImpl {
                         precision: x.precision as u32,
                         source: x.source.clone(),
                     }).collect()
-        };
+        };*/
 
         // send extents though Sender channel
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);
-        tokio::spawn(async move {
+        /*tokio::spawn(async move {
             for extent in extents {
                 tx.send(Ok(extent)).await.unwrap(); // TODO - error
             }
-        });
+        });*/
 
         Ok(Response::new(rx))
     }
@@ -242,7 +245,7 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
 
         // initialize task
-        let task = SplitTask::new(request.band.clone(), self.dht.clone(),
+        /*let task = SplitTask::new(request.band.clone(), self.dht.clone(),
             request.end_timestamp.clone(), request.geohash.clone(),
             self.image_manager.clone(), request.platform.clone(),
             request.precision as usize, request.recurse,
@@ -252,7 +255,9 @@ impl DataManagement for DataManagementImpl {
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
             task_manager.execute(task, request.task_id).unwrap()
-        };
+        };*/
+
+        let task_id = 0; // TODO - fix split
 
         // initialize reply
         let reply = DataSplitReply {

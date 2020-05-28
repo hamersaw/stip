@@ -14,7 +14,6 @@ pub const SPLIT_SOURCE: &'static str = "split";
 
 const CREATE_TABLE_STMT: &str =
 "CREATE TABLE images (
-    band            TEXT NOT NULL,
     cloud_coverage  FLOAT NULL,
     geohash         TEXT NOT NULL,
     path            TEXT NOT NULL,
@@ -25,26 +24,25 @@ const CREATE_TABLE_STMT: &str =
 )";
 
 const CREATE_INDEX_STMT: &str =
-"CREATE INDEX idx_images ON images(platform, band, pixel_coverage)";
+"CREATE INDEX idx_images ON images(platform, pixel_coverage)";
 
 const INSERT_STMT: &str =
-"INSERT INTO images (band, cloud_coverage, geohash, 
+"INSERT INTO images (cloud_coverage, geohash, 
         path, pixel_coverage, platform, source, timestamp)
-    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
 const LIST_SELECT_STMT: &str =
-"SELECT band, cloud_coverage, geohash, path, 
-    pixel_coverage, platform, source, timestamp FROM images";
+"SELECT cloud_coverage, geohash, path, pixel_coverage,
+    platform, source, timestamp FROM images";
 
 const SEARCH_SELECT_STMT: &str =
-"SELECT platform, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, band, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images";
+"SELECT platform, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images";
 
 const SEARCH_GROUP_BY_STMT: &str = "
-GROUP BY platform, geohash_search, band, source, precision";
+GROUP BY platform, geohash_search, source, precision";
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
-    pub band: String,
     pub cloud_coverage: Option<f64>,
     pub geohash: String,
     pub path: String,
@@ -58,7 +56,6 @@ pub struct ImageMetadata {
 pub struct Extent {
     pub platform: String,
     pub geohash: String,
-    pub band: String,
     pub source: String,
     pub precision: u8,
     pub count: i64,
@@ -95,7 +92,7 @@ impl ImageManager {
         Ok(paths)
     }
 
-    pub fn list(&self, band: &Option<String>, end_timestamp: &Option<i64>,
+    pub fn list(&self, end_timestamp: &Option<i64>,
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
@@ -108,8 +105,6 @@ impl ImageManager {
         let mut params: Vec<&dyn ToSql> = Vec::new();
 
         // append existing filters to stmt_str
-        append_stmt_filter("band", band,
-            &mut stmt_str, "=", &mut params);
         append_stmt_filter("timestamp", end_timestamp,
             &mut stmt_str, "<=", &mut params);
         append_stmt_filter("cloud_coverage", max_cloud_coverage,
@@ -139,14 +134,13 @@ impl ImageManager {
         let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let images_iter = stmt.query_map(&params, |row| {
             Ok(ImageMetadata {
-                band: row.get(0)?,
-                cloud_coverage: row.get(1)?,
-                geohash: row.get(2)?,
-                path: row.get(3)?,
-                pixel_coverage: row.get(4)?,
-                platform: row.get(5)?,
-                source: row.get(6)?,
-                timestamp: row.get(7)?,
+                cloud_coverage: row.get(0)?,
+                geohash: row.get(1)?,
+                path: row.get(2)?,
+                pixel_coverage: row.get(3)?,
+                platform: row.get(4)?,
+                source: row.get(5)?,
+                timestamp: row.get(6)?,
             })
         }).unwrap();
 
@@ -155,17 +149,18 @@ impl ImageManager {
 
     pub fn load(&mut self, image: ImageMetadata)
             -> Result<(), Box<dyn Error>> {
-        let conn = self.conn.lock().unwrap();
+        // TODO - load data into sqlite
+        /*let conn = self.conn.lock().unwrap();
         conn.execute(INSERT_STMT, rusqlite::params![
-                image.band, image.cloud_coverage, image.geohash,
+                image.cloud_coverage, image.geohash,
                 image.path, image.pixel_coverage as f64,
                 image.platform, image.source, image.timestamp
-            ])?;
+            ])?;*/
 
         Ok(())
     }
 
-    pub fn search(&self, band: &Option<String>, end_timestamp: &Option<i64>,
+    pub fn search(&self, end_timestamp: &Option<i64>,
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
@@ -184,8 +179,6 @@ impl ImageManager {
         let mut params: Vec<&dyn ToSql> = Vec::new();
 
         // append existing filters to stmt_str
-        append_stmt_filter("band", band,
-            &mut stmt_str, "=", &mut params);
         append_stmt_filter("timestamp", end_timestamp,
             &mut stmt_str, "<=", &mut params);
         append_stmt_filter("cloud_coverage", max_cloud_coverage,
@@ -220,23 +213,22 @@ impl ImageManager {
             Ok(Extent {
                 platform: row.get(0)?,
                 geohash: row.get(1)?,
-                band: row.get(2)?,
-                source: row.get(3)?,
-                precision: row.get(4)?,
-                count: row.get(5)?,
+                source: row.get(2)?,
+                precision: row.get(3)?,
+                count: row.get(4)?,
             })
         }).unwrap();
 
         extent_iter.map(|x| x.unwrap()).collect()
     }
 
-    pub fn write(&mut self, platform: &str, geohash: &str, band: &str, 
+    pub fn write(&mut self, platform: &str, geohash: &str, 
             source: &str, tile: &str, timestamp: i64,
             pixel_coverage: f64, dataset: &mut Dataset)
             -> Result<(), Box<dyn Error>> {
-        // create directory 'self.directory/platform/geohash/band/dataset'
+        // create directory 'self.directory/platform/geohash/source'
         let mut path = self.directory.clone();
-        for filename in vec!(platform, geohash, band, source) {
+        for filename in vec!(platform, geohash, source) {
             path.push(filename);
             if !path.exists() {
                 std::fs::create_dir(&path)?;
@@ -284,8 +276,6 @@ impl ImageManager {
         std::fs::set_permissions(&path, permissions)?;
 
         // set dataset metadata attributes - TODO error
-        dataset_copy.set_metadata_item("BAND",
-            &band.to_string(), "STIP").unwrap();
         dataset_copy.set_metadata_item("GEOHASH",
             &geohash.to_string(), "STIP").unwrap();
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
@@ -300,7 +290,6 @@ impl ImageManager {
         // load image into internal store
         self.load(
             ImageMetadata {
-                band: band.to_string(),
                 cloud_coverage: None,
                 geohash: geohash.to_string(),
                 path: path_str.to_string(),
@@ -347,10 +336,6 @@ pub fn to_image_metadata(path: &mut PathBuf)
         .ok_or("source not found in path")?
         .to_string_lossy().to_string();
     let _ = path.pop();
-    let band = path.file_name()
-        .ok_or("band not found in path")?
-        .to_string_lossy().to_string();
-    let _ = path.pop();
     let geohash = path.file_name()
         .ok_or("geohash not found in path")?
         .to_string_lossy().to_string();
@@ -361,7 +346,6 @@ pub fn to_image_metadata(path: &mut PathBuf)
 
     // return ImageMetadata
     Ok(ImageMetadata {
-        band: band,
         cloud_coverage: cloud_coverage,
         geohash: geohash,
         path: path_str,

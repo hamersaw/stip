@@ -48,11 +48,6 @@ impl StreamHandler for TransferStreamHandler {
                 stream.read_exact(&mut geohash_buf)?;
                 let geohash = String::from_utf8(geohash_buf)?;
 
-                let band_len = stream.read_u8()?;
-                let mut band_buf = vec![0u8; band_len as usize];
-                stream.read_exact(&mut band_buf)?;
-                let band = String::from_utf8(band_buf)?;
-
                 let tile_len = stream.read_u8()?;
                 let mut tile_buf = vec![0u8; tile_len as usize];
                 stream.read_exact(&mut tile_buf)?;
@@ -73,7 +68,7 @@ impl StreamHandler for TransferStreamHandler {
                 // write image using ImageManager
                 let mut image_manager =
                     self.image_manager.write().unwrap();
-                image_manager.write(&platform, &geohash, &band, &source,
+                image_manager.write(&platform, &geohash, &source,
                     &tile, timestamp, pixel_coverage, &mut dataset)?;
             },
             None => return Err(Box::new(std::io::Error::new(
@@ -85,7 +80,7 @@ impl StreamHandler for TransferStreamHandler {
     }
 }
 
-pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
+pub fn send_image(platform: &str, geohash: &str, tile: &str,
         source: &str, timestamp: i64, pixel_coverage: f64,
         image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // open connection
@@ -98,9 +93,6 @@ pub fn send_image(platform: &str, geohash: &str, band: &str, tile: &str,
 
     stream.write_u8(geohash.len() as u8)?;
     stream.write(geohash.as_bytes())?;
-
-    stream.write_u8(band.len() as u8)?;
-    stream.write(band.as_bytes())?;
 
     stream.write_u8(tile.len() as u8)?;
     stream.write(tile.as_bytes())?;

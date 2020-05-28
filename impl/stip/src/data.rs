@@ -41,7 +41,8 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize DataFillRequest
+    // TODO - fix fill
+    /*// initialize DataFillRequest
     let fill_request = DataFillRequest {
         band: crate::string_opt(fill_matches.value_of("band")),
         end_timestamp: crate::i64_opt(
@@ -73,7 +74,7 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     for (node_id, fill_reply) in reply.fill_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, fill_reply.task_id);
-    }
+    }*/
 
     Ok(())
 }
@@ -94,7 +95,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let node_list_reply = client.node_list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
 
-    // initialize DataListRequest
+    // TODO - fix list
+    /*// initialize DataListRequest
     let request = DataListRequest {
         band: crate::string_opt(list_matches.value_of("band")),
         end_timestamp: crate::i64_opt(
@@ -130,7 +132,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
                 image.band, image.source, image.timestamp,
                 image.pixel_coverage, image.cloud_coverage);
         }
-    }
+    }*/
 
     Ok(())
 }
@@ -188,7 +190,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let node_list_reply = client.node_list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
 
-    // initialize DataSearchRequest
+    // TODO - fix search
+    /*// initialize DataSearchRequest
     let request = DataSearchRequest {
         band: crate::string_opt(search_matches.value_of("band")),
         end_timestamp: crate::i64_opt(
@@ -236,11 +239,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             let geohash_map = platform_map.entry(
                 extent.platform.clone()).or_insert(BTreeMap::new());
 
-            let band_map = geohash_map.entry(
+            let source_map = geohash_map.entry(
                 extent.geohash.clone()).or_insert(BTreeMap::new());
-
-            let source_map = band_map.entry(extent.band.clone())
-                .or_insert(BTreeMap::new());
 
             let count_map = source_map.entry(
                 extent.source.clone()).or_insert(BTreeMap::new());
@@ -254,22 +254,19 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     }
 
     // print summarized data
-    println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}", "platform",
-        "geohash", "band", "source", "precision", "count");
-    println!("--------------------------------------------------------------------");
+    println!("{:<16}{:<10}{:<12}{:<12}{:<12}", "platform",
+        "geohash", "source", "precision", "count");
+    println!("--------------------------------------------------------------");
     for (platform, geohash_map) in platform_map.iter() {
-        for (geohash, band_map) in geohash_map.iter() {
-            for (band, source_map) in band_map.iter() {
-                for (source, count_map) in source_map.iter() {
-                    for (precision, count) in count_map.iter() {
-                        println!("{:<16}{:<10}{:<6}{:<12}{:<12}{:<12}",
-                            platform, geohash, band, source,
-                            precision, count);
-                    }
+        for (geohash, source_map) in geohash_map.iter() {
+            for (source, count_map) in source_map.iter() {
+                for (precision, count) in count_map.iter() {
+                    println!("{:<16}{:<10}{:<12}{:<12}{:<12}",
+                        platform, geohash, source, precision, count);
                 }
             }
         }
-    }
+    }*/
 
     Ok(())
 }
@@ -283,7 +280,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // initialize DataSplitRequest
+    // TODO - fix split
+    /*// initialize DataSplitRequest
     let split_request = DataSplitRequest {
         band: crate::string_opt(split_matches.value_of("band")),
         end_timestamp: crate::i64_opt(
@@ -315,7 +313,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     for (node_id, split_reply) in reply.split_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, split_reply.task_id);
-    }
+    }*/
 
     Ok(())
 }

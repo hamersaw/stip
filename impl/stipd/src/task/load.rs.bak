@@ -84,7 +84,8 @@ impl Task for LoadEarthExplorerTask {
 
                     // process record
                     let result = match load_format {
-                        LoadFormat::NAIP => unimplemented!(),
+                        LoadFormat::NAIP => process_naip(&dht_clone,
+                            precision, &record, x_interval, y_interval),
                         LoadFormat::Sentinel => process_sentinel(
                             &dht_clone, precision, &record,
                             x_interval, y_interval),
@@ -156,7 +157,7 @@ impl Task for LoadEarthExplorerTask {
     }
 }
 
-/*pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize, 
+pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize, 
         record: &PathBuf, x_interval: f64, y_interval: f64)
         -> Result<(), Box<dyn Error>> {
     // open geotiff file
@@ -232,7 +233,7 @@ impl Task for LoadEarthExplorerTask {
     }
 
     Ok(())
-}*/
+}
 
 pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize, 
         record: &PathBuf, x_interval: f64, y_interval: f64)
@@ -250,11 +251,14 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
     let archive = ZipArchive::new(reader)?;
 
     // identify metadata xml file and band image files
+    let mut zip_images = Vec::new();
     let mut zip_metadata_option = None;
     for filename in archive.file_names() {
         let path = PathBuf::from(&filename);
 
-        if path.file_name() == Some(OsStr::new("MTD_MSIL1C.xml")) {
+        if path.extension() == Some(OsStr::new("jp2")) {
+            zip_images.push(filename);
+        } else if path.file_name() == Some(OsStr::new("MTD_MSIL1C.xml")) {
             zip_metadata_option = Some(filename);
         }
     }
@@ -262,8 +266,10 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
     // check if we identified xml metadata file and band image files
     if zip_metadata_option == None {
         return Err("unable to find xml metadata file".into());
+    } else if zip_images.len() == 0 {
+        return Err("no band images found".into());
     }
-
+    
     // open gdal metadata dataset - TODO error
     let zip_metadata = zip_metadata_option.unwrap();
     let metadata_filename = format!("/vsizip/{}/{}",
@@ -272,39 +278,31 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
     let dataset = Dataset::open(&metadata_path).unwrap();
 
     // parse metadata
+    let platform = match dataset.metadata_item("DATATAKE_1_SPACECRAFT_NAME", "") {
+        Some(platform) => platform,
+        None => return Err("spacecraft metadata not found".into()),
+    };
+
     let timestamp = match dataset.metadata_item("PRODUCT_START_TIME", "") {
         Some(time) => time.parse::<DateTime<Utc>>()?.timestamp(),
         None => return Err("start time metadata not found".into()),
     };
 
-    // populate subdatasets collection
-    let mut subdatasets: Vec<(&str, &str)> = Vec::new();
-    let mut count = 0;
-    let metadata = dataset.metadata("SUBDATASETS");
-    loop {
-        if count + 1 >= metadata.len() {
-            break;
-        }
+    //let uri = dataset.metadata_item("PRODUCT_URI", ""));
+    //println!("  PLATFORM: {}", platform);
+    //println!("  TIMES: {} - {}", start_time, end_time);
 
-        // parse subdataset name
-        let name_fields: Vec<&str> =
-            metadata[count].split("=").collect();
+    // iterate over zipped images
+    for zip_image in zip_images.iter() {
+        // open dataset - TODO error
+        let zip_image_filename = format!("/vsizip/{}/{}",
+            record.to_string_lossy(), zip_image);
+        let zip_image_path = PathBuf::from(&zip_image_filename);
+        let dataset = Dataset::open(&zip_image_path).unwrap();
 
-        // parse subdataset desc
-        let description_fields: Vec<&str> =
-            metadata[count+1].split("=").collect();
-
-        subdatasets.push((name_fields[1], description_fields[1]));
-        count += 2;
-    }
-
-    // process data subsets
-    for (i, (name, description)) in subdatasets.iter().enumerate() {
-        //println!("  {} - {}", name, description);
-
-        // open dataset
-        let path = PathBuf::from(name);
-        let dataset = Dataset::open(&path).unwrap();
+        // parse band ID
+        let band = &zip_image[zip_image.len() - 7..zip_image.len() - 4];
+        //println!("  BAND: {}", band_id);
 
         // split image with geohash precision - TODO error
         for (dataset, _, win_max_x, _, win_max_y) in
@@ -319,8 +317,6 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             if pixel_coverage == 0f64 {
                 continue;
             }
-
-            //println!("    {} - {}", geohash, pixel_coverage);
 
             // compute geohash hash
             let mut hasher = DefaultHasher::new();
@@ -347,16 +343,17 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
                 }
             };
 
+            //println!("    GEOHASH: {}", geohash);
+            //println!("    DIMENSIONS: {:?}", dataset.size());
+
             // send image to new host
-            if let Err(e) = crate::transfer::send_image("Sentinel-2",
-                    &geohash, &format!("{}-{}", tile, i), &RAW_SOURCE,
-                    timestamp, pixel_coverage, &dataset, &addr) {
+            if let Err(e) = crate::transfer::send_image(&platform,
+                    &geohash, &tile, &RAW_SOURCE, timestamp,
+                    pixel_coverage, &dataset, &addr) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }
     }
-
-    // TODO - write metadata
 
     Ok(())
 }
