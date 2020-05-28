@@ -44,6 +44,17 @@ service DataManagement {
     rpc Split (DataSplitRequest) returns (DataSplitReply);
 }
 
+message Filter {
+    optional int64 endTimestamp = 1;
+    optional string geohash = 2;
+    optional double maxCloudCoverage = 3;
+    optional double minPixelCoverage = 4;
+    optional string platform = 5;
+    optional bool recurse = 6;
+    optional string source = 7;
+    optional int64 startTimestamp = 8;
+}
+
 // Broadcast Messages
 enum DataBroadcastType {
     FILL = 0;
@@ -64,15 +75,10 @@ message DataBroadcastReply {
 
 // Fill Messages
 message DataFillRequest {
-    optional string band = 1;
-    optional int64 endTimestamp = 2;
-    optional string geohash = 3;
-    optional string platform = 4;
-    required bool recurse = 5;
-    optional int64 startTimestamp = 6;
-    optional uint64 taskId = 7;
-    required uint32 threadCount = 8;
-    required int64 windowSeconds = 9;
+    required Filter filter = 1;
+    optional uint64 taskId = 2;
+    required uint32 threadCount = 3;
+    required int64 windowSeconds = 4;
 }
 
 message DataFillReply {
@@ -81,26 +87,24 @@ message DataFillReply {
 
 // List Messages
 message Image {
-    required string band = 1;
-    optional double cloudCoverage = 2;
-    required string geohash = 3;
-    required string path = 4;
-    required double pixelCoverage = 5;
-    required string platform = 6;
-    required string source = 7;
-    required int64 timestamp = 8;
+    optional double cloudCoverage = 1;
+    required string geohash = 2;
+    repeated File files = 3;
+    required double pixelCoverage = 4;
+    required string platform = 5;
+    required string source = 6;
+    required int64 timestamp = 7;
+}
+
+message File {
+    repeated string bands = 1;
+    required string dataType = 2;
+    required string path = 3;
+    required string resolution = 4;
 }
 
 message DataListRequest {
-    optional string band = 1;
-    optional int64 endTimestamp = 2;
-    optional string geohash = 3;
-    optional double maxCloudCoverage = 4;
-    optional double minPixelCoverage = 5;
-    optional string platform = 6;
-    required bool recurse = 7;
-    optional string source = 8;
-    optional int64 startTimestamp = 9;
+    required Filter filter = 1; 
 }
 
 // Load Messages
@@ -123,37 +127,22 @@ message DataLoadReply {
 
 // Search Messages
 message Extent {
-    required string band = 1;
-    required uint32 count = 2;
-    required string geohash = 3;
-    required string platform = 4;
-    required uint32 precision = 5;
-    required string source = 6;
+    required uint32 count = 1;
+    required string geohash = 2;
+    required string platform = 3;
+    required uint32 precision = 4;
+    required string source = 5;
 }
 
 message DataSearchRequest {
-    optional string band = 1;
-    optional int64 endTimestamp = 2;
-    optional string geohash = 3;
-    optional double maxCloudCoverage = 4;
-    optional double minPixelCoverage = 5;
-    required bool recurse = 6;
-    optional string platform = 7;
-    optional string source = 8;
-    optional int64 startTimestamp = 9;
+    required Filter filter = 1; 
 }
 
 // Split Messages
 message DataSplitRequest {
-    optional string band = 1;
-    optional int64 endTimestamp = 2;
-    optional string geohash = 3;
-    optional string platform = 4;
-    required uint32 precision = 5;
-    required bool recurse = 6;
-    optional int64 startTimestamp = 7;
-    optional uint64 taskId = 8;
-    required uint32 threadCount = 9;
+    required Filter filter = 1; 
+    optional uint64 taskId = 2;
+    required uint32 threadCount = 3;
 }
 
 message DataSplitReply {

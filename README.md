@@ -80,12 +80,13 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip data fill -p NAIP
 
 ## TODO
-- add Filter protobuf -> use everywhere
-- image replication? - one replica on geohash of length (x - 1)
 - improve node logging
 - refactor task implementations - facilitate code reuse
-#### COMMANDS 
-- data list / search - allow mulitple bands?
 - __data load - support MODIS data__
+#### DISCUSS
+- data list / search - allow mulitple bands?
 - data merge - combine images into higher level images
+- image replication? - one replica on geohash of length (x - 1)
 - task stop?
+#### 3.0
+- everything!
