@@ -89,4 +89,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - image replication? - one replica on geohash of length (x - 1)
 - task stop?
 #### 3.0
-- everything!
+- sentinel-2: subdatasets have no pixel coverage, while others don't
+- fix everything!

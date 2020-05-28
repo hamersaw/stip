@@ -218,11 +218,11 @@ impl DataManagement for DataManagementImpl {
                 &filter.platform, filter.recurse, &filter.source,
                 &filter.start_timestamp).iter()
                     .map(|x| Extent {
-                        count: x.count as u32,
-                        geohash: x.geohash.clone(),
-                        platform: x.platform.clone(),
-                        precision: x.precision as u32,
-                        source: x.source.clone(),
+                        count: x.0 as u32,
+                        geohash: x.1.clone(),
+                        platform: x.2.clone(),
+                        precision: x.3 as u32,
+                        source: x.4.clone(),
                     }).collect()
         };
 

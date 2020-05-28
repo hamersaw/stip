@@ -5,7 +5,7 @@ use geohash::Coordinate;
 use swarm::prelude::Dht;
 use zip::ZipArchive;
 
-use crate::image::{FileMetadata, ImageMetadata, RAW_SOURCE};
+use crate::image::RAW_SOURCE;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::HashMap;

@@ -48,13 +48,18 @@ const LIST_SELECT_STMT: &str =
     platform, source, timestamp FROM images";
 
 const SEARCH_SELECT_STMT: &str =
-"SELECT platform, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, source, LENGTH(geohash) as precision, COUNT(*) as count FROM images";
+"SELECT COUNT(*) as count, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, platform, LENGTH(geohash) as precision, source FROM images";
 
 const SEARCH_GROUP_BY_STMT: &str = "
-GROUP BY platform, geohash_search, source, precision";
+GROUP BY geohash_search, platform, precision, source";
 
+// platform geohash, source, tile, timestamp,
+//   pixel_coverage, cloud_coverage, files
 type Image = (String, String, String, String,
     i64, f64, Option<f64>, Vec<(String, String)>);
+
+// count, geohash, platform, precision, source
+type Extent = (i64, String, String, u8, String);
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
@@ -71,15 +76,6 @@ pub struct ImageMetadata {
 pub struct FileMetadata {
     pub description: String,
     pub path: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct Extent {
-    pub platform: String,
-    pub geohash: String,
-    pub source: String,
-    pub precision: u8,
-    pub count: i64,
 }
 
 pub struct ImageManager {
@@ -247,13 +243,8 @@ impl ImageManager {
         // execute query - TODO error
         let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let extent_iter = stmt.query_map(&params, |row| {
-            Ok(Extent {
-                platform: row.get(0)?,
-                geohash: row.get(1)?,
-                source: row.get(2)?,
-                precision: row.get(3)?,
-                count: row.get(4)?,
-            })
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, 
+                row.get(3)?, row.get(4)?))
         }).unwrap();
 
         extent_iter.map(|x| x.unwrap()).collect()
