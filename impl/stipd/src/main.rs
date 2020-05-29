@@ -100,18 +100,19 @@ fn main() {
                     Err(_) => break,
                 };
 
-                // TODO - load data
                 // parse image metadata
-                /*match crate::image::to_image_metadata(&mut path) {
-                    Ok((image, files)) => {
+                match crate::image::to_image_metadata(&mut path) {
+                    Ok((image, file)) => {
                         let mut image_manager = 
                             image_manager_clone.write().unwrap();
-                        if let Err(e) = image_manager.load(image, &files) {
+                        if let Err(e) = image_manager.load(image.0,
+                                &file.0, &image.1, &file.1, file.2,
+                                &image.2, &image.3, &image.4, image.5) {
                             warn!("failed to load image: {}", e);
                         }
                     },
                     Err(e) => warn!("failed to parse image metadata: {}", e),
-                }*/
+                }
             }
         });
     }

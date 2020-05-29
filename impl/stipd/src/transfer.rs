@@ -38,6 +38,7 @@ impl StreamHandler for TransferStreamHandler {
             Some(TransferOp::ReadImage) => unimplemented!(),
             Some(TransferOp::WriteImage) => {
                 // read everything
+                let description = read_string(stream)?;
                 let mut dataset = st_image::prelude::read(stream)?;
                 let geohash = read_string(stream)?;
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
@@ -50,8 +51,8 @@ impl StreamHandler for TransferStreamHandler {
                 // write image using ImageManager
                 let mut image_manager =
                     self.image_manager.write().unwrap();
-                image_manager.write(&mut dataset, &geohash,
-                    pixel_coverage, &platform, &source,
+                image_manager.write(&mut dataset, &description,
+                    &geohash, pixel_coverage, &platform, &source,
                     subdataset_number, &tile, timestamp)?;
             },
             None => return Err(Box::new(std::io::Error::new(
@@ -70,15 +71,16 @@ pub fn read_string<T: Read>(reader: &mut T) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(buf)?)
 }
 
-pub fn send_image(addr: &SocketAddr, dataset: &Dataset, geohash: &str,
-        pixel_coverage: f64, platform: &str, source: &str,
-        subdataset_number: u8, tile: &str, timestamp: i64)
-        -> Result<(), Box<dyn Error>> {
+pub fn send_image(addr: &SocketAddr, dataset: &Dataset,
+        description: &str, geohash: &str, pixel_coverage: f64,
+        platform: &str, source: &str, subdataset_number: u8, 
+        tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::WriteImage as u8)?;
 
     // write everything
+    write_string(&description, &mut stream)?;
     st_image::prelude::write(&dataset, &mut stream)?;
     write_string(&geohash, &mut stream)?;
     stream.write_f64::<BigEndian>(pixel_coverage)?;

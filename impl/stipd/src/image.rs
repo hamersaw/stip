@@ -64,7 +64,7 @@ type Extent = (i64, String, String, u8, String);
 // cloud_coverage, geohash, platform, source, tile, timestamp
 type Image = (Option<f64>, String, String, String, String, i64);
 
-// path, description
+// path, description, pixel_coverage
 type StFile = (String, String, f64);
 
 #[derive(Clone, Debug)]
@@ -269,10 +269,10 @@ impl ImageManager {
         extent_iter.map(|x| x.unwrap()).collect()
     }
 
-    pub fn write(&mut self, dataset: &mut Dataset, geohash: &str,
-            pixel_coverage: f64, platform: &str, source: &str,
-            subdataset_number: u8, tile: &str, timestamp: i64)
-            -> Result<(), Box<dyn Error>> {
+    pub fn write(&mut self, dataset: &mut Dataset, description: &str,
+            geohash: &str, pixel_coverage: f64, platform: &str,
+            source: &str, subdataset_number: u8, tile: &str,
+            timestamp: i64) -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/source'
         let mut path = self.directory.clone();
         for filename in vec!(platform, geohash, source) {
@@ -323,19 +323,22 @@ impl ImageManager {
         std::fs::set_permissions(&path, permissions)?;
 
         // set dataset metadata attributes - TODO error
+        dataset_copy.set_metadata_item("DESCRIPTION",
+            description, "STIP").unwrap();
         dataset_copy.set_metadata_item("GEOHASH",
-            &geohash.to_string(), "STIP").unwrap();
+            geohash, "STIP").unwrap();
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
             &pixel_coverage.to_string(), "STIP").unwrap();
         dataset_copy.set_metadata_item("PLATFORM",
-            &platform.to_string(), "STIP").unwrap();
+            platform, "STIP").unwrap();
         dataset_copy.set_metadata_item("SOURCE",
-            &source.to_string(), "STIP").unwrap();
+            source, "STIP").unwrap();
+        dataset_copy.set_metadata_item("TILE", tile, "STIP").unwrap();
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
-        // TODO - load data - TODO - description
-        self.load(None, "", geohash, &path.to_string_lossy(),
+        // load data
+        self.load(None, description, geohash, &path.to_string_lossy(),
             pixel_coverage, platform, source, tile, timestamp)?;
 
         Ok(())
@@ -356,29 +359,26 @@ fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
 }
 
 pub fn to_image_metadata(path: &mut PathBuf)
-        -> Result<(Image, Vec<StFile>), Box<dyn Error>> {
-    unimplemented!();
-    /*// open input file
-    let mut file = File::open(&path)?;
+        -> Result<(Image, StFile), Box<dyn Error>> {
+    let dataset = Dataset::open(&path).unwrap();
 
-    // read metadata
-    let platform = crate::transfer::read_string(&mut file)?;
-    let geohash = crate::transfer::read_string(&mut file)?;
-    let source = crate::transfer::read_string(&mut file)?;
-    let tile = crate::transfer::read_string(&mut file)?;
-    let timestamp = file.read_i64::<BigEndian>()?;
-    let pixel_coverage = file.read_f64::<BigEndian>()?;
+    // TODO - error
+    let cloud_coverage =
+            match dataset.metadata_item("CLOUD_COVERAGE", "STIP") {
+        Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
+        None => None,
+    };
+    let description = dataset.metadata_item("DESCRIPTION", "STIP").unwrap();
+    let geohash = dataset.metadata_item("GEOHASH", "STIP").unwrap();
+    let path = path.to_string_lossy().to_string();
+    let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
+        .unwrap().parse::<f64>()?;
+    let platform = dataset.metadata_item("PLATFORM", "STIP").unwrap();
+    let source = dataset.metadata_item("SOURCE", "STIP").unwrap();
+    let tile = dataset.metadata_item("TILE", "STIP").unwrap();
+    let timestamp = dataset.metadata_item("TIMESTAMP", "STIP")
+        .unwrap().parse::<i64>()?;
 
-    // read files
-    let mut files = Vec::new();
-    for _ in 0..file.read_u8()? {
-        let path = crate::transfer::read_string(&mut file)?;
-        let description = crate::transfer::read_string(&mut file)?;
-        files.push((path, description));
-    }
-
-    // TODO - read cloud coverage
-
-    Ok(((None, geohash, pixel_coverage, platform,
-        source, tile, timestamp), files))*/
+    Ok(((cloud_coverage, geohash, platform, source, tile, timestamp),
+        (path, description, pixel_coverage)))
 }

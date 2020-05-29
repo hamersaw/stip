@@ -300,12 +300,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
     }
 
     // process data subsets
-    //let mut subdataset_metadata = HashMap::new();
     for (i, (name, description)) in subdatasets.iter().enumerate() {
-        //let mut geohash_metadata = subdataset_metadata.entry(i)
-        //    .or_insert(HashMap::new());
-        //println!("  {} - {}", name, description);
-
         // open dataset
         let path = PathBuf::from(name);
         let dataset = Dataset::open(&path).unwrap();
@@ -324,18 +319,6 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
                 continue;
             }
 
-            /*// update image metadata
-            let mut tile_metadata = geohash_metadata.entry(geohash.clone())
-                .or_insert(HashMap::new());
-
-            let (files, pixel_coverage_sum) =
-                tile_metadata.entry(tile.clone())
-                .or_insert((Vec::new(), 0.0));
-
-            files.push((format!("{}-{}", tile, i),
-                description.to_string()));
-            *pixel_coverage_sum += pixel_coverage;*/
- 
             //println!("    {} - {}", geohash, pixel_coverage);
 
             // compute geohash hash
@@ -343,7 +326,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             hasher.write(geohash.as_bytes());
             let hash = hasher.finish();
 
-            // discover hash location
+            // discover hash location - TODO move elsewhere
             let addr = {
                 let dht = dht.read().unwrap(); 
                 let (node_id, addrs) = match dht.locate(hash) {
@@ -364,55 +347,13 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             };
 
             // send image to new host
-            /*if let Err(e) = crate::transfer::send_image(
-                    "Sentinel-2", &geohash, &RAW_SOURCE, &tile, i as u8,
-                    timestamp, pixel_coverage, &dataset, &addr) {*/
-            if let Err(e) = crate::transfer::send_image(&addr,
-                    &dataset, &geohash, pixel_coverage, "Sentinel-2",
+            if let Err(e) = crate::transfer::send_image(&addr, &dataset,
+                    description, &geohash, pixel_coverage, "Sentinel-2",
                     &RAW_SOURCE, i as u8, &tile, timestamp) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }
     }
-
-    // TODO - write metadata
-    /*for (_, geohash_metadata) in subdataset_metadata.iter() {
-        for (geohash, tile_metadata) in geohash_metadata.iter() {
-            for (tile, (files, pixel_coverage_sum)) in tile_metadata.iter() {
-                // compute geohash hash
-                let mut hasher = DefaultHasher::new();
-                hasher.write(geohash.as_bytes());
-                let hash = hasher.finish();
-
-                // discover hash location
-                let addr = {
-                    let dht = dht.read().unwrap(); 
-                    let (node_id, addrs) = match dht.locate(hash) {
-                        Some(node) => node,
-                        None => {
-                            warn!("no dht location for hash {}", hash);
-                            continue;
-                        },
-                    };
-
-                    match addrs.1 {
-                        Some(addr) => addr.clone(),
-                        None => {
-                            warn!("dht node {} has no xfer_addr", node_id);
-                            continue;
-                        },
-                    }
-                };
-
-                // send image to new host
-                if let Err(e) = crate::transfer::send_metadata("Sentinel-2",
-                        &geohash, &RAW_SOURCE, &tile, timestamp,
-                        pixel_coverage_sum / files.len() as f64, files, &addr) {
-                        warn!("failed to write metadata to node {}: {}", addr, e);
-                }
-            }
-        }
-    }*/
 
     Ok(())
 }
