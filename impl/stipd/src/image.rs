@@ -53,13 +53,14 @@ const SEARCH_SELECT_STMT: &str =
 const SEARCH_GROUP_BY_STMT: &str = "
 GROUP BY geohash_search, platform, precision, source";
 
-// platform geohash, source, tile, timestamp,
-//   pixel_coverage, cloud_coverage, files
-type Image = (String, String, String, String,
-    i64, f64, Option<f64>, Vec<(String, String)>);
-
 // count, geohash, platform, precision, source
 type Extent = (i64, String, String, u8, String);
+
+// path, description
+type StFile = (String, String);
+
+// cloud_coverage, geohash, pixel_coverage, platform, source, tile, timestamp
+type Image = (Option<f64>, String, f64, String, String, String, i64);
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
@@ -168,27 +169,24 @@ impl ImageManager {
         unimplemented!();
     }
 
-    /*pub fn load(&mut self, platform: &str, geohash: &str, source: &str,
-            tile: &str, timestamp: i64, pixel_coverage: f64, cloud_coverage: Option<f64>,
-            files: &Vec<(String, String)>) -> Result<(), Box<dyn Error>> {*/
-    pub fn load(&mut self, image: Image) -> Result<(), Box<dyn Error>> {
+    pub fn load(&mut self, image: Image, files: &Vec<StFile>)
+            -> Result<(), Box<dyn Error>> {
         self.image_id += 1;
 
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
         conn.execute(INSERT_IMAGES_STMT, rusqlite::params![
-                self.image_id, image.6, image.1,
-                image.5,
-                image.0, image.2, image.4
+                self.image_id, image.0, image.1, image.2,
+                image.3, image.4, image.6
             ])?;
 
-        for (path, description) in image.7.iter() {
+        for (path, description) in files.iter() {
             conn.execute(INSERT_FILES_STMT, rusqlite::params![
                     self.image_id, path, description
                 ])?;
         }
 
-        println!("LOAD {} {} {} {}", image.0, image.1, image.2, image.3);
+        //println!("LOAD {} {} {} {}", image.4, image.2, image.5, image.6);
 
         Ok(())
     }
@@ -317,13 +315,14 @@ impl ImageManager {
         Ok(())
     }
 
-    pub fn write_metadata(&mut self, platform: &str, geohash: &str,
-            source: &str, tile: &str, timestamp: i64, pixel_coverage: f64,
-            files: &Vec<(String, String)>) -> Result<(), Box<dyn Error>> {
+    pub fn write_metadata(&mut self, platform: String, geohash: String,
+            source: String, tile: String, timestamp: i64,
+            pixel_coverage: f64, files: Vec<(String, String)>)
+            -> Result<(), Box<dyn Error>> {
         // TODO - replicated code
         // create directory 'self.directory/platform/geohash/source'
         let mut path = self.directory.clone();
-        for filename in vec!(platform, geohash, source) {
+        for filename in vec!(&platform, &geohash, &source) {
             path.push(filename);
             if !path.exists() {
                 std::fs::create_dir(&path)?;
@@ -335,7 +334,7 @@ impl ImageManager {
         }
 
         // check if image path exists
-        path.push(tile);
+        path.push(&tile);
         path.set_extension("meta");
 
         if path.exists() { // attempting to rewrite existing file
@@ -361,8 +360,9 @@ impl ImageManager {
         }
 
         // TODO - load image into internal store
-        //self.load((platform, geohash, source, tile,
-        //    timestamp, pixel_coverage, None, files))?;
+        let image = (None, geohash, pixel_coverage,
+            platform, source, tile, timestamp);
+        self.load(image, &files)?;
 
         Ok(())
     }
@@ -382,7 +382,7 @@ fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
 }
 
 pub fn to_image_metadata(path: &mut PathBuf)
-        -> Result<Image, Box<dyn Error>> {
+        -> Result<(Image, Vec<StFile>), Box<dyn Error>> {
     // open input file
     let mut file = File::open(&path)?;
 
@@ -404,6 +404,6 @@ pub fn to_image_metadata(path: &mut PathBuf)
 
     // TODO - read cloud coverage
 
-    Ok((platform, geohash, source, tile,
-        timestamp, pixel_coverage, None, files))
+    Ok(((None, geohash, pixel_coverage, platform,
+        source, tile, timestamp), files))
 }

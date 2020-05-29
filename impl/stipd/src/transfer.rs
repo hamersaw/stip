@@ -75,8 +75,8 @@ impl StreamHandler for TransferStreamHandler {
 
                 // write image metadata using ImageManager
                 let mut image_manager = self.image_manager.write().unwrap();
-                image_manager.write_metadata(&platform, &geohash, &source,
-                    &tile, timestamp, pixel_coverage, &files)?;
+                image_manager.write_metadata(platform, geohash, source,
+                    tile, timestamp, pixel_coverage, files)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
