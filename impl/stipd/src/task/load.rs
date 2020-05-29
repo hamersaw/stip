@@ -8,7 +8,6 @@ use zip::ZipArchive;
 use crate::image::RAW_SOURCE;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
-use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
 use std::ffi::OsStr;
@@ -85,7 +84,9 @@ impl Task for LoadEarthExplorerTask {
 
                     // process record
                     let result = match load_format {
-                        LoadFormat::NAIP => unimplemented!(),
+                        LoadFormat::NAIP => process_naip(
+                            &dht_clone, precision, &record,
+                            x_interval, y_interval),
                         LoadFormat::Sentinel => process_sentinel(
                             &dht_clone, precision, &record,
                             x_interval, y_interval),
@@ -157,7 +158,7 @@ impl Task for LoadEarthExplorerTask {
     }
 }
 
-/*pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize, 
+pub fn process_naip(dht: &Arc<RwLock<Dht>>, precision: usize, 
         record: &PathBuf, x_interval: f64, y_interval: f64)
         -> Result<(), Box<dyn Error>> {
     // open geotiff file
@@ -225,15 +226,15 @@ impl Task for LoadEarthExplorerTask {
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image("NAIP",
-                &geohash, &tile, &RAW_SOURCE, timestamp,
-                pixel_coverage, &dataset, &addr) {
+        if let Err(e) = crate::transfer::send_image(&addr, &dataset,
+                "Base Image", &geohash, pixel_coverage, "NAIP",
+                &RAW_SOURCE, 0, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
     }
 
     Ok(())
-}*/
+}
 
 pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize, 
         record: &PathBuf, x_interval: f64, y_interval: f64)

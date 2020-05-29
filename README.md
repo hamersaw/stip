@@ -81,9 +81,8 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 
 ## TODO
 - **cloud coverage computation sentinel-2 data**
-- **data fill - fix v3.0**
+- __data fill - fix v3.0__
 - **data load - support MODIS data**
-- __data load - fix v3.0 NAIP data__
 - improve node logging
 - refactor task implementations - facilitate code reuse
 #### DISCUSS

@@ -1,4 +1,3 @@
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 use rusqlite::{Connection, ToSql};
