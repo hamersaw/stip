@@ -105,9 +105,10 @@ fn main() {
                     Ok((image, file)) => {
                         let mut image_manager = 
                             image_manager_clone.write().unwrap();
-                        if let Err(e) = image_manager.load(image.0,
-                                &file.0, &image.1, &file.1, file.2,
-                                &image.2, &image.3, &image.4, image.5) {
+                        if let Err(e) = image_manager.load(
+                                image.0, &file.0, &image.1, &file.1,
+                                file.2, &image.2, &image.3, file.3,
+                                &image.4, image.5) {
                             warn!("failed to load image: {}", e);
                         }
                     },

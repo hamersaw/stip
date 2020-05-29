@@ -80,10 +80,10 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip data fill -p NAIP
 
 ## TODO
+- **cloud coverage computation sentinel-2 data**
 - **data fill - fix v3.0**
 - **data load - support MODIS data**
 - __data load - fix v3.0 NAIP data__
-- **data split - fix v3.0**
 - improve node logging
 - refactor task implementations - facilitate code reuse
 #### DISCUSS

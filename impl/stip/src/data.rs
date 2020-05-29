@@ -289,19 +289,25 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let mut client = DataManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // TODO - fix split
-    /*// initialize DataSplitRequest
-    let split_request = DataSplitRequest {
-        band: crate::string_opt(split_matches.value_of("band")),
+    // initialize Filter
+    let filter = Filter {
         end_timestamp: crate::i64_opt(
             split_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(split_matches.value_of("geohash")),
+        max_cloud_coverage: None,
+        min_pixel_coverage: None,
         platform: crate::string_opt(split_matches.value_of("platform")),
-        precision: split_matches.value_of("precision")
-            .unwrap().parse::<u32>()?,
         recurse: split_matches.is_present("recurse"),
+        source: None,
         start_timestamp: crate::i64_opt(
             split_matches.value_of("start_timestamp"))?,
+    };
+
+    // initialize DataSplitRequest
+    let split_request = DataSplitRequest {
+        filter: filter,
+        precision: split_matches.value_of("precision")
+            .unwrap().parse::<u32>()?,
         task_id: crate::u64_opt(split_matches.value_of("task_id"))?,
         thread_count: split_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
@@ -322,7 +328,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     for (node_id, split_reply) in reply.split_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, split_reply.task_id);
-    }*/
+    }
 
     Ok(())
 }

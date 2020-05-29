@@ -16,10 +16,11 @@ pub const SPLIT_SOURCE: &'static str = "split";
 
 const CREATE_FILES_TABLE_STMT: &str =
 "CREATE TABLE files (
+    description     TEXT NOT NULL,
     image_id        BIGINT NOT NULL,
     path            TEXT NOT NULL,
     pixel_coverage  FLOAT NOT NULL,
-    description     TEXT NOT NULL
+    subdataset      TINYINT NOT NULL
 )";
 
 const CREATE_IMAGES_TABLE_STMT: &str =
@@ -38,23 +39,24 @@ const CREATE_IMAGES_TABLE_STMT: &str =
 
 const INSERT_IMAGES_STMT: &str =
 "INSERT INTO images (cloud_coverage, geohash,
-        id, platform, source, tile, timestamp)
-    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+    id, platform, source, tile, timestamp)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
 const INSERT_FILES_STMT: &str =
-"INSERT INTO files (image_id, description, path, pixel_coverage)
-    VALUES (?1, ?2, ?3, ?4)";
+"INSERT INTO files (description, image_id, path, 
+    pixel_coverage, subdataset)
+VALUES (?1, ?2, ?3, ?4, ?5)";
 
 const ID_SELECT_STMT: &str =
 "SELECT id from images WHERE geohash = ?1 AND tile = ?2";
 
 const LIST_SELECT_STMT: &str =
 "SELECT cloud_coverage, description, geohash, path, pixel_coverage,
-    platform, source, tile, timestamp
+    platform, source, subdataset, tile, timestamp
 FROM images JOIN files ON images.id = files.image_id";
 
 const LIST_ORDER_BY_STMT: &str =
-" ORDER BY images.tile, images.geohash, files.path";
+" ORDER BY images.tile, images.geohash, files.subdataset";
 
 const SEARCH_SELECT_STMT: &str =
 "SELECT COUNT(*) as count, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, platform, LENGTH(geohash) as precision, source FROM images";
@@ -63,13 +65,13 @@ const SEARCH_GROUP_BY_STMT: &str =
 " GROUP BY geohash_search, platform, precision, source";
 
 // count, geohash, platform, precision, source
-type Extent = (i64, String, String, u8, String);
+pub type Extent = (i64, String, String, u8, String);
 
 // cloud_coverage, geohash, platform, source, tile, timestamp
-type Image = (Option<f64>, String, String, String, String, i64);
+pub type Image = (Option<f64>, String, String, String, String, i64);
 
-// description, path, pixel_coverage
-type StFile = (String, String, f64);
+// description, path, pixel_coverage, subdataset
+pub type StFile = (String, String, f64, u8);
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
@@ -167,8 +169,8 @@ impl ImageManager {
         let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let images_iter = stmt.query_map(&params, |row| {
             Ok(((row.get(0)?, row.get(2)?, row.get(5)?,
-                    row.get(6)?, row.get(7)?, row.get(8)?),
-                (row.get(1)?, row.get(3)?, row.get(4)?)))
+                    row.get(6)?, row.get(8)?, row.get(9)?),
+                (row.get(1)?, row.get(3)?, row.get(4)?, row.get(7)?)))
         }).unwrap();
 
         // process images
@@ -193,7 +195,8 @@ impl ImageManager {
     pub fn load(&mut self, cloud_coverage: Option<f64>,
             description: &str, geohash: &str, path: &str,
             pixel_coverage: f64, platform: &str, source: &str,
-            tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
+            subdataset: u8, tile: &str, timestamp: i64)
+            -> Result<(), Box<dyn Error>> {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
 
@@ -220,7 +223,7 @@ impl ImageManager {
         };
 
         conn.execute(INSERT_FILES_STMT, rusqlite::params![
-                id, description, path, pixel_coverage
+                description, id, path, pixel_coverage, subdataset
             ])?;
 
         Ok(())
@@ -285,7 +288,7 @@ impl ImageManager {
 
     pub fn write(&mut self, dataset: &mut Dataset, description: &str,
             geohash: &str, pixel_coverage: f64, platform: &str,
-            source: &str, subdataset_number: u8, tile: &str,
+            source: &str, subdataset: u8, tile: &str,
             timestamp: i64) -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/source'
         let mut path = self.directory.clone();
@@ -301,7 +304,7 @@ impl ImageManager {
         }
 
         // check if image path exists
-        path.push(format!("{}-{}", tile, subdataset_number));
+        path.push(format!("{}-{}", tile, subdataset));
         path.set_extension("tif");
 
         if path.exists() { // attempting to rewrite existing file
@@ -347,13 +350,15 @@ impl ImageManager {
             platform, "STIP").unwrap();
         dataset_copy.set_metadata_item("SOURCE",
             source, "STIP").unwrap();
+        dataset_copy.set_metadata_item("SUBDATASET",
+            &subdataset.to_string(), "STIP").unwrap();
         dataset_copy.set_metadata_item("TILE", tile, "STIP").unwrap();
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
         // load data
         self.load(None, description, geohash, &path.to_string_lossy(),
-            pixel_coverage, platform, source, tile, timestamp)?;
+            pixel_coverage, platform, source, subdataset, tile, timestamp)?;
 
         Ok(())
     }
@@ -389,10 +394,12 @@ pub fn to_image_metadata(path: &mut PathBuf)
         .unwrap().parse::<f64>()?;
     let platform = dataset.metadata_item("PLATFORM", "STIP").unwrap();
     let source = dataset.metadata_item("SOURCE", "STIP").unwrap();
+    let subdataset = dataset.metadata_item("SUBDATASET", "STIP")
+        .unwrap().parse::<u8>()?;
     let tile = dataset.metadata_item("TILE", "STIP").unwrap();
     let timestamp = dataset.metadata_item("TIMESTAMP", "STIP")
         .unwrap().parse::<i64>()?;
 
     Ok(((cloud_coverage, geohash, platform, source, tile, timestamp),
-        (description, path, pixel_coverage)))
+        (description, path, pixel_coverage, subdataset)))
 }

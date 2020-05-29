@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
 
-use crate::image::{ImageManager, ImageMetadata, RAW_SOURCE, SPLIT_SOURCE};
+use crate::image::{ImageManager, Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -47,17 +47,16 @@ impl SplitTask {
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let base_records: Vec<ImageMetadata> = {
+        let base_records: Vec<(Image, Vec<StFile>)> = {
             let image_manager = self.image_manager.read().unwrap();
-            /*image_manager.list(&self.end_timestamp,
+            image_manager.list(&self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
                 self.recurse, &Some(RAW_SOURCE.to_string()),
-                &self.start_timestamp)*/
-            unimplemented!();
+                &self.start_timestamp)
         };
 
-        let records: Vec<ImageMetadata> = base_records.into_iter()
-            .filter(|x| x.geohash.len() < self.precision as usize).collect();
+        let records: Vec<(Image, Vec<StFile>)> = base_records.into_iter()
+            .filter(|x| (x.0).1.len() < self.precision as usize).collect();
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -81,7 +80,7 @@ impl Task for SplitTask {
                 // iterate over records
                 loop {
                     // fetch next record
-                    let record: ImageMetadata = match receiver_clone.recv() {
+                    let record = match receiver_clone.recv() {
                         Ok(record) => record,
                         Err(_) => break,
                     };
@@ -153,71 +152,74 @@ impl Task for SplitTask {
     }
 }
 
-fn process(dht: &Arc<RwLock<Dht>>, precision: usize, record: &ImageMetadata,
-        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
-    // TODO - check if path exists
-    /*let path = Path::new(&record.path);
-    if !path.exists() {
-        return Err(format!("image path '{}' does not exist",
-            path.to_string_lossy()).into());
-    }
-
-    // open image - TODO error
-    let dataset = Dataset::open(&path).unwrap();
-
-    // split image with geohash precision - TODO error
-    for (dataset, _, win_max_x, _, win_max_y) in
-            st_image::prelude::split(&dataset, 
-                4326, x_interval, y_interval).unwrap() {
-        // compute window geohash
-        let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-        let geohash = geohash::encode(coordinate, precision)?;
-
-        //  skip if geohash doesn't 'start_with' base image geohash
-        if !geohash.starts_with(&record.geohash) {
-            continue;
+fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
+        record: &(Image, Vec<StFile>), x_interval: f64,
+        y_interval: f64) -> Result<(), Box<dyn Error>> {
+    let image = &record.0;
+    for file in record.1.iter() {
+        // check if path exists
+        let path = Path::new(&file.1);
+        if !path.exists() {
+            return Err(format!("image path '{}' does not exist",
+                path.to_string_lossy()).into());
         }
 
-        // if image has 0.0 coverage -> don't process - TODO error
-        let pixel_coverage = st_image::coverage(&dataset).unwrap();
-        if pixel_coverage == 0f64 {
-            continue;
-        }
+        // open image - TODO error
+        let dataset = Dataset::open(&path).unwrap();
 
-        // compute geohash hash
-        let mut hasher = DefaultHasher::new();
-        hasher.write(geohash.as_bytes());
-        let hash = hasher.finish();
+        // split image with geohash precision - TODO error
+        for (dataset, _, win_max_x, _, win_max_y) in
+                st_image::prelude::split(&dataset, 
+                    4326, x_interval, y_interval).unwrap() {
+            // compute window geohash
+            let coordinate = Coordinate{x: win_max_x, y: win_max_y};
+            let geohash = geohash::encode(coordinate, precision)?;
 
-        // discover hash location
-        let addr = {
-            let dht = dht.read().unwrap(); 
-            let (node_id, addrs) = match dht.locate(hash) {
-                Some(node) => node,
-                None => {
-                    warn!("no dht location for hash {}", hash);
-                    continue;
-                },
+            //  skip if geohash doesn't 'start_with' base image geohash
+            if !geohash.starts_with(&image.1) {
+                continue;
+            }
+
+            // if image has 0.0 coverage -> don't process - TODO error
+            let pixel_coverage = st_image::coverage(&dataset).unwrap();
+            if pixel_coverage == 0f64 {
+                continue;
+            }
+
+            // compute geohash hash
+            // TODO - replicated code with load tasks
+            let mut hasher = DefaultHasher::new();
+            hasher.write(geohash.as_bytes());
+            let hash = hasher.finish();
+
+            // discover hash location
+            let addr = {
+                let dht = dht.read().unwrap(); 
+                let (node_id, addrs) = match dht.locate(hash) {
+                    Some(node) => node,
+                    None => {
+                        warn!("no dht location for hash {}", hash);
+                        continue;
+                    },
+                };
+
+                match addrs.1 {
+                    Some(addr) => addr.clone(),
+                    None => {
+                        warn!("dht node {} has no xfer_addr", node_id);
+                        continue;
+                    },
+                }
             };
 
-            match addrs.1 {
-                Some(addr) => addr.clone(),
-                None => {
-                    warn!("dht node {} has no xfer_addr", node_id);
-                    continue;
-                },
+            // send image to new host
+            if let Err(e) = crate::transfer::send_image(&addr,
+                    &dataset, &file.0, &geohash, file.2, &image.2,
+                    SPLIT_SOURCE, file.3, &image.4, image.5) {
+                warn!("failed to write image to node {}: {}", addr, e);
             }
-        };
-
-        // send image to new host
-        let tile_id = &path.file_name().unwrap().to_string_lossy();
-        if let Err(e) = crate::transfer::send_image(&record.platform,
-                &geohash, &tile_id, &SPLIT_SOURCE, record.timestamp,
-                pixel_coverage, &dataset, &addr) {
-            warn!("failed to write image to node {}: {}", addr, e);
         }
-    }*/
+    }
 
-    unimplemented!();
     Ok(())
 }
