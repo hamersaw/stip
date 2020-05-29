@@ -49,14 +49,18 @@ const ID_SELECT_STMT: &str =
 "SELECT id from images WHERE geohash = ?1 AND tile = ?2";
 
 const LIST_SELECT_STMT: &str =
-"SELECT cloud_coverage, geohash, path, pixel_coverage,
-    platform, source, timestamp FROM images";
+"SELECT cloud_coverage, description, geohash, path, pixel_coverage,
+    platform, source, tile, timestamp
+FROM images JOIN files ON images.id = files.image_id";
+
+const LIST_ORDER_BY_STMT: &str =
+" ORDER BY images.tile, images.geohash, files.path";
 
 const SEARCH_SELECT_STMT: &str =
 "SELECT COUNT(*) as count, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, platform, LENGTH(geohash) as precision, source FROM images";
 
-const SEARCH_GROUP_BY_STMT: &str = "
-GROUP BY geohash_search, platform, precision, source";
+const SEARCH_GROUP_BY_STMT: &str =
+" GROUP BY geohash_search, platform, precision, source";
 
 // count, geohash, platform, precision, source
 type Extent = (i64, String, String, u8, String);
@@ -64,7 +68,7 @@ type Extent = (i64, String, String, u8, String);
 // cloud_coverage, geohash, platform, source, tile, timestamp
 type Image = (Option<f64>, String, String, String, String, i64);
 
-// path, description, pixel_coverage
+// description, path, pixel_coverage
 type StFile = (String, String, f64);
 
 #[derive(Clone, Debug)]
@@ -122,7 +126,7 @@ impl ImageManager {
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
-            start_timestamp: &Option<i64>) -> Vec<ImageMetadata> {
+            start_timestamp: &Option<i64>) -> Vec<(Image, Vec<StFile>)> {
         // lock the sqlite connection
         let conn = self.conn.lock().unwrap();
 
@@ -156,22 +160,34 @@ impl ImageManager {
                 &mut stmt_str, "=", &mut params),
         }
 
-        // TODO - execute query - TODO error
-        /*let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        // append LIST_ORDER_BY_STMT to stmt_str
+        stmt_str.push_str(LIST_ORDER_BY_STMT);
+
+        // execute query - TODO error
+        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let images_iter = stmt.query_map(&params, |row| {
-            Ok(ImageMetadata {
-                cloud_coverage: row.get(0)?,
-                geohash: row.get(1)?,
-                path: row.get(2)?,
-                pixel_coverage: row.get(3)?,
-                platform: row.get(4)?,
-                source: row.get(5)?,
-                timestamp: row.get(6)?,
-            })
+            Ok(((row.get(0)?, row.get(2)?, row.get(5)?,
+                    row.get(6)?, row.get(7)?, row.get(8)?),
+                (row.get(1)?, row.get(3)?, row.get(4)?)))
         }).unwrap();
 
-        images_iter.map(|x| x.unwrap()).collect()*/
-        unimplemented!();
+        // process images
+        let mut images: Vec<(Image, Vec<StFile>)> = Vec::new();
+        for (image, file) in images_iter.map(|x| x.unwrap()) {
+            match images.last_mut() {
+                Some((i, f)) => {
+                    // if geohash and tile match -> append file to files
+                    //   else -> add new image
+                    match i.1 == image.1 && i.5 == image.5 {
+                        true => f.push(file),
+                        false => images.push((image, vec!(file))),
+                    }
+                },
+                None => images.push((image, vec!(file))),
+            }
+        }
+
+        images
     }
 
     pub fn load(&mut self, cloud_coverage: Option<f64>,
@@ -206,8 +222,6 @@ impl ImageManager {
         conn.execute(INSERT_FILES_STMT, rusqlite::params![
                 id, description, path, pixel_coverage
             ])?;
-
-        //println!("LOAD {} {} {} {}", image.4, image.2, image.5, image.6);
 
         Ok(())
     }
@@ -380,5 +394,5 @@ pub fn to_image_metadata(path: &mut PathBuf)
         .unwrap().parse::<i64>()?;
 
     Ok(((cloud_coverage, geohash, platform, source, tile, timestamp),
-        (path, description, pixel_coverage)))
+        (description, path, pixel_coverage)))
 }

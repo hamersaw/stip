@@ -319,8 +319,6 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
                 continue;
             }
 
-            //println!("    {} - {}", geohash, pixel_coverage);
-
             // compute geohash hash
             let mut hasher = DefaultHasher::new();
             hasher.write(geohash.as_bytes());

@@ -1,4 +1,4 @@
-use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, Image, LoadFormat as ProtoLoadFormat};
+use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, File, Image, LoadFormat as ProtoLoadFormat};
 use swarm::prelude::Dht;
 use tokio::sync::mpsc::Receiver;
 use tonic::{Request, Response, Status};
@@ -140,35 +140,46 @@ impl DataManagement for DataManagementImpl {
             -> Result<Response<Self::ListStream>, Status> {
         trace!("DataListRequest: {:?}", request);
         let request = request.get_ref();
+        let filter = &request.filter;
 
-        // TODO - fix list
         // search for requested images
-        /*let images: Vec<Image> = {
+        let mut images = Vec::new();
+        {
             let image_manager = self.image_manager.read().unwrap();
-            image_manager.list(&request.end_timestamp,
-                &request.geohash, &request.max_cloud_coverage,
-                &request.min_pixel_coverage, &request.platform,
-                request.recurse, &request.source,
-                &request.start_timestamp).iter()
-                    .map(|x| Image {
-                        band: x.band.clone(),
-                        cloud_coverage: x.cloud_coverage,
-                        geohash: x.geohash.clone(),
-                        path: x.path.clone(),
-                        pixel_coverage: x.pixel_coverage,
-                        platform: x.platform.clone(),
-                        source: x.source.clone(),
-                        timestamp: x.timestamp,
-                    }).collect()
-        };*/
+            let image_iter = image_manager.list(&filter.end_timestamp,
+                &filter.geohash, &filter.max_cloud_coverage,
+                &filter.min_pixel_coverage, &filter.platform,
+                filter.recurse, &filter.source, &filter.start_timestamp);
+
+            // convert image and files to protobufs
+            for (i, f) in image_iter {
+                let mut files = Vec::new();
+                for file in f {
+                    files.push(File {
+                        description: file.0,
+                        path: file.1,
+                        pixel_coverage: file.2,
+                    })
+                }
+
+                images.push(Image {
+                    cloud_coverage: i.0,
+                    geohash: i.1,
+                    files: files,
+                    platform: i.2,
+                    source: i.3,
+                    timestamp: i.5,
+                });
+            }
+        }
 
         // send images though Sender channel
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);
-        /*tokio::spawn(async move {
+        tokio::spawn(async move {
             for image in images {
                 tx.send(Ok(image)).await.unwrap(); // TODO - error
             }
-        });*/
+        });
 
         Ok(Response::new(rx))
     }

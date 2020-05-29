@@ -95,10 +95,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let node_list_reply = client.node_list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
 
-    // TODO - fix list
-    /*// initialize DataListRequest
-    let request = DataListRequest {
-        band: crate::string_opt(list_matches.value_of("band")),
+    // initialize Filter
+    let filter = Filter {
         end_timestamp: crate::i64_opt(
             list_matches.value_of("end_timestamp"))?,
         geohash: crate::string_opt(list_matches.value_of("geohash")),
@@ -113,10 +111,16 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
             list_matches.value_of("start_timestamp"))?,
     };
 
+    // initialize DataListRequest
+    let request = DataListRequest {
+        filter: filter,
+    };
+
     // iterate over each available node
-    println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}{:<16}",
-        "node_id", "path", "platform", "geohash", "band",
-        "source", "timestamp", "pixel_coverage", "cloud_coverage");
+    println!("{:<12}{:<80}{:<16}{:<10}{:<12}{:<16}{:<16}{:<16}{:<30}",
+        "node_id", "path", "platform", "geohash",
+        "source", "timestamp", "pixel_coverage",
+        "cloud_coverage", "description");
     println!("--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for node in node_list_reply.nodes.iter() {
         // initialize DataManagement grpc client
@@ -127,12 +131,14 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         let mut stream = client.list(Request::new(request.clone()))
             .await?.into_inner();
         while let Some(image) = stream.message().await? {
-            println!("{:<12}{:<80}{:<16}{:<10}{:<6}{:<12}{:<16}{:<16}{:<16?}", 
-                node.id, image.path, image.platform, image.geohash,
-                image.band, image.source, image.timestamp,
-                image.pixel_coverage, image.cloud_coverage);
+            for file in image.files.iter() {
+                println!("{:<12}{:<80}{:<16}{:<10}{:<12}{:<16}{:<16}{:<16?}{:<30}", 
+                    node.id, file.path, image.platform, image.geohash,
+                    image.source, image.timestamp, file.pixel_coverage,
+                    image.cloud_coverage, file.description);
+            }
         }
-    }*/
+    }
 
     Ok(())
 }

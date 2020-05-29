@@ -90,15 +90,15 @@ message Image {
     optional double cloudCoverage = 1;
     required string geohash = 2;
     repeated File files = 3;
-    required double pixelCoverage = 4;
-    required string platform = 5;
-    required string source = 6;
-    required int64 timestamp = 7;
+    required string platform = 4;
+    required string source = 5;
+    required int64 timestamp = 6;
 }
 
 message File {
-    repeated string description = 1;
+    required string description = 1;
     required string path = 2;
+    required double pixelCoverage = 3;
 }
 
 message DataListRequest {
