@@ -61,18 +61,18 @@ These commands enable searching the system for images using the metadata provide
     # search for NAIP data where the geohash starts with '9x'
     ./stip data search -p NAIP -g 9x -r 
 
-    # search for data band B01 beginning on 2015-01-01 
+    # search for data beginning on 2015-01-01 
     # where the pixel coverage is greater than 95%
-    ./stip data search -b B01 -s 2524608000 -x 0.95
+    ./stip data search -s 2524608000 -x 0.95
 
-    # list all images from Sentinel-2A dataset for geohash '9xj3ej'
-    ./stip data list -p Sentinel-2A -g 9xj3ej
+    # list all images from Sentinel-2 dataset for geohash '9xj3ej'
+    ./stip data list -p Sentinel-2 -g 9xj3ej
 #### DATA SPLIT
 Images are stored at the geohash length defined during data loads. However, the 'data split' command enables further partitioning of datasets. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'data search' and 'data list' commands, enabling fine image processing filtering criteria.
 
-    # split Sentinel-2B data at a geohash length of 6 
+    # split Sentinel-2 data at a geohash length of 6 
     # for all geohashes starting with '9xj'
-    ./stip data split -p Sentinel-2B -g 9xj -r -l 6
+    ./stip data split -p Sentinel-2 -g 9xj -r -l 6
 #### DATA FILL
 Typically image datasets partition data into many tiles. The inherit tile bounds mean that often a single geohash spans multiple tiles. Therefore, when loading data, one image contains partial data whereas another contains the remaining data. The 'data fill' command attempts to identify image sets where 'complete' images may be built by combining multiple source images. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'data search' and 'data list' commands, enabling fine image processing filtering criteria.
 
@@ -80,15 +80,13 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip data fill -p NAIP
 
 ## TODO
+- **data fill - fix v3.0**
+- **data load - support MODIS data**
+- __data load - fix v3.0 NAIP data__
+- **data split - fix v3.0**
 - improve node logging
 - refactor task implementations - facilitate code reuse
-- __data load - support MODIS data__
 #### DISCUSS
-- data list / search - allow mulitple bands?
 - data merge - combine images into higher level images
 - image replication? - one replica on geohash of length (x - 1)
 - task stop?
-#### 3.0
-- sentinel-2: subdatasets have no pixel coverage, while others don't
-    - fix pixel_coverage computation to use the defined 'fill value'
-- fix everything!

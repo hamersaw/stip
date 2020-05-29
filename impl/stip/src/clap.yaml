@@ -33,11 +33,6 @@ subcommands:
             - fill:
                 about: initialize fill data task
                 args:
-                    - band:
-                        help: image band
-                        long: band
-                        short: b
-                        takes_value: true
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp
@@ -82,11 +77,6 @@ subcommands:
             - list:
                 about: list images for the specified criteria
                 args:
-                    - band:
-                        help: image band
-                        long: band
-                        short: b
-                        takes_value: true
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp
@@ -160,11 +150,6 @@ subcommands:
             - search:
                 about: search for images
                 args:
-                    - band:
-                        help: image band
-                        long: band
-                        short: b
-                        takes_value: true
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp
@@ -207,11 +192,6 @@ subcommands:
             - split:
                 about: split images with a new geohash precision
                 args:
-                    - band:
-                        help: image band
-                        long: band
-                        short: b
-                        takes_value: true
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp
