@@ -300,10 +300,10 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
     }
 
     // process data subsets
-    let mut subdataset_metadata = HashMap::new();
+    //let mut subdataset_metadata = HashMap::new();
     for (i, (name, description)) in subdatasets.iter().enumerate() {
-        let mut geohash_metadata = subdataset_metadata.entry(i)
-            .or_insert(HashMap::new());
+        //let mut geohash_metadata = subdataset_metadata.entry(i)
+        //    .or_insert(HashMap::new());
         //println!("  {} - {}", name, description);
 
         // open dataset
@@ -324,7 +324,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
                 continue;
             }
 
-            // update image metadata
+            /*// update image metadata
             let mut tile_metadata = geohash_metadata.entry(geohash.clone())
                 .or_insert(HashMap::new());
 
@@ -334,7 +334,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
 
             files.push((format!("{}-{}", tile, i),
                 description.to_string()));
-            *pixel_coverage_sum += pixel_coverage;
+            *pixel_coverage_sum += pixel_coverage;*/
  
             //println!("    {} - {}", geohash, pixel_coverage);
 
@@ -364,16 +364,19 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
             };
 
             // send image to new host
-            if let Err(e) = crate::transfer::send_image("Sentinel-2",
-                    &geohash, &RAW_SOURCE, &format!("{}-{}", tile, i),
-                    timestamp, pixel_coverage, &dataset, &addr) {
+            /*if let Err(e) = crate::transfer::send_image(
+                    "Sentinel-2", &geohash, &RAW_SOURCE, &tile, i as u8,
+                    timestamp, pixel_coverage, &dataset, &addr) {*/
+            if let Err(e) = crate::transfer::send_image(&addr,
+                    &dataset, &geohash, pixel_coverage, "Sentinel-2",
+                    &RAW_SOURCE, i as u8, &tile, timestamp) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }
     }
 
     // TODO - write metadata
-    for (_, geohash_metadata) in subdataset_metadata.iter() {
+    /*for (_, geohash_metadata) in subdataset_metadata.iter() {
         for (geohash, tile_metadata) in geohash_metadata.iter() {
             for (tile, (files, pixel_coverage_sum)) in tile_metadata.iter() {
                 // compute geohash hash
@@ -409,7 +412,7 @@ pub fn process_sentinel(dht: &Arc<RwLock<Dht>>, precision: usize,
                 }
             }
         }
-    }
+    }*/
 
     Ok(())
 }

@@ -102,7 +102,7 @@ fn main() {
 
                 // TODO - load data
                 // parse image metadata
-                match crate::image::to_image_metadata(&mut path) {
+                /*match crate::image::to_image_metadata(&mut path) {
                     Ok((image, files)) => {
                         let mut image_manager = 
                             image_manager_clone.write().unwrap();
@@ -111,7 +111,7 @@ fn main() {
                         }
                     },
                     Err(e) => warn!("failed to parse image metadata: {}", e),
-                }
+                }*/
             }
         });
     }

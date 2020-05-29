@@ -18,17 +18,18 @@ const CREATE_FILES_TABLE_STMT: &str =
 "CREATE TABLE files (
     image_id        BIGINT NOT NULL,
     path            TEXT NOT NULL,
+    pixel_coverage  FLOAT NOT NULL,
     description     TEXT NOT NULL
 )";
 
 const CREATE_IMAGES_TABLE_STMT: &str =
 "CREATE TABLE images (
-    image_id        BIGINT PRIMARY KEY,
     cloud_coverage  FLOAT NULL,
     geohash         TEXT NOT NULL,
-    pixel_coverage  FLOAT NOT NULL,
+    id              BIGINT PRIMARY KEY,
     platform        TEXT NOT NULL,
     source          TEXT NOT NULL,
+    tile            TEXT NOT NULL,
     timestamp       BIGINT NOT NULL
 )";
 
@@ -36,12 +37,16 @@ const CREATE_IMAGES_TABLE_STMT: &str =
 //"CREATE INDEX idx_images ON images(platform, pixel_coverage)";
 
 const INSERT_IMAGES_STMT: &str =
-"INSERT INTO images (image_id, cloud_coverage, geohash, 
-        pixel_coverage, platform, source, timestamp)
+"INSERT INTO images (cloud_coverage, geohash,
+        id, platform, source, tile, timestamp)
     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
 const INSERT_FILES_STMT: &str =
-"INSERT INTO files (image_id, path, description) VALUES (?1, ?2, ?3)";
+"INSERT INTO files (image_id, description, path, pixel_coverage)
+    VALUES (?1, ?2, ?3, ?4)";
+
+const ID_SELECT_STMT: &str =
+"SELECT id from images WHERE geohash = ?1 AND tile = ?2";
 
 const LIST_SELECT_STMT: &str =
 "SELECT cloud_coverage, geohash, path, pixel_coverage,
@@ -56,11 +61,11 @@ GROUP BY geohash_search, platform, precision, source";
 // count, geohash, platform, precision, source
 type Extent = (i64, String, String, u8, String);
 
-// path, description
-type StFile = (String, String);
+// cloud_coverage, geohash, platform, source, tile, timestamp
+type Image = (Option<f64>, String, String, String, String, i64);
 
-// cloud_coverage, geohash, pixel_coverage, platform, source, tile, timestamp
-type Image = (Option<f64>, String, f64, String, String, String, i64);
+// path, description
+type StFile = (String, String, f64);
 
 #[derive(Clone, Debug)]
 pub struct ImageMetadata {
@@ -82,7 +87,7 @@ pub struct FileMetadata {
 pub struct ImageManager {
     conn: Mutex<Connection>,
     directory: PathBuf,
-    image_id: i64,
+    id: i64,
 }
 
 impl ImageManager {
@@ -96,7 +101,7 @@ impl ImageManager {
         ImageManager {
             conn: Mutex::new(conn),
             directory: directory,
-            image_id: 1000,
+            id: 1000,
         }
     }
 
@@ -169,22 +174,38 @@ impl ImageManager {
         unimplemented!();
     }
 
-    pub fn load(&mut self, image: Image, files: &Vec<StFile>)
-            -> Result<(), Box<dyn Error>> {
-        self.image_id += 1;
-
+    pub fn load(&mut self, cloud_coverage: Option<f64>,
+            description: &str, geohash: &str, path: &str,
+            pixel_coverage: f64, platform: &str, source: &str,
+            tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
-        conn.execute(INSERT_IMAGES_STMT, rusqlite::params![
-                self.image_id, image.0, image.1, image.2,
-                image.3, image.4, image.6
-            ])?;
 
-        for (path, description) in files.iter() {
-            conn.execute(INSERT_FILES_STMT, rusqlite::params![
-                    self.image_id, path, description
+        // TODO - check if tile, geohash combination is already registered
+        // execute query - TODO error
+        let mut stmt = conn.prepare(ID_SELECT_STMT)
+            .expect("prepare id select");
+        let ids: Vec<i64> = stmt.query_map(
+            rusqlite::params![geohash, tile],
+            |row| { Ok(row.get(0)?) }
+        ).unwrap().map(|x| x.unwrap()).collect();
+
+        let id = match ids.len() {
+            1 => ids[0],
+            _ => {
+                conn.execute(INSERT_IMAGES_STMT, rusqlite::params![
+                    cloud_coverage, geohash, self.id,
+                    platform, source, tile, timestamp
                 ])?;
-        }
+
+                self.id += 1;
+                self.id - 1
+            },
+        };
+
+        conn.execute(INSERT_FILES_STMT, rusqlite::params![
+                id, description, path, pixel_coverage
+            ])?;
 
         //println!("LOAD {} {} {} {}", image.4, image.2, image.5, image.6);
 
@@ -248,9 +269,10 @@ impl ImageManager {
         extent_iter.map(|x| x.unwrap()).collect()
     }
 
-    pub fn write(&self, platform: &str, geohash: &str, source: &str,
-            tile: &str, timestamp: i64, pixel_coverage: f64,
-            dataset: &mut Dataset) -> Result<(), Box<dyn Error>> {
+    pub fn write(&mut self, dataset: &mut Dataset, geohash: &str,
+            pixel_coverage: f64, platform: &str, source: &str,
+            subdataset_number: u8, tile: &str, timestamp: i64)
+            -> Result<(), Box<dyn Error>> {
         // create directory 'self.directory/platform/geohash/source'
         let mut path = self.directory.clone();
         for filename in vec!(platform, geohash, source) {
@@ -265,7 +287,7 @@ impl ImageManager {
         }
 
         // check if image path exists
-        path.push(tile);
+        path.push(format!("{}-{}", tile, subdataset_number));
         path.set_extension("tif");
 
         if path.exists() { // attempting to rewrite existing file
@@ -312,10 +334,14 @@ impl ImageManager {
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
+        // TODO - load data - TODO - description
+        self.load(None, "", geohash, &path.to_string_lossy(),
+            pixel_coverage, platform, source, tile, timestamp)?;
+
         Ok(())
     }
 
-    pub fn write_metadata(&mut self, platform: String, geohash: String,
+    /*pub fn write_metadata(&mut self, platform: String, geohash: String,
             source: String, tile: String, timestamp: i64,
             pixel_coverage: f64, files: Vec<(String, String)>)
             -> Result<(), Box<dyn Error>> {
@@ -365,7 +391,7 @@ impl ImageManager {
         self.load(image, &files)?;
 
         Ok(())
-    }
+    }*/
 }
 
 fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
@@ -383,7 +409,8 @@ fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
 
 pub fn to_image_metadata(path: &mut PathBuf)
         -> Result<(Image, Vec<StFile>), Box<dyn Error>> {
-    // open input file
+    unimplemented!();
+    /*// open input file
     let mut file = File::open(&path)?;
 
     // read metdaata
@@ -405,5 +432,5 @@ pub fn to_image_metadata(path: &mut PathBuf)
     // TODO - read cloud coverage
 
     Ok(((None, geohash, pixel_coverage, platform,
-        source, tile, timestamp), files))
+        source, tile, timestamp), files))*/
 }

@@ -15,8 +15,8 @@ use std::sync::{Arc, RwLock};
 enum TransferOp {
     ReadImage = 0,
     WriteImage = 1,
-    ReadMetadata = 2,
-    WriteMetadata = 3,
+    //ReadMetadata = 2,
+    //WriteMetadata = 3,
 }
 
 pub struct TransferStreamHandler {
@@ -39,23 +39,24 @@ impl StreamHandler for TransferStreamHandler {
         match FromPrimitive::from_u8(op_type) {
             Some(TransferOp::ReadImage) => unimplemented!(),
             Some(TransferOp::WriteImage) => {
-                // read metadata
-                let platform = read_string(stream)?;
+                // read everything
+                let mut dataset = st_image::prelude::read(stream)?;
                 let geohash = read_string(stream)?;
+                let pixel_coverage = stream.read_f64::<BigEndian>()?;
+                let platform = read_string(stream)?;
                 let source = read_string(stream)?;
+                let subdataset_number = stream.read_u8()?;
                 let tile = read_string(stream)?;
                 let timestamp = stream.read_i64::<BigEndian>()?;
-                let pixel_coverage = stream.read_f64::<BigEndian>()?;
-
-                // read image
-                let mut dataset = st_image::prelude::read(stream)?;
 
                 // write image using ImageManager
-                let mut image_manager = self.image_manager.read().unwrap();
-                image_manager.write(&platform, &geohash, &source,
-                    &tile, timestamp, pixel_coverage, &mut dataset)?;
+                let mut image_manager =
+                    self.image_manager.write().unwrap();
+                image_manager.write(&mut dataset, &geohash,
+                    pixel_coverage, &platform, &source,
+                    subdataset_number, &tile, timestamp)?;
             },
-            Some(TransferOp::ReadMetadata) => unimplemented!(),
+            /*Some(TransferOp::ReadMetadata) => unimplemented!(),
             Some(TransferOp::WriteMetadata) => {
                 // read metadata
                 let platform = read_string(stream)?;
@@ -77,7 +78,7 @@ impl StreamHandler for TransferStreamHandler {
                 let mut image_manager = self.image_manager.write().unwrap();
                 image_manager.write_metadata(platform, geohash, source,
                     tile, timestamp, pixel_coverage, files)?;
-            },
+            },*/
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!("unsupported operation type '{}'", op_type)))),
@@ -94,28 +95,32 @@ pub fn read_string<T: Read>(reader: &mut T) -> Result<String, Box<dyn Error>> {
     Ok(String::from_utf8(buf)?)
 }
 
-pub fn send_image(platform: &str, geohash: &str, source: &str,
-        tile: &str, timestamp: i64, pixel_coverage: f64,
-        image: &Dataset, addr: &SocketAddr) -> Result<(), Box<dyn Error>> {
+/*pub fn send_image(platform: &str, geohash: &str, source: &str,
+        tile: &str, subdataset_number: u8, timestamp: i64,
+        pixel_coverage: f64, image: &Dataset, addr: &SocketAddr)*/
+
+pub fn send_image(addr: &SocketAddr, dataset: &Dataset, geohash: &str,
+        pixel_coverage: f64, platform: &str, source: &str,
+        subdataset_number: u8, tile: &str, timestamp: i64)
+        -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::WriteImage as u8)?;
 
-    // write metadata
-    write_string(&platform, &mut stream)?;
+    // write everything
+    st_image::prelude::write(&dataset, &mut stream)?;
     write_string(&geohash, &mut stream)?;
+    stream.write_f64::<BigEndian>(pixel_coverage)?;
+    write_string(&platform, &mut stream)?;
     write_string(&source, &mut stream)?;
+    stream.write_u8(subdataset_number)?;
     write_string(&tile, &mut stream)?;
     stream.write_i64::<BigEndian>(timestamp)?;
-    stream.write_f64::<BigEndian>(pixel_coverage)?;
-
-    // write dataset
-    st_image::prelude::write(&image, &mut stream)?;
 
     Ok(())
 }
 
-pub fn send_metadata(platform: &str, geohash: &str, source: &str,
+/*pub fn send_metadata(platform: &str, geohash: &str, source: &str,
         tile: &str, timestamp: i64, pixel_coverage: f64,
         files: &Vec<(String, String)>, addr: &SocketAddr)
         -> Result<(), Box<dyn Error>> {
@@ -139,7 +144,7 @@ pub fn send_metadata(platform: &str, geohash: &str, source: &str,
     }
 
     Ok(())
-}
+}*/
 
 pub fn write_string<T: Write>(value: &str, writer: &mut T)
         -> Result<(), Box<dyn Error>> {
