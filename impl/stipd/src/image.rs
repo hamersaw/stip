@@ -106,7 +106,7 @@ impl ImageManager {
     }
 
     pub fn get_paths(&self) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-        let glob_expression = format!("{}/*/*/*/*meta",
+        let glob_expression = format!("{}/*/*/*/*tif",
             self.directory.to_string_lossy());
 
         // iterate over existing images
@@ -181,7 +181,7 @@ impl ImageManager {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
 
-        // TODO - check if tile, geohash combination is already registered
+        // check if tile, geohash combination is already registered
         // execute query - TODO error
         let mut stmt = conn.prepare(ID_SELECT_STMT)
             .expect("prepare id select");
@@ -340,58 +340,6 @@ impl ImageManager {
 
         Ok(())
     }
-
-    /*pub fn write_metadata(&mut self, platform: String, geohash: String,
-            source: String, tile: String, timestamp: i64,
-            pixel_coverage: f64, files: Vec<(String, String)>)
-            -> Result<(), Box<dyn Error>> {
-        // TODO - replicated code
-        // create directory 'self.directory/platform/geohash/source'
-        let mut path = self.directory.clone();
-        for filename in vec!(&platform, &geohash, &source) {
-            path.push(filename);
-            if !path.exists() {
-                std::fs::create_dir(&path)?;
-                let mut permissions =
-                    std::fs::metadata(&path)?.permissions();
-                permissions.set_mode(0o755);
-                std::fs::set_permissions(&path, permissions)?;
-            }
-        }
-
-        // check if image path exists
-        path.push(&tile);
-        path.set_extension("meta");
-
-        if path.exists() { // attempting to rewrite existing file
-            return Ok(());
-        }
-
-        // open output file
-        let mut file = File::create(&path)?;
- 
-        // write metadata
-        crate::transfer::write_string(&platform, &mut file)?;
-        crate::transfer::write_string(&geohash, &mut file)?;
-        crate::transfer::write_string(&source, &mut file)?;
-        crate::transfer::write_string(&tile, &mut file)?;
-        file.write_i64::<BigEndian>(timestamp)?;
-        file.write_f64::<BigEndian>(pixel_coverage)?;
-
-        // write files
-        file.write_u8(files.len() as u8)?;
-        for (path, description) in files.iter() {
-            crate::transfer::write_string(&path, &mut file)?;
-            crate::transfer::write_string(&description, &mut file)?;
-        }
-
-        // TODO - load image into internal store
-        let image = (None, geohash, pixel_coverage,
-            platform, source, tile, timestamp);
-        self.load(image, &files)?;
-
-        Ok(())
-    }*/
 }
 
 fn append_stmt_filter<'a, T: ToSql>(feature: &str, filter: &'a Option<T>,
@@ -413,7 +361,7 @@ pub fn to_image_metadata(path: &mut PathBuf)
     /*// open input file
     let mut file = File::open(&path)?;
 
-    // read metdaata
+    // read metadata
     let platform = crate::transfer::read_string(&mut file)?;
     let geohash = crate::transfer::read_string(&mut file)?;
     let source = crate::transfer::read_string(&mut file)?;
