@@ -54,29 +54,13 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
 
         //println!("{} {} {}", tile, geohash, pixel_coverage);
 
-        // compute geohash hash
-        let mut hasher = DefaultHasher::new();
-        hasher.write(geohash.as_bytes());
-        let hash = hasher.finish();
-
-        // discover hash location
-        let addr = {
-            let dht = dht.read().unwrap(); 
-            let (node_id, addrs) = match dht.locate(hash) {
-                Some(node) => node,
-                None => {
-                    warn!("no dht location for hash {}", hash);
-                    continue;
-                },
-            };
-
-            match addrs.1 {
-                Some(addr) => addr.clone(),
-                None => {
-                    warn!("dht node {} has no xfer_addr", node_id);
-                    continue;
-                },
-            }
+        // lookup geohash in dht
+        let addr = match crate::task::dht_lookup(&dht, &geohash) {
+            Ok(addr) => addr,
+            Err(e) => {
+                warn!("{}", e);
+                continue;
+            },
         };
 
         // send image to new host

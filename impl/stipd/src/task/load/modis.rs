@@ -73,14 +73,7 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
 fn process_splits(datasets: &HashMap<String, Dataset>,
         description: &str, dht: &Arc<RwLock<Dht>>, subdataset: u8,
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
-    let driver = Driver::get("GTiff").expect("get driver");
     for (geohash, dataset) in datasets.iter() {
-        // TODO - check pixel coverage
-        //let pixel_coverage = st_image::prelude::coverage(&dataset);
-        //println!("{:?}", pixel_coverage);
-
-        //let tmp_file = format!("/tmp/st-image-{}.tif", geohash);
-        //dataset.create_copy(&driver, &tmp_file, None).expect("dataset copy");
         // if image has 0.0 coverage -> don't process - TODO error
         let pixel_coverage = st_image::coverage(&dataset).unwrap();
         if pixel_coverage == 0f64 {
@@ -89,29 +82,13 @@ fn process_splits(datasets: &HashMap<String, Dataset>,
 
         //println!("{} {} {}", tile, geohash, pixel_coverage);
 
-        // compute geohash hash
-        let mut hasher = DefaultHasher::new();
-        hasher.write(geohash.as_bytes());
-        let hash = hasher.finish();
-
-        // discover hash location
-        let addr = {
-            let dht = dht.read().unwrap(); 
-            let (node_id, addrs) = match dht.locate(hash) {
-                Some(node) => node,
-                None => {
-                    warn!("no dht location for hash {}", hash);
-                    continue;
-                },
-            };
-
-            match addrs.1 {
-                Some(addr) => addr.clone(),
-                None => {
-                    warn!("dht node {} has no xfer_addr", node_id);
-                    continue;
-                },
-            }
+        // lookup geohash in dht
+        let addr = match crate::task::dht_lookup(&dht, &geohash) {
+            Ok(addr) => addr,
+            Err(e) => {
+                warn!("{}", e);
+                continue;
+            },
         };
 
         // send image to new host

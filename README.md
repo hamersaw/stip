@@ -86,10 +86,6 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - __data fill - fix v3.0__
 - data list - format client output
 - **data split - add filter for split geohashes**
+- documentation on supported datasets
 - improve node logging
-- refactor dht lookup - used in all load processors
 - refactor task implementations - facilitate code reuse
-#### DISCUSS
-- data merge - combine images into higher level images
-- image replication? - one replica on geohash of length (x - 1)
-- task stop?

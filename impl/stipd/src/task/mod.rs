@@ -1,6 +1,12 @@
+use geohash::{self, Coordinate};
+use swarm::prelude::Dht;
+
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::error::Error;
+use std::hash::Hasher;
+use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -91,4 +97,25 @@ pub enum TaskStatus {
     Complete,
     Failure(String),
     Running,
+}
+
+fn dht_lookup(dht: &Arc<RwLock<Dht>>, geohash: &str)
+        -> Result<SocketAddr, Box<dyn Error>> {
+    // compute geohash hash
+    let mut hasher = DefaultHasher::new();
+    hasher.write(geohash.as_bytes());
+    let hash = hasher.finish();
+
+    // discover hash location
+    let dht = dht.read().unwrap(); 
+    match dht.locate(hash) {
+        Some((node_id, addrs)) => {
+            match addrs.1 {
+                Some(addr) => Ok(addr.clone()),
+                None => Err(format!("dht node {} has no xfer_addr",
+                    node_id).into()),
+            }
+        },
+        None => Err(format!("no dht node for hash {}", hash).into()),
+    }
 }
