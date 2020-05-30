@@ -83,7 +83,6 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip data fill -p NAIP
 
 ## TODO
-- **cloud coverage computation sentinel-2 data**
 - __data fill - fix v3.0__
 - data list - format client output
 - **data split - add filter for split geohashes**

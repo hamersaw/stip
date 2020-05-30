@@ -6,7 +6,6 @@ import math
 import multiprocessing
 import numpy as np
 import os
-import pathlib
 import s2cloudless
 import sys
 
@@ -15,23 +14,21 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(script_dir + '/../../stippy/')
 import stippy
 
-BANDS = ['B01', 'B02', 'B04', 'B05',
-    'B08', 'B8A', 'B09', 'B10', 'B11', 'B12']
+BANDS = [(2, 1), (0, 1), (0,3), (1, 1),
+    (0, 4), (1, 4), (2, 2), (2, 3), (1, 5), (1, 6)]
 
-def compute_cloud_coverage(directory, platform, geohash, source, tile):
+#def compute_cloud_coverage(directory, platform, geohash, source, tile):
+def compute_cloud_coverage(image):
     # compute max width and height
     width = 0
     height = 0
-    for band in BANDS:
-        path = directory + '/' + platform + '/' + geohash + '/' + band + '/' + source + '/' + tile
-        gdal_dataset = gdal.Open(path)
+    for (file_index, band_index) in BANDS:
+        gdal_dataset = gdal.Open(image.files[file_index].path)
 
-        array = gdal_dataset.ReadAsArray()
-
-        if len(array) > height:
-            height = len(array)
-        if len(array[0]) > width:
-            width = len(array[0])
+        if gdal_dataset.RasterYSize > height:
+            height = gdal_dataset.RasterYSize
+        if gdal_dataset.RasterXSize > width:
+            width = gdal_dataset.RasterXSize
 
     #print('image dimension: ' + str(width) + ' x ' + str(height))
 
@@ -43,12 +40,10 @@ def compute_cloud_coverage(directory, platform, geohash, source, tile):
         for j in range(0, width):
             band_array[0][i].append([])
 
-    for band in BANDS:
-        path = directory + '/' + platform + '/' + geohash + '/' + band + '/' + source + '/' + tile
-        gdal_dataset = gdal.Open(path)
-
-        array = gdal_dataset.ReadAsArray(buf_xsize=width, buf_ysize=height)
-
+    for (file_index, band_index) in BANDS:
+        gdal_dataset = gdal.Open(image.files[file_index].path)
+        array = gdal_dataset.GetRasterBand(band_index) \
+            .ReadAsArray(buf_xsize=width, buf_ysize=height)
         #print('  ' + str(len(array[0])) + ', ' + str(len(array)))
 
         for i in range(0, height):
@@ -73,23 +68,27 @@ def compute_cloud_coverage(directory, platform, geohash, source, tile):
     return cloud_pixels / (cloud_pixels + clear_pixels)
 
 def process(image):
-    # compute path of image
-    path = pathlib.Path(image.path)
+    # validate image
+    if len(image.files) != 4:
+        print('not all files found')
+        return
 
-    # compute cloud coverage percentage
-    tile = path.name
-    directory = str(path.parents[4])
-    cloud_coverage = compute_cloud_coverage(directory,
-        image.platform, image.geohash, image.source, tile)
-
-    print(image.geohash + ' ' + path.name
-        + ' ' + str(cloud_coverage))
+    cloud_coverage = compute_cloud_coverage(image)
+    print(image.geohash + ' ' + str(cloud_coverage))
 
     # update all existing image bands
-    for path in path.parents[2].glob('*/' + image.source + '/' + tile):
-        gdal_dataset = gdal.Open(str(path))
+    processed = []
+    for (file_index, band_index) in BANDS:
+        # check if file already processed
+        if file_index in processed:
+            continue
+
+        # update file
+        gdal_dataset = gdal.Open(image.files[file_index].path)
         gdal_dataset.SetMetadataItem("CLOUD_COVERAGE",
             str(cloud_coverage), "STIP")
+
+        processed.append(file_index)
 
 if __name__ == "__main__":
     # parse arguments
@@ -105,16 +104,9 @@ if __name__ == "__main__":
 
     # compile list of processing images
     host_addr = args.ip_address + ':' + str(args.port)
-    image_iter = stippy.list_node_images(host_addr,
-        platform='Sentinel-2A', band='TCI')
     images = []
-
-    for (node, image) in stippy.list_node_images(host_addr,
-            platform='Sentinel-2A', band='TCI'):
-        images.append(image)
-
-    for (node, image) in stippy.list_node_images(host_addr,
-            platform='Sentinel-2B', band='TCI'):
+    for (node, image) in stippy.list_node_images(
+            host_addr, platform='Sentinel-2'):
         images.append(image)
 
     # process images
