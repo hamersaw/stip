@@ -117,11 +117,10 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // iterate over each available node
-    println!("{:<12}{:<80}{:<16}{:<10}{:<12}{:<16}{:<16}{:<16}{:<30}",
-        "node_id", "path", "platform", "geohash",
-        "source", "timestamp", "pixel_coverage",
-        "cloud_coverage", "description");
-    println!("--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    println!("{:<8}{:<12}{:<10}{:<8}{:<12}{:<16}{:<16}{:<80}",
+        "node", "platform", "geohash", "source", "timestamp",
+        "pixel_coverage", "cloud_coverage", "path");
+    println!("------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for node in node_list_reply.nodes.iter() {
         // initialize DataManagement grpc client
         let mut client = DataManagementClient::connect(
@@ -132,10 +131,10 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
             .await?.into_inner();
         while let Some(image) = stream.message().await? {
             for file in image.files.iter() {
-                println!("{:<12}{:<80}{:<16}{:<10}{:<12}{:<16}{:<16}{:<16?}{:<30}", 
-                    node.id, file.path, image.platform, image.geohash,
+                println!("{:<8}{:<12}{:<10}{:<8}{:<12}{:<16.5}{:<16.5}{:<80}",
+                    node.id, image.platform, image.geohash,
                     image.source, image.timestamp, file.pixel_coverage,
-                    image.cloud_coverage, file.description);
+                    image.cloud_coverage.unwrap_or(-1.0), file.path);
             }
         }
     }
