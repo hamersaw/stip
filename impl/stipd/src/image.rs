@@ -4,7 +4,6 @@ use rusqlite::{Connection, ToSql};
 
 use std::error::Error;
 use std::ffi::CString;
-use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::Mutex;
