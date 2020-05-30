@@ -49,11 +49,14 @@ Behind the scenes of stip all functionality is partitioned into a variety of tas
 #### DATA LOAD
 Data load tasks are initialized on a per-node basis, meaning each node ony processes local data. Therefore, data is typically distributed among cluster nodes to enable distributed processing. As such, a separate task must be manually started on each node to load the local data.
 
+    # load a single modis file at geohash length 3
+    ./stip data load '~/Downloads/earth-explorer/modis/MCD43A4.A2020100.h08v05.006.2020109032339.hdf' modis -t 1 -l 3
+
     # load data for the given glob with 4 threads at geohash length 6
-    ./stip data load '~/Downloads/earth-explorer/naip/test/*' -t 4 -l 6
+    ./stip data load '~/Downloads/earth-explorer/naip/test/*' naip -t 4 -l 6
 
     # load sentinel data for files with the provided glob at geohash
-    # length 5 using 2 threads and setting the task id as 1000
+    #   length 5 using 2 threads and setting the task id as 1000
     ./stip -i $(curl ifconfig.me) data load "/s/$(hostname)/a/nobackup/galileo/usgs-earth-explorer/sentinel-2/foco-20km/*T13TEE*" sentinel -t 2 -l 5 -d 1000
 #### DATA LIST / SEARCH
 These commands enable searching the system for images using the metadata provided. 'data search' provides an agglomerated data representation, presenting image geohash precision counts satisfying the query. It is useful for gaining understanding of the dataspace. With an understanding of interesting data the 'data list' command returns all metadata for images satisfying the provided filtering criteria.
@@ -62,7 +65,7 @@ These commands enable searching the system for images using the metadata provide
     ./stip data search -p NAIP -g 9x -r 
 
     # search for data beginning on 2015-01-01 
-    # where the pixel coverage is greater than 95%
+    #   where the pixel coverage is greater than 95%
     ./stip data search -s 2524608000 -x 0.95
 
     # list all images from Sentinel-2 dataset for geohash '9xj3ej'
@@ -71,7 +74,7 @@ These commands enable searching the system for images using the metadata provide
 Images are stored at the geohash length defined during data loads. However, the 'data split' command enables further partitioning of datasets. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'data search' and 'data list' commands, enabling fine image processing filtering criteria.
 
     # split Sentinel-2 data at a geohash length of 6 
-    # for all geohashes starting with '9xj'
+    #   for all geohashes starting with '9xj'
     ./stip data split -p Sentinel-2 -g 9xj -r -l 6
 #### DATA FILL
 Typically image datasets partition data into many tiles. The inherit tile bounds mean that often a single geohash spans multiple tiles. Therefore, when loading data, one image contains partial data whereas another contains the remaining data. The 'data fill' command attempts to identify image sets where 'complete' images may be built by combining multiple source images. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'data search' and 'data list' commands, enabling fine image processing filtering criteria.
@@ -82,8 +85,10 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 ## TODO
 - **cloud coverage computation sentinel-2 data**
 - __data fill - fix v3.0__
-- **data load - support MODIS data**
+- data list - format client output
+- **data split - add filter for split geohashes**
 - improve node logging
+- refactor dht lookup - used in all load processors
 - refactor task implementations - facilitate code reuse
 #### DISCUSS
 - data merge - combine images into higher level images

@@ -1,6 +1,7 @@
 use gdal::raster::Dataset;
 use swarm::prelude::Dht;
 
+mod modis;
 mod naip;
 mod sentinel_2;
 
@@ -13,6 +14,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Clone)]
 pub enum LoadFormat {
+    MODIS,
     NAIP,
     Sentinel,
 }
@@ -77,6 +79,9 @@ impl Task for LoadEarthExplorerTask {
 
                     // process record
                     let result = match load_format {
+                        LoadFormat::MODIS => modis::process(
+                            &dht_clone, precision, &record,
+                            x_interval, y_interval),
                         LoadFormat::NAIP => naip::process(
                             &dht_clone, precision, &record,
                             x_interval, y_interval),

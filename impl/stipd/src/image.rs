@@ -302,9 +302,7 @@ impl ImageManager {
         }
 
         // check if image path exists
-        path.push(format!("{}-{}", tile, subdataset));
-        path.set_extension("tif");
-
+        path.push(format!("{}-{}.tif", tile, subdataset));
         if path.exists() { // attempting to rewrite existing file
             return Ok(());
         }

@@ -192,6 +192,7 @@ impl DataManagement for DataManagementImpl {
         // initialize task
         let load_format = match ProtoLoadFormat
                 ::from_i32(request.load_format).unwrap() {
+            ProtoLoadFormat::Modis => LoadFormat::MODIS,
             ProtoLoadFormat::Naip => LoadFormat::NAIP,
             ProtoLoadFormat::Sentinel => LoadFormat::Sentinel,
         };

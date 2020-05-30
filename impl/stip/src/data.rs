@@ -154,6 +154,7 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 
     // parse load format
     let load_format = match load_matches.value_of("LOAD_FORMAT") {
+        Some("modis") => LoadFormat::Modis as i32,
         Some("naip") => LoadFormat::Naip as i32,
         Some("sentinel") => LoadFormat::Sentinel as i32,
         _ => unimplemented!(),

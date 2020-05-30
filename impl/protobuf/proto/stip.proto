@@ -107,8 +107,9 @@ message DataListRequest {
 
 // Load Messages
 enum LoadFormat {
-    NAIP = 0;
-    SENTINEL = 1;
+    MODIS = 0;
+    NAIP = 1;
+    SENTINEL = 2;
 }
 
 message DataLoadRequest {

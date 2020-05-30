@@ -127,6 +127,7 @@ subcommands:
                         index: 2
                         required: true
                         possible_values: 
+                            - modis
                             - naip
                             - sentinel
                         help: dataset load format
