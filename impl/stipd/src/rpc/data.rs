@@ -258,9 +258,10 @@ impl DataManagement for DataManagementImpl {
         // initialize task
         let task = SplitTask::new(self.dht.clone(),
             filter.end_timestamp.clone(), filter.geohash.clone(),
-            self.image_manager.clone(), filter.platform.clone(),
-            request.precision as usize, filter.recurse,
-            filter.start_timestamp.clone(), request.thread_count as u8);
+            request.geohash_bound.clone(), self.image_manager.clone(),
+            filter.platform.clone(), request.precision as usize,
+            filter.recurse, filter.start_timestamp.clone(),
+            request.thread_count as u8);
 
         // execute task using task manager - TODO error
         let task_id = {

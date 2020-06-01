@@ -16,6 +16,7 @@ pub struct SplitTask {
     dht: Arc<RwLock<Dht>>,
     end_timestamp: Option<i64>,
     geohash: Option<String>,
+    geohash_bound: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     precision: usize,
@@ -26,7 +27,7 @@ pub struct SplitTask {
 
 impl SplitTask {
     pub fn new(dht: Arc<RwLock<Dht>>, end_timestamp: Option<i64>,
-            geohash: Option<String>,
+            geohash: Option<String>, geohash_bound: Option<String>,
             image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
@@ -34,6 +35,7 @@ impl SplitTask {
             dht: dht,
             end_timestamp: end_timestamp,
             geohash: geohash,
+            geohash_bound: geohash_bound,
             image_manager: image_manager,
             platform: platform,
             precision: precision,
@@ -47,7 +49,7 @@ impl SplitTask {
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let base_records: Vec<(Image, Vec<StFile>)> = {
+        let mut records: Vec<(Image, Vec<StFile>)> = {
             let image_manager = self.image_manager.read().unwrap();
             image_manager.list(&self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
@@ -55,8 +57,18 @@ impl Task for SplitTask {
                 &self.start_timestamp)
         };
 
-        let records: Vec<(Image, Vec<StFile>)> = base_records.into_iter()
-            .filter(|x| (x.0).1.len() < self.precision as usize).collect();
+        // filter by geohash precision length
+        records = records.into_iter().filter(|x| {
+                (x.0).1.len() < self.precision as usize
+            }).collect();
+
+        // filter by result bounding geohash if necessary
+        if let Some(geohash) = &self.geohash_bound {
+            records = records.into_iter().filter(|(image, files)| {
+                    image.1.starts_with(geohash)
+                        || geohash.starts_with(&image.1)
+                }).collect();
+        }
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -168,10 +180,9 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
         let dataset = Dataset::open(&path).unwrap();
 
         // split image with geohash precision - TODO error
-        for (dataset, _, win_max_x, _, win_max_y) in
-                st_image::prelude::split(&dataset, 
-                    4326, x_interval, y_interval).unwrap() {
-            // compute window geohash
+        for dataset_split in st_image::prelude::split(&dataset,
+                4326, x_interval, y_interval).unwrap() {
+            let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
             let coordinate = Coordinate{x: win_max_x, y: win_max_y};
             let geohash = geohash::encode(coordinate, precision)?;
 
@@ -179,6 +190,9 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
             if !geohash.starts_with(&image.1) {
                 continue;
             }
+
+            // perform dataset split - TODO error
+            let dataset = dataset_split.dataset().unwrap();
 
             // if image has 0.0 coverage -> don't process - TODO error
             let pixel_coverage = st_image::coverage(&dataset).unwrap();

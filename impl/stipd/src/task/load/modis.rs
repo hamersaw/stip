@@ -112,13 +112,15 @@ fn split_subdatasets<T: GdalType>(subdatasets: Vec<(&str, &str)>,
         let dataset = Dataset::open(&path).expect("subdataset open");
 
         // TODO - error
-        for (dataset, _, win_max_x, _, win_max_y) in
-                st_image::prelude::split(&dataset, 4326,
-                x_interval, y_interval).unwrap() {
-            // compute window geohash
+        for dataset_split in st_image::prelude::split(&dataset,
+                4326, x_interval, y_interval).unwrap() {
+            let (_, win_max_x, _, win_max_y) =
+                dataset_split.coordinates();
             let coordinate = Coordinate{x: win_max_x, y: win_max_y};
             let geohash = geohash::encode(coordinate, precision)?;
 
+            // perform dataset split - TODO error
+            let dataset = dataset_split.dataset().unwrap();
             let (x, y) = dataset.size();
 
             // TODO - tmp print

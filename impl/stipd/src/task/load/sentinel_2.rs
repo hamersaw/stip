@@ -87,12 +87,14 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
         let dataset = Dataset::open(&path).unwrap();
 
         // split image with geohash precision - TODO error
-        for (dataset, _, win_max_x, _, win_max_y) in
-                st_image::prelude::split(&dataset, 4326,
-                    x_interval, y_interval).unwrap() {
-            // compute window geohash
+        for dataset_split in st_image::prelude::split(&dataset,
+                4326, x_interval, y_interval).unwrap() {
+            let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
             let coordinate = Coordinate{x: win_max_x, y: win_max_y};
             let geohash = geohash::encode(coordinate, precision)?;
+
+            // perform dataset split - TODO error
+            let dataset = dataset_split.dataset().unwrap();
 
             // if image has 0.0 coverage -> don't process - TODO error
             let pixel_coverage = st_image::coverage(&dataset).unwrap();

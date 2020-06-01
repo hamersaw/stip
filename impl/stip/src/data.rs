@@ -306,6 +306,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     // initialize DataSplitRequest
     let split_request = DataSplitRequest {
         filter: filter,
+        geohash_bound: crate::string_opt(
+            split_matches.value_of("geohash_bound")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
         task_id: crate::u64_opt(split_matches.value_of("task_id"))?,

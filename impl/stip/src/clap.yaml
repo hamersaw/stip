@@ -203,6 +203,11 @@ subcommands:
                         long: geohash
                         short: g
                         takes_value: true
+                    - geohash_bound:
+                        help: boundary for resulting geohash splits
+                        long: geohash_bound
+                        short: b
+                        takes_value: true
                     - platform:
                         help: image platform (ex. SENTINEL-2B)
                         long: platform

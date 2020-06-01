@@ -54,6 +54,9 @@ impl StreamHandler for TransferStreamHandler {
                 image_manager.write(&mut dataset, &description,
                     &geohash, pixel_coverage, &platform, &source,
                     subdataset_number, &tile, timestamp)?;
+
+                // write success
+                stream.write_u8(1)?;
             },
             None => return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -64,7 +67,8 @@ impl StreamHandler for TransferStreamHandler {
     }
 }
 
-pub fn read_string<T: Read>(reader: &mut T) -> Result<String, Box<dyn Error>> {
+pub fn read_string<T: Read>(reader: &mut T)
+        -> Result<String, Box<dyn Error>> {
     let len = reader.read_u8()?;
     let mut buf = vec![0u8; len as usize];
     reader.read_exact(&mut buf)?;
@@ -89,6 +93,9 @@ pub fn send_image(addr: &SocketAddr, dataset: &Dataset,
     stream.write_u8(subdataset_number)?;
     write_string(&tile, &mut stream)?;
     stream.write_i64::<BigEndian>(timestamp)?;
+ 
+    // read success
+    let _ = stream.read_u8()?;
 
     Ok(())
 }
