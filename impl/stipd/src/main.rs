@@ -44,6 +44,7 @@ fn main() {
     // build swarm config
     let swarm_config = SwarmConfigBuilder::new()
         .addr(SocketAddr::new(opt.ip_addr, opt.gossip_port))
+        .gossip_interval_ms(2000)
         .build().expect("build swarm config");
 
     // build dht

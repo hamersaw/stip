@@ -87,4 +87,7 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - **data split - add filter for split geohashes**
 - documentation on supported datasets
 - improve node logging
+- __reduce memory footprint__
+    - remove file path directory from sqlite -> add on processing
+    - remove file descriptions in sqlite
 - refactor task implementations - facilitate code reuse

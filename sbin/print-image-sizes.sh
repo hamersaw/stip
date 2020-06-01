@@ -1,20 +1,20 @@
 #!/bin/bash
-# ./sbin/print-image-sizes.sh ~/Downloads/STIP-6/ TCI \
+# ./sbin/print-image-sizes.sh /tmp/stip-images/ 0 \
 #    | awk '{ xsum += $2; ysum+=$3; n++ } END { if (n > 0) print xsum / n, ysum/n; }'
 
 # check arguments
 if (( $# < 1 )); then
-    echo "usage: $(basename $0) directory [band]"
+    echo "usage: $(basename $0) directory [subdataset]"
     exit
 fi
 
-band="*"
+subdataset="*"
 if (( $# == 2 )); then
-    band=$2
+    subdataset=$2
 fi
 
 # iterate over files
-for file in $(find $1 -type f -wholename "*/$band/*/*tif"); do
+for file in $(find $1 -type f -wholename "*/*-$subdataset.tif"); do
     #echo $file
 
     # identify image band
