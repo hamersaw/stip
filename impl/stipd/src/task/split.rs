@@ -5,9 +5,7 @@ use swarm::prelude::Dht;
 use crate::image::{ImageManager, Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
-use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
-use std::hash::Hasher;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -64,7 +62,7 @@ impl Task for SplitTask {
 
         // filter by result bounding geohash if necessary
         if let Some(geohash) = &self.geohash_bound {
-            records = records.into_iter().filter(|(image, files)| {
+            records = records.into_iter().filter(|(image, _)| {
                     image.1.starts_with(geohash)
                         || geohash.starts_with(&image.1)
                 }).collect();

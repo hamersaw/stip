@@ -16,7 +16,6 @@ const CREATE_FILES_TABLE_STMT: &str =
 "CREATE TABLE files (
     description     TEXT NOT NULL,
     image_id        BIGINT NOT NULL,
-    path            TEXT NOT NULL,
     pixel_coverage  FLOAT NOT NULL,
     subdataset      TINYINT NOT NULL
 )";
@@ -41,15 +40,15 @@ const INSERT_IMAGES_STMT: &str =
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
 const INSERT_FILES_STMT: &str =
-"INSERT INTO files (description, image_id, path, 
+"INSERT INTO files (description, image_id,
     pixel_coverage, subdataset)
-VALUES (?1, ?2, ?3, ?4, ?5)";
+VALUES (?1, ?2, ?3, ?4)";
 
 const ID_SELECT_STMT: &str =
 "SELECT id from images WHERE geohash = ?1 AND tile = ?2";
 
 const LIST_SELECT_STMT: &str =
-"SELECT cloud_coverage, description, geohash, path, pixel_coverage,
+"SELECT cloud_coverage, description, geohash, pixel_coverage,
     platform, source, subdataset, tile, timestamp
 FROM images JOIN files ON images.id = files.image_id";
 
@@ -71,23 +70,6 @@ pub type Image = (Option<f64>, String, String, String, String, i64);
 // description, path, pixel_coverage, subdataset
 pub type StFile = (String, String, f64, u8);
 
-#[derive(Clone, Debug)]
-pub struct ImageMetadata {
-    pub cloud_coverage: Option<f64>,
-    pub geohash: String,
-    pub files: Vec<FileMetadata>,
-    pub pixel_coverage: f64,
-    pub platform: String,
-    pub source: String,
-    pub timestamp: i64,
-}
-
-#[derive(Clone, Debug)]
-pub struct FileMetadata {
-    pub description: String,
-    pub path: String,
-}
-
 pub struct ImageManager {
     conn: Mutex<Connection>,
     directory: PathBuf,
@@ -107,6 +89,27 @@ impl ImageManager {
             directory: directory,
             id: 1000,
         }
+    }
+
+    pub fn get_image_path(&self, create: bool, geohash: &str,
+            platform: &str, source: &str, subdataset: u8,
+            tile: &str) -> Result<PathBuf, Box<dyn Error>> {
+        // create directory 'self.directory/platform/geohash/source'
+        let mut path = self.directory.clone();
+        for filename in vec!(platform, geohash, source) {
+            path.push(filename);
+            if create && !path.exists() {
+                std::fs::create_dir(&path)?;
+                let mut permissions =
+                    std::fs::metadata(&path)?.permissions();
+                permissions.set_mode(0o755);
+                std::fs::set_permissions(&path, permissions)?;
+            }
+        }
+
+        // add tile-subdataset.tif
+        path.push(format!("{}-{}.tif", tile, subdataset));
+        Ok(path)
     }
 
     pub fn get_paths(&self) -> Result<Vec<PathBuf>, Box<dyn Error>> {
@@ -166,14 +169,25 @@ impl ImageManager {
         // execute query - TODO error
         let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let images_iter = stmt.query_map(&params, |row| {
-            Ok(((row.get(0)?, row.get(2)?, row.get(5)?,
-                    row.get(6)?, row.get(8)?, row.get(9)?),
-                (row.get(1)?, row.get(3)?, row.get(4)?, row.get(7)?)))
+            let geohash: String = row.get(2)?;
+            let platform: String = row.get(4)?;
+            let source: String = row.get(5)?;
+            let subdataset: u8 = row.get(6)?;
+            let tile: String = row.get(7)?;
+ 
+            // TODO - error
+            let path = self.get_image_path(false, &geohash,
+                &platform, &source, subdataset, &tile).unwrap();
+
+            Ok(((row.get(0)?, geohash, platform,
+                    source, tile, row.get(8)?),
+                (row.get(1)?, path.to_string_lossy().to_string(),
+                    row.get(3)?, subdataset)))
         }).unwrap();
 
         // process images
         let mut images: Vec<(Image, Vec<StFile>)> = Vec::new();
-        for (image, file) in images_iter.map(|x| x.unwrap()) {
+        for (image, mut file) in images_iter.map(|x| x.unwrap()) {
             match images.last_mut() {
                 Some((i, f)) => {
                     // if geohash and tile match -> append file to files
@@ -191,10 +205,9 @@ impl ImageManager {
     }
 
     pub fn load(&mut self, cloud_coverage: Option<f64>,
-            description: &str, geohash: &str, path: &str,
-            pixel_coverage: f64, platform: &str, source: &str,
-            subdataset: u8, tile: &str, timestamp: i64)
-            -> Result<(), Box<dyn Error>> {
+            description: &str, geohash: &str, pixel_coverage: f64,
+            platform: &str, source: &str, subdataset: u8, tile: &str,
+            timestamp: i64) -> Result<(), Box<dyn Error>> {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
 
@@ -221,7 +234,7 @@ impl ImageManager {
         };
 
         conn.execute(INSERT_FILES_STMT, rusqlite::params![
-                description, id, path, pixel_coverage, subdataset
+                description, id, pixel_coverage, subdataset
             ])?;
 
         Ok(())
@@ -288,21 +301,10 @@ impl ImageManager {
             geohash: &str, pixel_coverage: f64, platform: &str,
             source: &str, subdataset: u8, tile: &str,
             timestamp: i64) -> Result<(), Box<dyn Error>> {
-        // create directory 'self.directory/platform/geohash/source'
-        let mut path = self.directory.clone();
-        for filename in vec!(platform, geohash, source) {
-            path.push(filename);
-            if !path.exists() {
-                std::fs::create_dir(&path)?;
-                let mut permissions =
-                    std::fs::metadata(&path)?.permissions();
-                permissions.set_mode(0o755);
-                std::fs::set_permissions(&path, permissions)?;
-            }
-        }
+        // get image path
+        let path = self.get_image_path(true, geohash,
+            platform, source, subdataset, tile)?;
 
-        // check if image path exists
-        path.push(format!("{}-{}.tif", tile, subdataset));
         if path.exists() { // attempting to rewrite existing file
             return Ok(());
         }
@@ -353,8 +355,8 @@ impl ImageManager {
             &timestamp.to_string(), "STIP").unwrap();
 
         // load data
-        self.load(None, description, geohash, &path.to_string_lossy(),
-            pixel_coverage, platform, source, subdataset, tile, timestamp)?;
+        self.load(None, description, geohash, pixel_coverage,
+            platform, source, subdataset, tile, timestamp)?;
 
         Ok(())
     }

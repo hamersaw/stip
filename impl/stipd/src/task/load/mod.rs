@@ -1,4 +1,3 @@
-use gdal::raster::Dataset;
 use swarm::prelude::Dht;
 
 mod modis;

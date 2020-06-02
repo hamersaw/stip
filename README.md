@@ -84,9 +84,8 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 
 ## TODO
 - __data fill - fix v3.0__
-- documentation on supported datasets
 - improve node logging
-- __reduce memory footprint__
-    - remove file path directory from sqlite -> add on processing
-    - remove file descriptions in sqlite
+- __remove file descriptions in sqlite - vastly reduces memory use__
+    - documentation on supported datasets
 - refactor task implementations - facilitate code reuse
+- st-image - on split, fill vectors with 'no_data_value'

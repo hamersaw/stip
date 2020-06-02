@@ -1,6 +1,6 @@
 use gdal::raster::Dataset;
 
-use crate::image::{FILLED_SOURCE, ImageManager, ImageMetadata};
+use crate::image::{FILLED_SOURCE, ImageManager};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;
@@ -43,13 +43,13 @@ impl FillTask {
 
 impl Task for FillTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // search for images using ImageManager
+        unimplemented!();
+        /*// search for images using ImageManager
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
-            /*image_manager.list(&self.end_timestamp,
+            image_manager.list(&self.end_timestamp,
                 &self.geohash, &None, &None, &self.platform,
-                self.recurse, &None, &self.start_timestamp)*/
-            unimplemented!();
+                self.recurse, &None, &self.start_timestamp)
         };
 
         // order by platform, geohash, band
@@ -194,11 +194,11 @@ impl Task for FillTask {
         });
 
         // return task handle
-        Ok(task_handle)
+        Ok(task_handle)*/
     }
 }
 
-fn process(image_manager: &Arc<RwLock<ImageManager>>,
+/*fn process(image_manager: &Arc<RwLock<ImageManager>>,
         record: &mut Vec<ImageMetadata>) -> Result<(), Box<dyn Error>> {
     // sort records by pixel_coverage
     record.sort_by(|a, b| {
@@ -215,7 +215,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
     let mut datasets = Vec::new();
     for image in record.iter() {
         // TODO check if path exists
-        /*let path = Path::new(&image.path);
+        let path = Path::new(&image.path);
         if !path.exists() {
             // TODO - log
             continue;
@@ -223,7 +223,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
 
         // open image - TODO  error
         let dataset = Dataset::open(&path).unwrap();
-        datasets.push(dataset);*/
+        datasets.push(dataset);
     }
 
     // perform fill - TODO error
@@ -239,7 +239,7 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
     }
 
     if pixel_coverage > max_pixel_coverage {
-        /*// TODO - write mem_dataset - TODO error
+        // TODO - write mem_dataset - TODO error
         let image = &record[0];
         let path = Path::new(&record[0].path);
         let tile_id = &path.file_name().unwrap().to_string_lossy();
@@ -247,8 +247,8 @@ fn process(image_manager: &Arc<RwLock<ImageManager>>,
         let mut image_manager = image_manager.write().unwrap();
         image_manager.write(&image.platform, &image.geohash, 
             FILLED_SOURCE, &tile_id, image.timestamp,
-            pixel_coverage, &mut dataset)?;*/
+            pixel_coverage, &mut dataset)?;
     }
 
     Ok(())
-}
+}*/

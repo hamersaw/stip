@@ -1,4 +1,3 @@
-use geohash::{self, Coordinate};
 use swarm::prelude::Dht;
 
 use std::collections::hash_map::DefaultHasher;

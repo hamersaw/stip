@@ -7,12 +7,10 @@ use zip::ZipArchive;
 
 use crate::image::RAW_SOURCE;
 
-use std::collections::hash_map::DefaultHasher;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
-use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
