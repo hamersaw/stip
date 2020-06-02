@@ -2,6 +2,31 @@
 ## OVERVIEW
 A distributed spatiotemporal image management framework designed specifically for training neural networks.
 
+## DATASETS
+All datasets are retrieved using the [USGS Earth Explorer](https://earthexplorer.usgs.gov/).
+#### MODIS
+STIP processes the MCD43A4 MODIS dataset located at 'NASA/LPDAAC Collections/MODIS BRDF and Albedo - V6/MCD43A4 V6' in the Earth Engine datasets. The file format is hdf. Below is a table outlining the resulting subdatasets produced.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | ~500m      | u8        | Quality 1, 2, 3, 4, 5, 6, 7
+1          | ~500m      | int16     | Reflectance 1, 2, 3, 4, 5, 6, 7
+#### NAIP
+NAIP is retreived using the 'Aerial Imagery/NAIP' Earth Engine dataset. It is in a ZIP format (internally a single GeoTiff image). The STIP subdatasets are provided below.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | 1m         | u8        | Red, Green, Blue, NIR
+#### Sentinel-2
+Sentinel-2 data is loaded using the SAFE format downloaded using the Earth Engine 'Sentinel/Sentinel-2' dataset. The resulting subdatasets withing STIP are provided below.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | 10m        | uint16    | B02, B03, B04, B08
+1          | 20m        | uint16    | B05, B06, B07, B8A, B11, B12
+2          | 60m        | uint16    | B01, B09, B10
+3          | 10m        | u8        | TCI-R, TCI-G, TCI-B
+
 ## WORKSPACE
 The implementation is structured using rust's workspace paradigm within the ./impl directory in the project root.
 #### PROTOBUF
@@ -86,6 +111,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - __data fill - fix v3.0__
 - improve node logging
 - __remove file descriptions in sqlite - vastly reduces memory use__
-    - documentation on supported datasets
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
