@@ -96,9 +96,9 @@ message Image {
 }
 
 message File {
-    required string description = 1;
-    required string path = 2;
-    required double pixelCoverage = 3;
+    required string path = 1;
+    required double pixelCoverage = 2;
+    required int32 subdataset = 3;
 }
 
 message DataListRequest {

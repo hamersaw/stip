@@ -64,8 +64,8 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image(&addr, &dataset,
-                "Base Image", &geohash, pixel_coverage, "NAIP",
+        if let Err(e) = crate::transfer::send_image(&addr,
+                &dataset, &geohash, pixel_coverage, "NAIP",
                 &RAW_SOURCE, 0, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }

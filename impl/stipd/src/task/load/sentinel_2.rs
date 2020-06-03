@@ -79,7 +79,7 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
     }
 
     // process data subsets
-    for (i, (name, description)) in subdatasets.iter().enumerate() {
+    for (i, (name, _)) in subdatasets.iter().enumerate() {
         // open dataset
         let path = PathBuf::from(name);
         let dataset = Dataset::open(&path).unwrap();
@@ -110,8 +110,8 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
             };
 
             // send image to new host
-            if let Err(e) = crate::transfer::send_image(&addr, &dataset,
-                    description, &geohash, pixel_coverage, "Sentinel-2",
+            if let Err(e) = crate::transfer::send_image(&addr,
+                    &dataset, &geohash, pixel_coverage, "Sentinel-2",
                     &RAW_SOURCE, i as u8, &tile, timestamp) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }

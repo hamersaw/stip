@@ -14,7 +14,6 @@ pub const SPLIT_SOURCE: &'static str = "split";
 
 const CREATE_FILES_TABLE_STMT: &str =
 "CREATE TABLE files (
-    description     TEXT NOT NULL,
     image_id        BIGINT NOT NULL,
     pixel_coverage  FLOAT NOT NULL,
     subdataset      TINYINT NOT NULL
@@ -40,20 +39,19 @@ const INSERT_IMAGES_STMT: &str =
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
 const INSERT_FILES_STMT: &str =
-"INSERT INTO files (description, image_id,
-    pixel_coverage, subdataset)
-VALUES (?1, ?2, ?3, ?4)";
+"INSERT INTO files (image_id, pixel_coverage, subdataset)
+VALUES (?1, ?2, ?3)";
 
 const ID_SELECT_STMT: &str =
 "SELECT id from images WHERE geohash = ?1 AND tile = ?2";
 
 const LIST_SELECT_STMT: &str =
-"SELECT cloud_coverage, description, geohash, pixel_coverage,
+"SELECT cloud_coverage, geohash, pixel_coverage,
     platform, source, subdataset, tile, timestamp
 FROM images JOIN files ON images.id = files.image_id";
 
 const LIST_ORDER_BY_STMT: &str =
-" ORDER BY images.tile, images.geohash, files.subdataset";
+" ORDER BY images.tile, images.geohash, images.timestamp, files.subdataset";
 
 const SEARCH_SELECT_STMT: &str =
 "SELECT COUNT(*) as count, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, platform, LENGTH(geohash) as precision, source FROM images";
@@ -67,8 +65,8 @@ pub type Extent = (i64, String, String, u8, String);
 // cloud_coverage, geohash, platform, source, tile, timestamp
 pub type Image = (Option<f64>, String, String, String, String, i64);
 
-// description, path, pixel_coverage, subdataset
-pub type StFile = (String, String, f64, u8);
+// path, pixel_coverage, subdataset
+pub type StFile = (String, f64, u8);
 
 pub struct ImageManager {
     conn: Mutex<Connection>,
@@ -169,20 +167,20 @@ impl ImageManager {
         // execute query - TODO error
         let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
         let images_iter = stmt.query_map(&params, |row| {
-            let geohash: String = row.get(2)?;
-            let platform: String = row.get(4)?;
-            let source: String = row.get(5)?;
-            let subdataset: u8 = row.get(6)?;
-            let tile: String = row.get(7)?;
+            let geohash: String = row.get(1)?;
+            let platform: String = row.get(3)?;
+            let source: String = row.get(4)?;
+            let subdataset: u8 = row.get(5)?;
+            let tile: String = row.get(6)?;
  
             // TODO - error
             let path = self.get_image_path(false, &geohash,
                 &platform, &source, subdataset, &tile).unwrap();
 
             Ok(((row.get(0)?, geohash, platform,
-                    source, tile, row.get(8)?),
-                (row.get(1)?, path.to_string_lossy().to_string(),
-                    row.get(3)?, subdataset)))
+                    source, tile, row.get(7)?),
+                (path.to_string_lossy().to_string(),
+                    row.get(2)?, subdataset)))
         }).unwrap();
 
         // process images
@@ -204,10 +202,10 @@ impl ImageManager {
         images
     }
 
-    pub fn load(&mut self, cloud_coverage: Option<f64>,
-            description: &str, geohash: &str, pixel_coverage: f64,
-            platform: &str, source: &str, subdataset: u8, tile: &str,
-            timestamp: i64) -> Result<(), Box<dyn Error>> {
+    pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,
+            pixel_coverage: f64, platform: &str, source: &str,
+            subdataset: u8, tile: &str, timestamp: i64) 
+            -> Result<(), Box<dyn Error>> {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
 
@@ -234,7 +232,7 @@ impl ImageManager {
         };
 
         conn.execute(INSERT_FILES_STMT, rusqlite::params![
-                description, id, pixel_coverage, subdataset
+                id, pixel_coverage, subdataset
             ])?;
 
         Ok(())
@@ -297,10 +295,10 @@ impl ImageManager {
         extent_iter.map(|x| x.unwrap()).collect()
     }
 
-    pub fn write(&mut self, dataset: &mut Dataset, description: &str,
-            geohash: &str, pixel_coverage: f64, platform: &str,
-            source: &str, subdataset: u8, tile: &str,
-            timestamp: i64) -> Result<(), Box<dyn Error>> {
+    pub fn write(&mut self, dataset: &mut Dataset, geohash: &str,
+            pixel_coverage: f64, platform: &str, source: &str,
+            subdataset: u8, tile: &str, timestamp: i64)
+            -> Result<(), Box<dyn Error>> {
         // get image path
         let path = self.get_image_path(true, geohash,
             platform, source, subdataset, tile)?;
@@ -338,8 +336,6 @@ impl ImageManager {
         std::fs::set_permissions(&path, permissions)?;
 
         // set dataset metadata attributes - TODO error
-        dataset_copy.set_metadata_item("DESCRIPTION",
-            description, "STIP").unwrap();
         dataset_copy.set_metadata_item("GEOHASH",
             geohash, "STIP").unwrap();
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
@@ -355,7 +351,7 @@ impl ImageManager {
             &timestamp.to_string(), "STIP").unwrap();
 
         // load data
-        self.load(None, description, geohash, pixel_coverage,
+        self.load(None, geohash, pixel_coverage,
             platform, source, subdataset, tile, timestamp)?;
 
         Ok(())
@@ -385,7 +381,6 @@ pub fn to_image_metadata(path: &mut PathBuf)
         Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
         None => None,
     };
-    let description = dataset.metadata_item("DESCRIPTION", "STIP").unwrap();
     let geohash = dataset.metadata_item("GEOHASH", "STIP").unwrap();
     let path = path.to_string_lossy().to_string();
     let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
@@ -399,5 +394,5 @@ pub fn to_image_metadata(path: &mut PathBuf)
         .unwrap().parse::<i64>()?;
 
     Ok(((cloud_coverage, geohash, platform, source, tile, timestamp),
-        (description, path, pixel_coverage, subdataset)))
+        (path, pixel_coverage, subdataset)))
 }

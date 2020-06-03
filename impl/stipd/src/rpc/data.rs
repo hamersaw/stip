@@ -156,9 +156,9 @@ impl DataManagement for DataManagementImpl {
                 let mut files = Vec::new();
                 for file in f {
                     files.push(File {
-                        description: file.0,
-                        path: file.1,
-                        pixel_coverage: file.2,
+                        path: file.0,
+                        pixel_coverage: file.1,
+                        subdataset: file.2 as i32,
                     })
                 }
 

@@ -168,7 +168,7 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
     let image = &record.0;
     for file in record.1.iter() {
         // check if path exists
-        let path = Path::new(&file.1);
+        let path = Path::new(&file.0);
         if !path.exists() {
             return Err(format!("image path '{}' does not exist",
                 path.to_string_lossy()).into());
@@ -209,8 +209,8 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&addr,
-                    &dataset, &file.0, &geohash, file.2, &image.2,
-                    SPLIT_SOURCE, file.3, &image.4, image.5) {
+                    &dataset, &geohash, file.1, &image.2,
+                    SPLIT_SOURCE, file.2, &image.4, image.5) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }
         }

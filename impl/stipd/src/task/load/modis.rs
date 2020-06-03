@@ -56,21 +56,19 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
     // process quality subdatasets
     let quality_datasets = split_subdatasets::<u8>(
         quality_subdatasets, precision, x_interval, y_interval)?;
-    process_splits(&quality_datasets, "BRDF Albedo Band Mandatory Quality", 
-        &dht, 0, &tile, timestamp)?;
+    process_splits(&quality_datasets, &dht, 0, &tile, timestamp)?;
 
     // process reflectance subdatasets
     let reflectance_datasets = split_subdatasets::<i16>(
         reflectance_subdatasets, precision, x_interval, y_interval)?;
-    process_splits(&reflectance_datasets,
-        "Nadir_Reflectance", &dht, 1, &tile, timestamp)?;
+    process_splits(&reflectance_datasets, &dht, 1, &tile, timestamp)?;
 
     Ok(())
 }
 
 fn process_splits(datasets: &HashMap<String, Dataset>,
-        description: &str, dht: &Arc<RwLock<Dht>>, subdataset: u8,
-        tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
+        dht: &Arc<RwLock<Dht>>, subdataset: u8, tile: &str,
+        timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geohash, dataset) in datasets.iter() {
         // if image has 0.0 coverage -> don't process - TODO error
         let pixel_coverage = st_image::coverage(&dataset).unwrap();
@@ -90,8 +88,8 @@ fn process_splits(datasets: &HashMap<String, Dataset>,
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image(&addr, &dataset,
-                description, &geohash, pixel_coverage, "MODIS",
+        if let Err(e) = crate::transfer::send_image(&addr,
+                &dataset, &geohash, pixel_coverage, "MODIS",
                 &RAW_SOURCE, subdataset, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }

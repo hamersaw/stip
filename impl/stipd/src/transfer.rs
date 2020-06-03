@@ -38,22 +38,21 @@ impl StreamHandler for TransferStreamHandler {
             Some(TransferOp::ReadImage) => unimplemented!(),
             Some(TransferOp::WriteImage) => {
                 // read everything
-                let description = read_string(stream)?;
                 let mut dataset = st_image::prelude::read(stream)?;
                 let geohash = read_string(stream)?;
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
                 let platform = read_string(stream)?;
                 let source = read_string(stream)?;
-                let subdataset_number = stream.read_u8()?;
+                let subdataset = stream.read_u8()?;
                 let tile = read_string(stream)?;
                 let timestamp = stream.read_i64::<BigEndian>()?;
 
                 // write image using ImageManager
                 let mut image_manager =
                     self.image_manager.write().unwrap();
-                image_manager.write(&mut dataset, &description,
-                    &geohash, pixel_coverage, &platform, &source,
-                    subdataset_number, &tile, timestamp)?;
+                image_manager.write(&mut dataset, &geohash,
+                    pixel_coverage, &platform, &source,
+                    subdataset, &tile, timestamp)?;
 
                 // write success
                 stream.write_u8(1)?;
@@ -76,21 +75,20 @@ pub fn read_string<T: Read>(reader: &mut T)
 }
 
 pub fn send_image(addr: &SocketAddr, dataset: &Dataset,
-        description: &str, geohash: &str, pixel_coverage: f64,
-        platform: &str, source: &str, subdataset_number: u8, 
-        tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
+        geohash: &str, pixel_coverage: f64, platform: &str,
+        source: &str, subdataset: u8, tile: &str, timestamp: i64)
+        -> Result<(), Box<dyn Error>> {
     // open connection
     let mut stream = TcpStream::connect(addr)?;
     stream.write_u8(TransferOp::WriteImage as u8)?;
 
     // write everything
-    write_string(&description, &mut stream)?;
     st_image::prelude::write(&dataset, &mut stream)?;
     write_string(&geohash, &mut stream)?;
     stream.write_f64::<BigEndian>(pixel_coverage)?;
     write_string(&platform, &mut stream)?;
     write_string(&source, &mut stream)?;
-    stream.write_u8(subdataset_number)?;
+    stream.write_u8(subdataset)?;
     write_string(&tile, &mut stream)?;
     stream.write_i64::<BigEndian>(timestamp)?;
  

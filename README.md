@@ -18,7 +18,7 @@ Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 1m         | u8        | Red, Green, Blue, NIR
 #### Sentinel-2
-Sentinel-2 data is loaded using the SAFE format downloaded using the Earth Engine 'Sentinel/Sentinel-2' dataset. The resulting subdatasets withing STIP are provided below.
+Sentinel-2 data is loaded using the SAFE format downloaded using the Earth Engine 'Sentinel/Sentinel-2' dataset. The resulting subdatasets within STIP are provided below.
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
@@ -110,6 +110,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 ## TODO
 - __data fill - fix v3.0__
 - improve node logging
-- __remove file descriptions in sqlite - vastly reduces memory use__
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
