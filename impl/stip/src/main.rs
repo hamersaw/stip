@@ -2,8 +2,8 @@
 extern crate clap;
 use clap::App;
 
-mod cluster;
 mod data;
+mod node;
 mod task;
 
 use std::error::Error;
@@ -14,10 +14,10 @@ fn main() {
 
     // parse subcommands
     match matches.subcommand() {
-        ("cluster", Some(cluster_matches)) =>
-            cluster::process(&matches, &cluster_matches),
         ("data", Some(data_matches)) =>
             data::process(&matches, &data_matches),
+        ("node", Some(node_matches)) =>
+            node::process(&matches, &node_matches),
         ("task", Some(task_matches)) =>
             task::process(&matches, &task_matches),
         (cmd, _) => println!("unknown subcommand '{}'", cmd),

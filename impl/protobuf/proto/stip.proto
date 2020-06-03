@@ -3,36 +3,6 @@ syntax = "proto2";
 package stip;
 
 /*
- * ClusterManagement Service
- */
-service ClusterManagement {
-    rpc NodeList (NodeListRequest) returns (NodeListReply);
-    rpc NodeShow (NodeShowRequest) returns (NodeShowReply);
-}
-
-// Node Messages
-message Node {
-    required uint32 id = 1;
-    required string rpcAddr = 2;
-    required string xferAddr = 3;
-}
-
-message NodeListRequest {
-}
-
-message NodeListReply {
-    repeated Node nodes = 1;
-}
-
-message NodeShowRequest {
-    required uint32 id = 1;
-}
-
-message NodeShowReply {
-    optional Node node = 1;
-}
-
-/*
  * DataManagement Service
  */
 service DataManagement {
@@ -151,12 +121,74 @@ message DataSplitReply {
 }
 
 /*
+ * EnvironmentManagement Service
+ */
+service EnvironmentManagement {
+    rpc Initialize (EnvironmentInitializeRequest)
+        returns (EnvironmentInitializeReply);
+    rpc List (EnvironmentListRequest) returns (EnvironmentListReply);
+}
+
+// Environment Messages
+message Environment {
+    optional uint32 dhtHashCharacters = 1;
+    required uint32 hashBits = 2;
+    required string id = 3;    
+    required uint32 imageProjection = 4;
+    required EnvironmentStatus status = 5;
+}
+
+enum EnvironmentStatus {
+    AVAILABLE = 0;
+    LOADED = 1;
+}
+
+// Initialize Messages
+message EnvironmentInitializeRequest {
+    optional uint32 dhtHashCharacters = 1;
+    required uint32 hashBits = 2;
+    required string id = 3;
+    required uint32 imageProjection = 4;
+}
+
+message EnvironmentInitializeReply {
+}
+
+// List Messages
+message EnvironmentListRequest {
+}
+
+message EnvironmentListReply {
+    repeated Environment environments = 1;
+}
+
+/*
+ * NodeManagement Service
+ */
+service NodeManagement {
+    rpc List (NodeListRequest) returns (NodeListReply);
+}
+
+// Node Messages
+message Node {
+    required uint32 id = 1;
+    required string rpcAddr = 2;
+    required string xferAddr = 3;
+}
+
+message NodeListRequest {
+}
+
+message NodeListReply {
+    repeated Node nodes = 1;
+}
+
+/*
  * TaskManagement Service
  */
 service TaskManagement {
     rpc Broadcast (TaskBroadcastRequest) returns (TaskBroadcastReply);
     rpc List (TaskListRequest) returns (TaskListReply);
-    rpc Show (TaskShowRequest) returns (TaskShowReply);
 }
 
 // Broadcast Messages
@@ -194,12 +226,4 @@ message TaskListRequest {
 
 message TaskListReply {
     repeated Task tasks = 1;
-}
-
-message TaskShowRequest {
-    required uint64 id = 1;
-}
-
-message TaskShowReply {
-    optional Task task = 1;
 }

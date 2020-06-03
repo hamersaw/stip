@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{ClusterManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, Extent, Filter, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
+use protobuf::{NodeManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, Extent, Filter, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -82,17 +82,17 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
 #[tokio::main]
 async fn list(matches: &ArgMatches, _: &ArgMatches,
         list_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initialize ClusterManagement grpc client
+    // initialize NodeManagement grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = ClusterManagementClient::connect(
+    let mut client = NodeManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize NodeListRequest
     let node_list_request = Request::new(NodeListRequest {});
 
     // retrieve NodeListReply
-    let node_list_reply = client.node_list(node_list_request).await?;
+    let node_list_reply = client.list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
 
     // initialize Filter
@@ -184,17 +184,17 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 #[tokio::main]
 async fn search(matches: &ArgMatches, _: &ArgMatches,
         search_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initialize ClusterManagement grpc client
+    // initialize NodeManagement grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = ClusterManagementClient::connect(
+    let mut client = NodeManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize NodeListRequest
     let node_list_request = Request::new(NodeListRequest {});
 
     // retrieve NodeListReply
-    let node_list_reply = client.node_list(node_list_request).await?;
+    let node_list_reply = client.list(node_list_request).await?;
     let node_list_reply = node_list_reply.get_ref();
 
     // initialize Filter

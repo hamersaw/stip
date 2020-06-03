@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskManagementClient, TaskListRequest, TaskShowRequest, TaskStatus};
+use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskManagementClient, TaskListRequest, TaskStatus};
 use tonic::Request;
 
 use std::{error, io};
@@ -10,9 +10,6 @@ pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
             = match task_matches.subcommand() {
         ("list", Some(list_matches)) => {
             list(&matches, &task_matches, &list_matches)
-        },
-        ("show", Some(show_matches)) => {
-            show(&matches, &task_matches, &show_matches)
         },
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
@@ -72,48 +69,6 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     }
 
     Ok(())
-}
-
-#[tokio::main]
-async fn show(matches: &ArgMatches, _: &ArgMatches,
-        show_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
-    // initialize grpc client
-    let ip_address = matches.value_of("ip_address").unwrap();
-    let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = TaskManagementClient::connect(
-        format!("http://{}:{}", ip_address, port)).await?;
-
-    // initialize request
-    let task_id = show_matches.value_of("ID").unwrap().parse::<u64>()?;
-    let request = Request::new(TaskShowRequest {
-        id: task_id,
-    });
-
-    // retrieve reply
-    let reply = client.show(request).await?;
-    let reply = reply.get_ref();
-
-    // print information
-    match &reply.task {
-        Some(task) => {
-            println!("task_id: {}", task.id);
-            println!("items_completed: {}", task.items_completed);
-            println!("items_skipped: {}", task.items_skipped);
-            println!("items_total: {}", task.items_total);
-            println!("status: {}", convert_status(task.status));
-        },
-        None => println!("task with id '{}' does not exist", task_id),
-    }
-
-    Ok(())
-}
-
-fn convert_status(status: i32) -> String {
-    match TaskStatus::from_i32(status).unwrap() {
-        TaskStatus::Complete => "completed".to_string(),
-        TaskStatus::Failure => "failure".to_string(),
-        TaskStatus::Running => "running".to_string(),
-    }
 }
 
 fn compute_progress(items_completed: u32,

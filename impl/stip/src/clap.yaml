@@ -15,18 +15,6 @@ args:
         short: p
         takes_value: true
 subcommands:
-    - cluster:
-        about: manage application cluster
-        subcommands:
-            - list:
-                about: list all cluster nodes
-            - show:
-                about: display information about a node
-                args:
-                    - ID:
-                        index: 1
-                        required: true
-                        help: dht node id
     - data:
         about: manage application data
         subcommands:
@@ -239,15 +227,13 @@ subcommands:
                         long: threads
                         short: t
                         takes_value: true
+    - node:
+        about: manage application cluster nodes
+        subcommands:
+            - list:
+                about: list all cluster nodes
     - task:
         about: manage cluster tasks
         subcommands:
             - list:
                 about: list tasks from the entire cluster
-            - show:
-                about: display task information from the contact node
-                args:
-                    - ID:
-                        index: 1
-                        required: true
-                        help: task id

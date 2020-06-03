@@ -1,34 +1,31 @@
-use protobuf::{Node, NodeListReply, NodeListRequest, NodeShowReply, NodeShowRequest, ClusterManagement};
-use swarm::prelude::Dht;
+use protobuf::{Environment, EnvironmentListReply, EnvironmentListRequest, EnvironmentShowReply, EnvironmentShowRequest, EnvironmentManagement};
 use tonic::{Request, Response, Status};
 
 use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 
-pub struct ClusterManagementImpl {
-    dht: Arc<RwLock<Dht>>,
+pub struct EnvironmentManagementImpl {
 }
 
-impl ClusterManagementImpl {
-    pub fn new(dht: Arc<RwLock<Dht>>) -> ClusterManagementImpl {
-        ClusterManagementImpl {
-            dht: dht,
+impl EnvironmentManagementImpl {
+    pub fn new(dht: Arc<RwLock<Dht>>) -> EnvironmentManagementImpl {
+        EnvironmentManagementImpl {
         }
     }
 }
 
 #[tonic::async_trait]
-impl ClusterManagement for ClusterManagementImpl {
-    async fn node_list(&self, request: Request<NodeListRequest>)
-            -> Result<Response<NodeListReply>, Status> {
-        trace!("NodeListRequest: {:?}", request);
+impl EnvironmentManagement for EnvironmentManagementImpl {
+    async fn list(&self, request: Request<EnvironmentListRequest>)
+            -> Result<Response<EnvironmentListReply>, Status> {
+        trace!("EnvironmentListRequest: {:?}", request);
 
         // populate cluster nodes from dht
         let mut nodes = Vec::new();
         {
             let dht = self.dht.read().unwrap();
             for (node_id, addrs) in dht.iter() {
-                // convert Node to protobuf
+                // convert Environment to protobuf
                 let node = to_protobuf_node(*node_id as u32,
                     &addrs.1, &addrs.2);
 
@@ -38,16 +35,16 @@ impl ClusterManagement for ClusterManagementImpl {
         }
 
         // initialize reply
-        let reply = NodeListReply {
+        let reply = EnvironmentListReply {
             nodes: nodes,
         };
 
         Ok(Response::new(reply))
     }
 
-    async fn node_show(&self, request: Request<NodeShowRequest>)
-            -> Result<Response<NodeShowReply>, Status> {
-        trace!("NodeShowRequest: {:?}", request);
+    async fn node_show(&self, request: Request<EnvironmentShowRequest>)
+            -> Result<Response<EnvironmentShowReply>, Status> {
+        trace!("EnvironmentShowRequest: {:?}", request);
         let request = request.get_ref();
 
         // populate cluster node from dht
@@ -61,7 +58,7 @@ impl ClusterManagement for ClusterManagementImpl {
         };
 
         // initialize reply
-        let reply = NodeShowReply {
+        let reply = EnvironmentShowReply {
             node: node,
         };
 
@@ -70,9 +67,9 @@ impl ClusterManagement for ClusterManagementImpl {
 }
 
 fn to_protobuf_node(node_id: u32, rpc_addr: &Option<SocketAddr>,
-        xfer_addr: &Option<SocketAddr>) -> Node {
+        xfer_addr: &Option<SocketAddr>) -> Environment {
     // initialize node protobuf
-    Node {
+    Environment {
         id: node_id,
         rpc_addr: format!("{}", rpc_addr.unwrap()),
         xfer_addr: format!("{}", xfer_addr.unwrap()),

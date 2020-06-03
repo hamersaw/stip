@@ -1,4 +1,4 @@
-use protobuf::{self, Task, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient, TaskShowReply, TaskShowRequest};
+use protobuf::{self, Task, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
@@ -91,29 +91,6 @@ impl TaskManagement for TaskManagementImpl {
         // initialize reply
         let reply = TaskListReply {
             tasks: tasks,
-        };
-
-        Ok(Response::new(reply))
-    }
-
-    async fn show(&self, request: Request<TaskShowRequest>)
-            -> Result<Response<TaskShowReply>, Status> {
-        trace!("TaskShowRequest: {:?}", request);
-        let request = request.get_ref();
-
-        // populate task from task_manager
-        let task = {
-            let task_manager = self.task_manager.read().unwrap();
-            match task_manager.get(&request.id) {
-                None => None,
-                Some(task_handle) =>
-                    Some(to_protobuf_task(request.id, task_handle)),
-            }
-        };
-
-        // initialize reply
-        let reply = TaskShowReply {
-            task: task,
         };
 
         Ok(Response::new(reply))

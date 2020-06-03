@@ -2,18 +2,19 @@
 extern crate log;
 
 use comm::Server as CommServer;
-use protobuf::{ClusterManagementServer, DataManagementServer, TaskManagementServer};
+use protobuf::{DataManagementServer, NodeManagementServer, TaskManagementServer};
 use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
 
+mod environment;
 mod image;
 use image::ImageManager;
 mod task;
 use task::TaskManager;
 mod rpc;
-use rpc::cluster::ClusterManagementImpl;
 use rpc::data::DataManagementImpl;
+use rpc::node::NodeManagementImpl;
 use rpc::task::TaskManagementImpl;
 mod transfer;
 use transfer::TransferStreamHandler;
@@ -132,13 +133,13 @@ fn main() {
     // start GRPC server
     let addr = SocketAddr::new("0.0.0.0".parse().unwrap(), opt.rpc_port);
 
-    let cluster_management = ClusterManagementImpl::new(dht.clone());
     let data_management = DataManagementImpl::new(dht.clone(),
         image_manager, task_manager.clone());
+    let node_management = NodeManagementImpl::new(dht.clone());
     let task_management = TaskManagementImpl::new(dht, task_manager);
 
-    if let Err(e) = start_rpc_server(addr, cluster_management,
-            data_management, task_management) {
+    if let Err(e) = start_rpc_server(addr, data_management,
+            node_management, task_management) {
         panic!("failed to start rpc server: {}", e);
     }
 
@@ -148,13 +149,13 @@ fn main() {
 
 #[tokio::main]
 async fn start_rpc_server(addr: SocketAddr, 
-        cluster_management: ClusterManagementImpl,
         data_management: DataManagementImpl,
+        node_management: NodeManagementImpl,
         task_management: TaskManagementImpl)
         -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
-        .add_service(ClusterManagementServer::new(cluster_management))
         .add_service(DataManagementServer::new(data_management))
+        .add_service(NodeManagementServer::new(node_management))
         .add_service(TaskManagementServer::new(task_management))
         .serve(addr).await?;
 
