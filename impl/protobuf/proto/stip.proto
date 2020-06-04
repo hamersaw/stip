@@ -39,16 +39,22 @@ enum Geocode {
 // Broadcast Messages
 enum AlbumBroadcastType {
     ALBUM_CREATE = 0;
+    ALBUM_CLOSE = 1;
+    ALBUM_OPEN = 2;
 }
 
 message AlbumBroadcastRequest {
     required AlbumBroadcastType messageType = 1;    
     optional AlbumCreateRequest createRequest = 2;
+    optional AlbumCloseRequest closeRequest = 3;
+    optional AlbumOpenRequest openRequest = 4;
 }
 
 message AlbumBroadcastReply {
     required AlbumBroadcastType messageType = 1;    
     map<uint32, AlbumCreateReply> createReplies = 2;
+    map<uint32, AlbumCloseReply> closeReplies = 3;
+    map<uint32, AlbumOpenReply> openReplies = 4;
 }
 
 // Close Messages

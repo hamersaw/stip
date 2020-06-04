@@ -46,6 +46,8 @@ impl AlbumManagement for AlbumManagementImpl {
 
         // send broadcast message to each dht node
         let mut create_replies = HashMap::new();
+        let mut close_replies = HashMap::new();
+        let mut open_replies = HashMap::new();
 
         for (node_id, addr) in dht_nodes {
             // initialize grpc client - TODO error
@@ -60,6 +62,18 @@ impl AlbumManagement for AlbumManagementImpl {
                     create_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
+                AlbumBroadcastType::AlbumClose => {
+                    let reply = client.close(request
+                        .close_request.clone().unwrap()).await.unwrap();
+                    close_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+                AlbumBroadcastType::AlbumOpen => {
+                    let reply = client.open(request
+                        .open_request.clone().unwrap()).await.unwrap();
+                    open_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
             };
         }
 
@@ -67,6 +81,8 @@ impl AlbumManagement for AlbumManagementImpl {
         let reply = AlbumBroadcastReply {
             message_type: request.message_type,
             create_replies: create_replies,
+            close_replies: close_replies,
+            open_replies: open_replies,
         };
 
         Ok(Response::new(reply))

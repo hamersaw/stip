@@ -8,13 +8,13 @@ pub fn process(matches: &ArgMatches, album_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match album_matches.subcommand() {
         ("close", Some(close_matches)) =>
-            create(&matches, &album_matches, &close_matches),
+            close(&matches, &album_matches, &close_matches),
         ("create", Some(create_matches)) =>
             create(&matches, &album_matches, &create_matches),
         ("list", Some(list_matches)) =>
             list(&matches, &album_matches, &list_matches),
         ("open", Some(open_matches)) =>
-            list(&matches, &album_matches, &open_matches),
+            open(&matches, &album_matches, &open_matches),
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
     };
@@ -34,12 +34,19 @@ async fn close(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize request
-    let request = Request::new(AlbumCloseRequest {
+    let close_request = AlbumCloseRequest {
         id: close_matches.value_of("ID").unwrap().to_string(),
+    };
+
+    let request = Request::new(AlbumBroadcastRequest {
+        message_type: AlbumBroadcastType::AlbumCreate as i32,
+        create_request: None,
+        close_request: Some(close_request),
+        open_request: None,
     });
 
     // retrieve reply
-    let reply = client.close(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     Ok(())
@@ -77,8 +84,9 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
     let request = Request::new(AlbumBroadcastRequest {
         message_type: AlbumBroadcastType::AlbumCreate as i32,
         create_request: Some(create_request),
+        close_request: None,
+        open_request: None,
     });
-
 
     // retrieve reply
     let reply = client.broadcast(request).await?;
@@ -148,13 +156,20 @@ async fn open(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // initialize request
-    let request = Request::new(AlbumOpenRequest {
+    let open_request = AlbumOpenRequest {
         id: open_matches.value_of("ID").unwrap().to_string(),
         index: index,
+    };
+
+    let request = Request::new(AlbumBroadcastRequest {
+        message_type: AlbumBroadcastType::AlbumCreate as i32,
+        create_request: None,
+        close_request: None,
+        open_request: Some(open_request),
     });
 
     // retrieve reply
-    let reply = client.open(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     Ok(())
