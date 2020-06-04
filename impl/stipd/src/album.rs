@@ -8,7 +8,7 @@ pub enum AlbumStatus {
     Open,
 }
 
-pub enum SpatialHashAlgorithm {
+pub enum Geocode {
     Geohash,
     QuadTile,
 }
@@ -32,21 +32,20 @@ impl AlbumManager {
         self.albums.get(name)
     }
 
-    pub fn create(&mut self, dht_hash_characters: Option<u8>,
-            id: &str, spatial_hash_algorithm: SpatialHashAlgorithm)
-            -> Result<(), Box<dyn Error>> {
+    pub fn create(&mut self, dht_key_length: Option<u8>,
+            geocode: Geocode, id: &str) -> Result<(), Box<dyn Error>> {
         // check if album already exists
         if self.albums.contains_key(id) {
             return Err(
                 format!("album {} already exists", id).into());
         }
 
-        // TODO - create directory
+        // TODO - create directory and write metadata file
 
         self.albums.insert(id.to_string(),
             Album {
-                dht_hash_characters: dht_hash_characters,
-                spatial_hash_algorithm: spatial_hash_algorithm,
+                dht_key_length: dht_key_length,
+                geocode: geocode,
                 status: AlbumStatus::Open,
             });
 
@@ -65,15 +64,13 @@ impl AlbumManager {
 }
 
 pub struct Album {
-    dht_hash_characters: Option<u8>,
-    spatial_hash_algorithm: SpatialHashAlgorithm,
+    dht_key_length: Option<u8>,
+    geocode: Geocode,
     status: AlbumStatus,
 }
 
 impl Album {
-    pub fn get_metadata(&self)
-            -> (Option<u8>, &SpatialHashAlgorithm, &AlbumStatus) {
-        (self.dht_hash_characters,
-            &self.spatial_hash_algorithm, &self.status)
+    pub fn get_metadata(&self) -> (Option<u8>, &Geocode, &AlbumStatus) {
+        (self.dht_key_length, &self.geocode, &self.status)
     }
 }

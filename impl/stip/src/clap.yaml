@@ -25,16 +25,16 @@ subcommands:
                         index: 1
                         required: true
                         help: unique album identifier
-                    - SPATIAL_HASH_ALGORITHM:
+                    - GEOCODE:
                         index: 2
                         required: true
                         possible_values: 
                             - geohash
                             - quadtile
-                        help: spatial hash algorithm
-                    - dht_hash_characters:
-                        help: number of spatial hash characters to process in dht hash
-                        long: dht_characters
+                        help: album geocode
+                    - dht_key_length:
+                        help: key length for geocode dht hash
+                        long: dht_key_length
                         short: d
                         takes_value: true
             - list:

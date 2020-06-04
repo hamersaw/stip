@@ -1,7 +1,7 @@
 use protobuf::{Album, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement};
 use tonic::{Request, Response, Status};
 
-use crate::album::{AlbumManager, AlbumStatus, SpatialHashAlgorithm};
+use crate::album::{AlbumManager, AlbumStatus, Geocode};
 
 use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
@@ -26,25 +26,23 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumCreateRequest: {:?}", request);
         let request = request.get_ref();
 
-        let dht_hash_characters = match request.dht_hash_characters {
+        let dht_key_length = match request.dht_key_length {
             Some(value) => Some(value as u8),
             None => None,
         };
 
-        let spatial_hash_algorithm = match protobuf::SpatialHashAlgorithm
-                ::from_i32(request.spatial_hash_algorithm).unwrap() {
-            protobuf::SpatialHashAlgorithm::Geohash =>
-                SpatialHashAlgorithm::Geohash,
-            protobuf::SpatialHashAlgorithm::Quadtile =>
-                SpatialHashAlgorithm::QuadTile,
+        let geocode = match protobuf::Geocode
+                ::from_i32(request.geocode).unwrap() {
+            protobuf::Geocode::Geohash => Geocode::Geohash,
+            protobuf::Geocode::Quadtile => Geocode::QuadTile,
         };
 
         // initialize album - TODO error
         {
             let mut album_manager =
                 self.album_manager.write().unwrap();
-            album_manager.create(dht_hash_characters, &request.id,
-                spatial_hash_algorithm).unwrap();
+            album_manager.create(dht_key_length, geocode,
+                &request.id).unwrap()
         }
 
         // initialize reply
@@ -60,37 +58,33 @@ impl AlbumManagement for AlbumManagementImpl {
         // populate albums from AlbumManager
         let mut albums = Vec::new();
         {
-            let album_manager =
-                self.album_manager.read().unwrap();
+            let album_manager = self.album_manager.read().unwrap();
             for (id, album) in album_manager.iter() {
-                let (dht_hash_characters, spatial_hash_algorithm,
+                let (dht_key_length, geocode,
                     status) = album.get_metadata();
 
-                let dht_hash_characters = match dht_hash_characters {
+                // parse album metadata
+                let dht_key_length = match dht_key_length {
                     Some(value) => Some(value as u32),
                     None => None,
                 };
 
-                let spatial_hash_algorithm =
-                        match spatial_hash_algorithm {
-                    SpatialHashAlgorithm::Geohash =>
-                        protobuf::SpatialHashAlgorithm::Geohash,
-                    SpatialHashAlgorithm::QuadTile =>
-                        protobuf::SpatialHashAlgorithm::Quadtile,
+                let geocode = match geocode {
+                    Geocode::Geohash => protobuf::Geocode::Geohash,
+                    Geocode::QuadTile => protobuf::Geocode::Quadtile,
                 };
 
                 let status = match status {
                     AlbumStatus::Closed =>
                         protobuf::AlbumStatus::Closed,
-                    AlbumStatus::Open =>
-                        protobuf::AlbumStatus::Open,
+                    AlbumStatus::Open => protobuf::AlbumStatus::Open,
                 };
 
+                // add Album protobuf
                 albums.push(Album {
+                    dht_key_length: dht_key_length,
+                    geocode: geocode as i32,
                     id: id.to_string(),
-                    dht_hash_characters: dht_hash_characters,
-                    spatial_hash_algorithm:
-                        spatial_hash_algorithm as i32,
                     status: status as i32,
                 });
             }

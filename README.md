@@ -1,6 +1,6 @@
 # stip (SpatioTemporal Image Partitioner)
 ## OVERVIEW
-A distributed spatiotemporal image management framework designed specifically for training neural networks.
+A distributed spatiotemporal image management framework.
 
 ## DATASETS
 All datasets are retrieved using the [USGS Earth Explorer](https://earthexplorer.usgs.gov/).

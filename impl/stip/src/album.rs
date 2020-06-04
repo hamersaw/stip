@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{AlbumCreateRequest, AlbumListRequest, AlbumManagementClient, AlbumStatus, SpatialHashAlgorithm};
+use protobuf::{AlbumCreateRequest, AlbumListRequest, AlbumManagementClient, AlbumStatus, Geocode};
 use tonic::Request;
 
 use std::{error, io};
@@ -29,26 +29,24 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
     let mut client = AlbumManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // parse dht hash characters
-    let dht_hash_characters = 
-            match create_matches.value_of("dht_hash_characters") {
+    // parse arguments
+    let dht_key_length = 
+            match create_matches.value_of("dht_key_length") {
         Some(value) => Some(value.parse::<u32>()?),
         None => None,
     };
 
-    // parse load format
-    let spatial_hash_algorithm =
-            match create_matches.value_of("SPATIAL_HASH_ALGORITHM") {
-        Some("geohash") => SpatialHashAlgorithm::Geohash as i32,
-        Some("quadtile") => SpatialHashAlgorithm::Quadtile as i32,
+    let geocode = match create_matches.value_of("GEOCODE") {
+        Some("geohash") => Geocode::Geohash as i32,
+        Some("quadtile") => Geocode::Quadtile as i32,
         _ => unimplemented!(),
     };
 
     // initialize request
     let request = Request::new(AlbumCreateRequest {
-        dht_hash_characters: dht_hash_characters,
+        dht_key_length: dht_key_length,
+        geocode: geocode,
         id: create_matches.value_of("ID").unwrap().to_string(),
-        spatial_hash_algorithm: spatial_hash_algorithm,
     });
 
     // retrieve reply
@@ -79,10 +77,9 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         "algorithm", "dht_chars", "status");
     println!("--------------------------------------------------------");
     for album in reply.albums.iter() {
-        let spatial_hash_algorithm = match SpatialHashAlgorithm
-                ::from_i32(album.spatial_hash_algorithm).unwrap() {
-            SpatialHashAlgorithm::Geohash => "geohash",
-            SpatialHashAlgorithm::Quadtile => "quadtile",
+        let geocode = match Geocode::from_i32(album.geocode).unwrap() {
+            Geocode::Geohash => "geohash",
+            Geocode::Quadtile => "quadtile",
         };
 
         let status = match AlbumStatus::from_i32(album.status).unwrap() {
@@ -90,9 +87,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
             AlbumStatus::Open => "open",
         };
 
-        println!("{:<24}{:<12}{:<12}{:<8}",
-            album.id, spatial_hash_algorithm,
-            album.dht_hash_characters.unwrap_or(0), status);
+        println!("{:<24}{:<12}{:<12}{:<8}", album.id, geocode,
+            album.dht_key_length.unwrap_or(0), status);
     }
 
     Ok(())

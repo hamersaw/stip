@@ -12,15 +12,10 @@ service AlbumManagement {
 
 // Album Messages
 message Album {
-    optional uint32 dhtHashCharacters = 1;
-    required string id = 2;
-    required SpatialHashAlgorithm spatialHashAlgorithm = 3;
+    optional uint32 dhtKeyLength = 1;
+    required Geocode geocode = 2;
+    required string id = 3;
     required AlbumStatus status = 4;
-}
-
-enum SpatialHashAlgorithm {
-    GEOHASH = 0;
-    QUADTILE = 1;
 }
 
 enum AlbumStatus {
@@ -28,11 +23,16 @@ enum AlbumStatus {
     OPEN = 1;
 }
 
+enum Geocode {
+    GEOHASH = 0;
+    QUADTILE = 1;
+}
+
 // Create Messages
 message AlbumCreateRequest {
-    optional uint32 dhtHashCharacters = 1;
-    required string id = 2;
-    required SpatialHashAlgorithm spatialHashAlgorithm = 3;
+    optional uint32 dhtKeyLength = 1;
+    required Geocode geocode = 2;
+    required string id = 3;
 }
 
 message AlbumCreateReply {
