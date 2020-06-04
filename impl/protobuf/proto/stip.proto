@@ -6,6 +6,7 @@ package stip;
  * AlbumManagement Service
  */
 service AlbumManagement {
+    rpc Broadcast (AlbumBroadcastRequest) returns (AlbumBroadcastReply);
     rpc Close (AlbumCloseRequest) returns (AlbumCloseReply);
     rpc Create (AlbumCreateRequest) returns (AlbumCreateReply);
     rpc List (AlbumListRequest) returns (AlbumListReply);
@@ -33,6 +34,21 @@ enum AlbumStatus {
 enum Geocode {
     GEOHASH = 0;
     QUADTILE = 1;
+}
+
+// Broadcast Messages
+enum AlbumBroadcastType {
+    ALBUM_CREATE = 0;
+}
+
+message AlbumBroadcastRequest {
+    required AlbumBroadcastType messageType = 1;    
+    optional AlbumCreateRequest createRequest = 2;
+}
+
+message AlbumBroadcastReply {
+    required AlbumBroadcastType messageType = 1;    
+    map<uint32, AlbumCreateReply> createReplies = 2;
 }
 
 // Close Messages

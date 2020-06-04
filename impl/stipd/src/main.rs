@@ -141,7 +141,8 @@ fn main() {
     // start GRPC server
     let addr = SocketAddr::new("0.0.0.0".parse().unwrap(), opt.rpc_port);
 
-    let album_management = AlbumManagementImpl::new(album_manager);
+    let album_management = AlbumManagementImpl::new(
+        album_manager, dht.clone());
     let data_management = DataManagementImpl::new(dht.clone(),
         image_manager, task_manager.clone());
     let node_management = NodeManagementImpl::new(dht.clone());

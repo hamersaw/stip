@@ -110,9 +110,8 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 ## TODO
 - __data fill - fix v3.0__
 - **fix pixel coverage filter on 'data search'**
-- **implement environments**
-    - sets coordinate projection and hash length
-    - distribute based on N hash characters
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
+#### ALBUMS
+- **replace ImageManager**

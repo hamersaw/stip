@@ -1,26 +1,77 @@
-use protobuf::{Album, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumOpenReply, AlbumOpenRequest};
+use protobuf::{Album, AlbumBroadcastReply, AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumManagementClient, AlbumOpenReply, AlbumOpenRequest};
+use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
 use crate::album::{AlbumManager, AlbumIndex, Geocode};
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 
 pub struct AlbumManagementImpl {
     album_manager: Arc<RwLock<AlbumManager>>,
+    dht: Arc<RwLock<Dht>>,
 }
 
 impl AlbumManagementImpl {
-    pub fn new(album_manager: Arc<RwLock<AlbumManager>>)
-            -> AlbumManagementImpl {
+    pub fn new(album_manager: Arc<RwLock<AlbumManager>>,
+            dht: Arc<RwLock<Dht>>) -> AlbumManagementImpl {
         AlbumManagementImpl {
             album_manager: album_manager,
+            dht: dht,
         }
     }
 }
 
 #[tonic::async_trait]
 impl AlbumManagement for AlbumManagementImpl {
+    async fn broadcast(&self, request: Request<AlbumBroadcastRequest>)
+            -> Result<Response<AlbumBroadcastReply>, Status> {
+        trace!("AlbumBroadcastRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+            }
+        }
+
+        // send broadcast message to each dht node
+        let mut create_replies = HashMap::new();
+
+        for (node_id, addr) in dht_nodes {
+            // initialize grpc client - TODO error
+            let mut client = AlbumManagementClient::connect(
+                format!("http://{}", addr)).await.unwrap();
+
+            // execute message at dht node
+            match AlbumBroadcastType::from_i32(request.message_type).unwrap() {
+                AlbumBroadcastType::AlbumCreate => {
+                    let reply = client.create(request
+                        .create_request.clone().unwrap()).await.unwrap();
+                    create_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
+            };
+        }
+
+        // initialize reply
+        let reply = AlbumBroadcastReply {
+            message_type: request.message_type,
+            create_replies: create_replies,
+        };
+
+        Ok(Response::new(reply))
+    }
+
     async fn close(&self, request: Request<AlbumCloseRequest>)
             -> Result<Response<AlbumCloseReply>, Status> {
         trace!("AlbumCloseRequest: {:?}", request);

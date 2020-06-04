@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{AlbumCloseRequest, AlbumCreateRequest, AlbumIndex, AlbumListRequest, AlbumManagementClient, AlbumOpenRequest, AlbumStatus, Geocode};
+use protobuf::{AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseRequest, AlbumCreateRequest, AlbumIndex, AlbumListRequest, AlbumManagementClient, AlbumOpenRequest, AlbumStatus, Geocode};
 use tonic::Request;
 
 use std::{error, io};
@@ -68,14 +68,20 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // initialize request
-    let request = Request::new(AlbumCreateRequest {
+    let create_request = AlbumCreateRequest {
         dht_key_length: dht_key_length,
         geocode: geocode,
         id: create_matches.value_of("ID").unwrap().to_string(),
+    };
+
+    let request = Request::new(AlbumBroadcastRequest {
+        message_type: AlbumBroadcastType::AlbumCreate as i32,
+        create_request: Some(create_request),
     });
 
+
     // retrieve reply
-    let reply = client.create(request).await?;
+    let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
     Ok(())
