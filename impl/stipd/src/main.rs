@@ -40,8 +40,12 @@ fn main() {
     }
 
     // initialize AlbumManager, ImageManager, and TaskManager
-    let album_manager = Arc::new(RwLock::new(
-        AlbumManager::new(opt.directory.clone()))); // TODO - remove clone when ImageManager dies
+    let album_manager = match AlbumManager::new(opt.directory.clone()) {
+        Ok(album_manager) => album_manager,
+        Err(e) => panic!("initialize AlbumManager failed: {}", e),
+    };
+
+    let album_manager = Arc::new(RwLock::new(album_manager));
     let image_manager = Arc::new(RwLock::new(
         ImageManager::new(opt.directory)));
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
