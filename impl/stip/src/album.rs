@@ -39,7 +39,7 @@ async fn close(matches: &ArgMatches, _: &ArgMatches,
     };
 
     let request = Request::new(AlbumBroadcastRequest {
-        message_type: AlbumBroadcastType::AlbumCreate as i32,
+        message_type: AlbumBroadcastType::AlbumClose as i32,
         create_request: None,
         close_request: Some(close_request),
         open_request: None,
@@ -159,10 +159,13 @@ async fn open(matches: &ArgMatches, _: &ArgMatches,
     let open_request = AlbumOpenRequest {
         id: open_matches.value_of("ID").unwrap().to_string(),
         index: index,
+        task_id: crate::u64_opt(open_matches.value_of("task_id"))?,
+        thread_count: open_matches.value_of("thread_count")
+            .unwrap().parse::<u32>()?,
     };
 
     let request = Request::new(AlbumBroadcastRequest {
-        message_type: AlbumBroadcastType::AlbumCreate as i32,
+        message_type: AlbumBroadcastType::AlbumOpen as i32,
         create_request: None,
         close_request: None,
         open_request: Some(open_request),

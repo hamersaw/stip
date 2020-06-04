@@ -108,7 +108,9 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip data fill -p NAIP
 
 ## TODO
+- __change 'data' to 'image' on commands__
 - __data fill - fix v3.0__
+- **fix conversion of GdalError to Box<dyn Error>**
 - **fix pixel coverage filter on 'data search'**
 - improve node logging
 - refactor task implementations - facilitate code reuse

@@ -122,12 +122,6 @@ impl AlbumManager {
     pub fn iter(&self) -> Iter<String, Arc<RwLock<Album>>> {
         self.albums.iter()
     }
-
-    pub fn remove(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
-        // remove 'name' from self.albums
-        self.albums.remove(name);
-        Ok(())
-    }
 }
 
 pub struct Album {
@@ -138,6 +132,10 @@ pub struct Album {
 }
 
 impl Album {
+    pub fn clear(&mut self) {
+        self.index = None;
+    }
+
     pub fn get_dht_key_length(&self) -> Option<u8> {
         self.dht_key_length
     }
@@ -169,6 +167,27 @@ impl Album {
 
     pub fn get_index(&self) -> &Option<AlbumIndex> {
         &self.index
+    }
+
+    pub fn get_paths(&self) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+        let glob_expression = format!("{}/*/*/*/*tif",
+            self.directory.to_string_lossy());
+
+        // iterate over existing images
+        let mut paths = Vec::new();
+        for entry in glob::glob(&glob_expression)? {
+            paths.push(entry?);
+        }
+
+        Ok(paths)
+    }
+
+    pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,
+            pixel_coverage: f64, platform: &str, source: &str,
+            subdataset: u8, tile: &str, timestamp: i64) 
+            -> Result<(), Box<dyn Error>> {
+        println!("TODO - load {} {} {}", geohash, tile, source);
+        Ok(())
     }
 
     pub fn write(&mut self, dataset: &mut Dataset, geohash: &str,

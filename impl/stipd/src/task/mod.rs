@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 pub mod fill;
 pub mod load;
 pub mod split;
+pub mod open;
 
 pub trait Task {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>>;

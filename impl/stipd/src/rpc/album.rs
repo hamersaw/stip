@@ -3,6 +3,8 @@ use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
 use crate::album::{AlbumManager, AlbumIndex, Geocode};
+use crate::task::TaskManager;
+use crate::task::open::OpenTask;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -11,14 +13,17 @@ use std::sync::{Arc, RwLock};
 pub struct AlbumManagementImpl {
     album_manager: Arc<RwLock<AlbumManager>>,
     dht: Arc<RwLock<Dht>>,
+    task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl AlbumManagementImpl {
     pub fn new(album_manager: Arc<RwLock<AlbumManager>>,
-            dht: Arc<RwLock<Dht>>) -> AlbumManagementImpl {
+            dht: Arc<RwLock<Dht>>, task_manager: Arc<RwLock<TaskManager>>)
+            -> AlbumManagementImpl {
         AlbumManagementImpl {
             album_manager: album_manager,
             dht: dht,
+            task_manager: task_manager,
         }
     }
 }
@@ -190,16 +195,25 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumOpenRequest: {:?}", request);
         let request = request.get_ref();
 
-        // TODO - open the album
-        /*{
-            let mut album_manager =
-                self.album_manager.write().unwrap();
-            album_manager.create(dht_key_length, geocode,
-                &request.id).unwrap()
-        }*/
+        let album = {
+            // TODO - unwrap on option
+            let album_manager = self.album_manager.read().unwrap();
+            album_manager.get(&request.id).unwrap().clone()
+        };
+
+        // initialize task
+        let task = OpenTask::new(album, request.thread_count as u8);
+
+        // execute task using task manager - TODO error
+        let task_id = {
+            let mut task_manager = self.task_manager.write().unwrap();
+            task_manager.execute(task, request.task_id).unwrap()
+        };
 
         // initialize reply
-        let reply = AlbumOpenReply {};
+        let reply = AlbumOpenReply {
+            task_id: task_id,
+        };
 
         Ok(Response::new(reply))
     }

@@ -87,9 +87,12 @@ message AlbumListReply {
 message AlbumOpenRequest {
     required string id = 1;
     required AlbumIndex index = 2;
+    optional uint64 taskId = 3;
+    required uint32 threadCount = 4;
 }
 
 message AlbumOpenReply {
+    required uint64 taskId = 1;
 }
 
 /*

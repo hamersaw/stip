@@ -57,6 +57,17 @@ subcommands:
                         index: 2
                         required: true
                         help: album image index
+                    - task_id:
+                        help: manually set task identifier
+                        long: task_id
+                        short: d
+                        takes_value: true
+                    - thread_count:
+                        default_value: "1"
+                        help: thread count for processing task
+                        long: threads
+                        short: t
+                        takes_value: true
     - data:
         about: manage application data
         subcommands:
