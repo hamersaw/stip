@@ -1,6 +1,6 @@
 use rusqlite::{Connection, ToSql};
 
-use crate::album::Extent;
+use crate::album::{Extent, Image, StFile};
 
 use std::error::Error;
 use std::sync::Mutex;
@@ -69,6 +69,85 @@ impl AlbumIndex {
             conn: Mutex::new(conn),
             id: 1000,
         }
+    }
+
+    pub fn list(&self, end_timestamp: &Option<i64>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>) -> Vec<(Image, Vec<StFile>)> {
+        // lock the sqlite connection
+        let conn = self.conn.lock().unwrap();
+
+        // initialize the SELECT command and parameters
+        let mut stmt_str = LIST_SELECT_STMT.to_string();
+        let mut params: Vec<&dyn ToSql> = Vec::new();
+
+        // append existing filters to stmt_str
+        append_stmt_filter("timestamp", end_timestamp,
+            &mut stmt_str, "<=", &mut params);
+        append_stmt_filter("cloud_coverage", max_cloud_coverage,
+            &mut stmt_str, "<=", &mut params);
+        append_stmt_filter("pixel_coverage", min_pixel_coverage,
+            &mut stmt_str, ">=", &mut params);
+        append_stmt_filter("platform", platform,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("source", source,
+            &mut stmt_str, "=", &mut params);
+        append_stmt_filter("timestamp", start_timestamp,
+            &mut stmt_str, ">=", &mut params);
+
+        let geohash_glob = match geohash {
+            Some(geohash) => Some(format!("{}%", geohash)),
+            None => None,
+        };
+
+        match recurse {
+            true => append_stmt_filter("geohash", &geohash_glob,
+                &mut stmt_str, "LIKE", &mut params),
+            false => append_stmt_filter("geohash", geohash,
+                &mut stmt_str, "=", &mut params),
+        }
+
+        // append LIST_ORDER_BY_STMT to stmt_str
+        stmt_str.push_str(LIST_ORDER_BY_STMT);
+
+        // execute query - TODO error
+        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        let images_iter = stmt.query_map(&params, |row| {
+            let geohash: String = row.get(1)?;
+            let platform: String = row.get(3)?;
+            let source: String = row.get(4)?;
+            let subdataset: u8 = row.get(5)?;
+            let tile: String = row.get(6)?;
+ 
+            // TODO - error
+            //let path = self.get_image_path(false, &geohash,
+            //    &platform, &source, subdataset, &tile).unwrap();
+
+            Ok(((row.get(0)?, geohash, platform,
+                    source, tile, row.get(7)?),
+                //(path.to_string_lossy().to_string(),
+                ("TODO - PATH".to_string(), row.get(2)?, subdataset)))
+        }).unwrap();
+
+        // process images
+        let mut images: Vec<(Image, Vec<StFile>)> = Vec::new();
+        for (image, mut file) in images_iter.map(|x| x.unwrap()) {
+            match images.last_mut() {
+                Some((i, f)) => {
+                    // if geohash and tile match -> append file to files
+                    //   else -> add new image
+                    match i.1 == image.1 && i.5 == image.5 {
+                        true => f.push(file),
+                        false => images.push((image, vec!(file))),
+                    }
+                },
+                None => images.push((image, vec!(file))),
+            }
+        }
+
+        images
     }
 
     pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,

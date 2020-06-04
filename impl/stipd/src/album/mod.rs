@@ -190,6 +190,20 @@ impl Album {
         Ok(paths)
     }
 
+    pub fn list(&self, end_timestamp: &Option<i64>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>)
+            -> Result<Vec<(Image, Vec<StFile>)>, Box<dyn Error>> {
+        match &self.index {
+            Some(index) => Ok(index.list(end_timestamp, geohash,
+                max_cloud_coverage, min_pixel_coverage, platform,
+                recurse, source, start_timestamp)),
+            None => Err("unable to search on closed album".into()),
+        }
+    }
+
     pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,
             pixel_coverage: f64, platform: &str, source: &str,
             subdataset: u8, tile: &str, timestamp: i64) 

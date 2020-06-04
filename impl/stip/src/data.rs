@@ -113,6 +113,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataListRequest
     let request = DataListRequest {
+        album: list_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
     };
 

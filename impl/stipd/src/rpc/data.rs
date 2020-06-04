@@ -146,14 +146,21 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
         let filter = &request.filter;
 
-        // search for requested images
+        // retrieve album - TODO unwrap on option
+        let album = {
+            let album_manager = self.album_manager.read().unwrap();
+            album_manager.get(&request.album).unwrap().clone()
+        };
+
+        // search for requested images - TODO unwrap of album list result
         let mut images = Vec::new();
         {
-            let image_manager = self.image_manager.read().unwrap();
-            let image_iter = image_manager.list(&filter.end_timestamp,
+            let album = album.read().unwrap();
+            let image_iter = album.list(&filter.end_timestamp,
                 &filter.geohash, &filter.max_cloud_coverage,
                 &filter.min_pixel_coverage, &filter.platform,
-                filter.recurse, &filter.source, &filter.start_timestamp);
+                filter.recurse, &filter.source,
+                &filter.start_timestamp).unwrap();
 
             // convert image and files to protobufs
             for (i, f) in image_iter {

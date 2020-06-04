@@ -159,7 +159,8 @@ message File {
 }
 
 message DataListRequest {
-    required Filter filter = 1; 
+    required string album = 1;
+    required Filter filter = 2; 
 }
 
 // Load Messages

@@ -114,7 +114,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     // print information
     println!("{:<24}{:<12}{:<16}{:<8}", "id",
         "geocode", "dht_key_length", "status");
-    println!("--------------------------------------------------------");
+    println!("------------------------------------------------------------");
     for album in reply.albums.iter() {
         let geocode = match Geocode::from_i32(album.geocode).unwrap() {
             Geocode::Geohash => "geohash",

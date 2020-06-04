@@ -114,6 +114,10 @@ subcommands:
             - list:
                 about: list images for the specified criteria
                 args:
+                    - ALBUM:
+                        index: 1
+                        required: true
+                        help: stip album
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp
