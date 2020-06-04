@@ -1,6 +1,6 @@
 use protobuf::{Album, AlbumBroadcastReply, AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumManagementClient, AlbumOpenReply, AlbumOpenRequest};
 use swarm::prelude::Dht;
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 
 use crate::album::{AlbumManager, Geocode};
 use crate::task::TaskManager;
@@ -45,7 +45,7 @@ impl AlbumManagement for AlbumManagementImpl {
                     continue;
                 }
 
-                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+                dht_nodes.push((*node_id, addrs.1.unwrap()));
             }
         }
 
@@ -55,27 +55,43 @@ impl AlbumManagement for AlbumManagementImpl {
         let mut open_replies = HashMap::new();
 
         for (node_id, addr) in dht_nodes {
-            // initialize grpc client - TODO error
-            let mut client = AlbumManagementClient::connect(
-                format!("http://{}", addr)).await.unwrap();
+            // initialize grpc client
+            let mut client = match AlbumManagementClient::connect(
+                    format!("http://{}", addr)).await {
+                Ok(client) => client,
+                Err(e) => return Err(Status::new(Code::Unavailable,
+                    format!("connection to {} failed: {}", addr, e))),
+            };
 
             // execute message at dht node
             match AlbumBroadcastType::from_i32(request.message_type).unwrap() {
                 AlbumBroadcastType::AlbumCreate => {
-                    let reply = client.create(request
-                        .create_request.clone().unwrap()).await.unwrap();
+                    let reply = match client.create(request
+                            .create_request.clone().unwrap()).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("create broadcast failed: {}", e))),
+                    };
                     create_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
                 AlbumBroadcastType::AlbumClose => {
-                    let reply = client.close(request
-                        .close_request.clone().unwrap()).await.unwrap();
+                    let reply = match client.close(request
+                            .close_request.clone().unwrap()).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("close broadcast failed: {}", e))),
+                    };
                     close_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
                 AlbumBroadcastType::AlbumOpen => {
-                    let reply = client.open(request
-                        .open_request.clone().unwrap()).await.unwrap();
+                    let reply = match client.open(request
+                            .open_request.clone().unwrap()).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("open broadcast failed: {}", e))),
+                    };
                     open_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
@@ -98,13 +114,15 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumCloseRequest: {:?}", request);
         let request = request.get_ref();
 
-        // TODO - close the album
-        /*{
-            let mut album_manager =
-                self.album_manager.write().unwrap();
-            album_manager.create(dht_key_length, geocode,
-                &request.id).unwrap()
-        }*/
+        // ensure album exists
+        let album = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.id)?;
+
+        // close album
+        {
+            let mut album = album.write().unwrap();
+            album.close();
+        }
 
         // initialize reply
         let reply = AlbumCloseReply {};
@@ -117,6 +135,11 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumCreateRequest: {:?}", request);
         let request = request.get_ref();
 
+        // check if album already exists
+        let _ = crate::rpc::assert_album_not_exists(
+            &self.album_manager, &request.id)?;
+
+        // parse arguments
         let dht_key_length = match request.dht_key_length {
             Some(value) => Some(value as u8),
             None => None,
@@ -128,12 +151,14 @@ impl AlbumManagement for AlbumManagementImpl {
             protobuf::Geocode::Quadtile => Geocode::QuadTile,
         };
 
-        // initialize album - TODO error
+        // create album
         {
-            let mut album_manager =
-                self.album_manager.write().unwrap();
-            album_manager.create(dht_key_length, geocode,
-                &request.id).unwrap()
+            let mut album_manager = self.album_manager.write().unwrap();
+            if let Err(e) = album_manager.create(
+                    dht_key_length, geocode, &request.id) {
+                return Err(Status::new(Code::Unknown,
+                    format!("failed to create album: {}", e)));
+            }
         }
 
         // initialize reply
@@ -192,13 +217,11 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumOpenRequest: {:?}", request);
         let request = request.get_ref();
 
-        // open album
-        let album = {
-            // TODO - unwrap on option
-            let album_manager = self.album_manager.read().unwrap();
-            album_manager.get(&request.id).unwrap().clone()
-        };
+        // ensure album exists
+        let album = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.id)?;
 
+        // open album
         {
             let mut album = album.write().unwrap();
             album.open();
@@ -207,10 +230,14 @@ impl AlbumManagement for AlbumManagementImpl {
         // initialize task
         let task = OpenTask::new(album, request.thread_count as u8);
 
-        // execute task using task manager - TODO error
+        // execute task using task manager
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            task_manager.execute(task, request.task_id).unwrap()
+            match task_manager.execute(task, request.task_id) {
+                Ok(task_id) => task_id,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to start OpenTask: {}", e))),
+            }
         };
 
         // initialize reply

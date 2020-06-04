@@ -143,8 +143,8 @@ fn main() {
 
     let album_management = AlbumManagementImpl::new(
         album_manager.clone(), dht.clone(), task_manager.clone());
-    let data_management = DataManagementImpl::new(album_manager,
-        dht.clone(), image_manager, task_manager.clone());
+    let data_management = DataManagementImpl::new(
+        album_manager, dht.clone(), task_manager.clone());
     let node_management = NodeManagementImpl::new(dht.clone());
     let task_management = TaskManagementImpl::new(dht, task_manager);
 

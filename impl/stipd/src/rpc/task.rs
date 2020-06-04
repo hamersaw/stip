@@ -1,6 +1,6 @@
 use protobuf::{self, Task, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient};
 use swarm::prelude::Dht;
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 
 use crate::task::{TaskHandle, TaskManager, TaskStatus};
 
@@ -39,7 +39,7 @@ impl TaskManagement for TaskManagementImpl {
                     continue;
                 }
 
-                dht_nodes.push((*node_id, addrs.1.unwrap().clone()));
+                dht_nodes.push((*node_id, addrs.1.unwrap()));
             }
         }
 
@@ -47,15 +47,23 @@ impl TaskManagement for TaskManagementImpl {
         let mut list_replies = HashMap::new();
 
         for (node_id, addr) in dht_nodes {
-            // initialize grpc client - TODO error
-            let mut client = TaskManagementClient::connect(
-                format!("http://{}", addr)).await.unwrap();
+            // initialize grpc client
+            let mut client = match TaskManagementClient::connect(
+                    format!("http://{}", addr)).await {
+                Ok(client) => client,
+                Err(e) => return Err(Status::new(Code::Unavailable,
+                    format!("connection to {} failed: {}", addr, e))),
+            };
 
             // execute message at dht node
             match TaskBroadcastType::from_i32(request.message_type).unwrap() {
                 TaskBroadcastType::TaskList => {
-                    let reply = client.list(request
-                        .list_request.clone().unwrap()).await.unwrap();
+                    let reply = match client.list(request
+                            .list_request.clone().unwrap()).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("list broadcast failed: {}", e))),
+                    };
                     list_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
@@ -80,11 +88,26 @@ impl TaskManagement for TaskManagementImpl {
         {
             let task_manager = self.task_manager.read().unwrap();
             for (task_id, task_handle) in task_manager.iter() {
-                // convert TaskHandle to protobuf
-                let task = to_protobuf_task(*task_id, task_handle);
+                let task_handle = task_handle.read().unwrap();
+                
+                // compile task status
+                let status = match task_handle.get_status() {
+                    TaskStatus::Complete =>
+                        protobuf::TaskStatus::Complete,
+                    TaskStatus::Failure(_) =>
+                        protobuf::TaskStatus::Failure,
+                    TaskStatus::Running =>
+                        protobuf::TaskStatus::Running,
+                };
 
-                // add to tasks
-                tasks.push(task);
+                // initialize task protobuf
+                tasks.push(Task {
+                    id: *task_id,
+                    items_completed: task_handle.get_items_completed(),
+                    items_skipped: task_handle.get_items_skipped(),
+                    items_total: task_handle.get_items_total(),
+                    status: status as i32,
+                });
             }
         }
 
@@ -94,26 +117,5 @@ impl TaskManagement for TaskManagementImpl {
         };
 
         Ok(Response::new(reply))
-    }
-}
-
-fn to_protobuf_task(task_id: u64, task_handle: &Arc<RwLock<TaskHandle>>) -> Task {
-    // get read lock on TaskHandle
-    let task_handle = task_handle.read().unwrap();
-    
-    // compile task status
-    let status = match task_handle.get_status() {
-        TaskStatus::Complete => protobuf::TaskStatus::Complete,
-        TaskStatus::Failure(_) => protobuf::TaskStatus::Failure,
-        TaskStatus::Running => protobuf::TaskStatus::Running,
-    };
-
-    // initialize task protobuf
-    Task {
-        id: task_id,
-        items_completed: task_handle.get_items_completed(),
-        items_skipped: task_handle.get_items_skipped(),
-        items_total: task_handle.get_items_total(),
-        status: status as i32,
     }
 }

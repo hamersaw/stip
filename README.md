@@ -109,13 +109,18 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 
 ## TODO
 - __change 'data' to 'image' on commands__
-- __data fill - fix v3.0__
 - **fix conversion of GdalError to Box<dyn Error>**
 - **fix pixel coverage filter on 'data search'**
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
 #### ALBUMS
+- documentation
+- cloud coverage computation on sentinel-2 data
 - 'album open' shared task id
-- fix all kinds of unwraps - this is terrible code
+    - write back task id to client
+- fix all kinds of unwraps - this is embarassing code
 - populate 'path' on 'data list'
+- data split - fix v4.0
+- data fill - fix v4.0
+- data load -> consult album.geocode to determine split parameters

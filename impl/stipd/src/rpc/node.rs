@@ -28,12 +28,12 @@ impl NodeManagement for NodeManagementImpl {
         {
             let dht = self.dht.read().unwrap();
             for (node_id, addrs) in dht.iter() {
-                // convert Node to protobuf
-                let node = to_protobuf_node(*node_id as u32,
-                    &addrs.1, &addrs.2);
-
                 // add to nodes
-                nodes.push(node);
+                nodes.push(Node {
+                    id: *node_id as u32,
+                    rpc_addr: format!("{}", &addrs.1.unwrap()),
+                    xfer_addr: format!("{}", &addrs.2.unwrap()),
+                });
             }
         }
 
@@ -43,15 +43,5 @@ impl NodeManagement for NodeManagementImpl {
         };
 
         Ok(Response::new(reply))
-    }
-}
-
-fn to_protobuf_node(node_id: u32, rpc_addr: &Option<SocketAddr>,
-        xfer_addr: &Option<SocketAddr>) -> Node {
-    // initialize node protobuf
-    Node {
-        id: node_id,
-        rpc_addr: format!("{}", rpc_addr.unwrap()),
-        xfer_addr: format!("{}", xfer_addr.unwrap()),
     }
 }

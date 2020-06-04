@@ -88,11 +88,6 @@ impl AlbumManager {
 
     pub fn create(&mut self, dht_key_length: Option<u8>,
             geocode: Geocode, id: &str) -> Result<(), Box<dyn Error>> {
-        // check if album already exists
-        if self.albums.contains_key(id) {
-            return Err(format!("album {} already exists", id).into());
-        }
-
         // create album directory
         let mut path = self.directory.clone();
         path.push(id);
@@ -140,7 +135,7 @@ pub struct Album {
 }
 
 impl Album {
-    pub fn clear(&mut self) {
+    pub fn close(&mut self) {
         self.index = None;
     }
 
