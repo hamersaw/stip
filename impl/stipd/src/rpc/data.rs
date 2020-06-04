@@ -197,8 +197,8 @@ impl DataManagement for DataManagementImpl {
             ProtoLoadFormat::Sentinel => LoadFormat::Sentinel,
         };
 
-        let task = LoadEarthExplorerTask::new(self.dht.clone(),
-            request.glob.clone(), load_format,
+        let task = LoadEarthExplorerTask::new(request.album.clone(),
+            self.dht.clone(), request.glob.clone(), load_format,
             request.precision as usize, request.thread_count as u8);
 
         // execute task using task manager - TODO error
@@ -256,12 +256,12 @@ impl DataManagement for DataManagementImpl {
         let filter = &request.filter;
 
         // initialize task
-        let task = SplitTask::new(self.dht.clone(),
-            filter.end_timestamp.clone(), filter.geohash.clone(),
-            request.geohash_bound.clone(), self.image_manager.clone(),
-            filter.platform.clone(), request.precision as usize,
-            filter.recurse, filter.start_timestamp.clone(),
-            request.thread_count as u8);
+        let task = SplitTask::new(request.album.clone(),
+            self.dht.clone(), filter.end_timestamp.clone(),
+            filter.geohash.clone(), request.geohash_bound.clone(), 
+            self.image_manager.clone(), filter.platform.clone(),
+            request.precision as usize, filter.recurse,
+            filter.start_timestamp.clone(), request.thread_count as u8);
 
         // execute task using task manager - TODO error
         let task_id = {

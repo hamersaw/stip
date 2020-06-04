@@ -14,9 +14,9 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize, 
-        record: &PathBuf, x_interval: f64, y_interval: f64)
-        -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
+        precision: usize, record: &PathBuf, x_interval: f64,
+        y_interval: f64) -> Result<(), Box<dyn Error>> {
     // compute tile name
     let tile_path = record.with_extension("");
     let tile = tile_path.file_name()
@@ -110,7 +110,7 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
             };
 
             // send image to new host
-            if let Err(e) = crate::transfer::send_image(&addr,
+            if let Err(e) = crate::transfer::send_image(&addr, album,
                     &dataset, &geohash, pixel_coverage, "Sentinel-2",
                     &RAW_SOURCE, i as u8, &tile, timestamp) {
                 warn!("failed to write image to node {}: {}", addr, e);

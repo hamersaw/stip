@@ -146,6 +146,8 @@ impl AlbumManagement for AlbumManagementImpl {
         {
             let album_manager = self.album_manager.read().unwrap();
             for (id, album) in album_manager.iter() {
+                let album = album.read().unwrap();
+
                 // parse album metadata
                 let dht_key_length = match album.get_dht_key_length() {
                     Some(value) => Some(value as u32),

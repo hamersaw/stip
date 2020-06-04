@@ -114,4 +114,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
 #### ALBUMS
-- **replace ImageManager**
+- add images to AlbumIndex on write
+- load existing images on 'open'

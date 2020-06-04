@@ -79,7 +79,7 @@ fn main() {
     let listener = TcpListener::bind(format!("{}:{}",
         opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
     let transfer_stream_handler =
-        Arc::new(TransferStreamHandler::new(image_manager.clone()));
+        Arc::new(TransferStreamHandler::new(album_manager.clone()));
     let mut server = CommServer::new(listener,
         50, transfer_stream_handler);
 

@@ -162,6 +162,7 @@ async fn load(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataLoadRequest
     let request = Request::new(DataLoadRequest {
+        album: load_matches.value_of("ALBUM").unwrap().to_string(),
         glob: load_matches.value_of("GLOB").unwrap().to_string(),
         load_format: load_format,
         precision: load_matches.value_of("precision")
@@ -306,6 +307,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataSplitRequest
     let split_request = DataSplitRequest {
+        album: split_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
         geohash_bound: crate::string_opt(
             split_matches.value_of("geohash_bound")),

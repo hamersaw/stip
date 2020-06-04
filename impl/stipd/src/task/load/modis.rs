@@ -13,9 +13,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize, 
-        record: &PathBuf, x_interval: f64, y_interval: f64)
-        -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
+        precision: usize, record: &PathBuf, x_interval: f64,
+        y_interval: f64) -> Result<(), Box<dyn Error>> {
     // TODO - error
     let dataset = Dataset::open(&record).unwrap();
  
@@ -56,17 +56,19 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
     // process quality subdatasets
     let quality_datasets = split_subdatasets::<u8>(
         quality_subdatasets, precision, x_interval, y_interval)?;
-    process_splits(&quality_datasets, &dht, 0, &tile, timestamp)?;
+    process_splits(album, &quality_datasets,
+        &dht, 0, &tile, timestamp)?;
 
     // process reflectance subdatasets
     let reflectance_datasets = split_subdatasets::<i16>(
         reflectance_subdatasets, precision, x_interval, y_interval)?;
-    process_splits(&reflectance_datasets, &dht, 1, &tile, timestamp)?;
+    process_splits(album, &reflectance_datasets,
+        &dht, 1, &tile, timestamp)?;
 
     Ok(())
 }
 
-fn process_splits(datasets: &HashMap<String, Dataset>,
+fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
         dht: &Arc<RwLock<Dht>>, subdataset: u8, tile: &str,
         timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geohash, dataset) in datasets.iter() {
@@ -88,7 +90,7 @@ fn process_splits(datasets: &HashMap<String, Dataset>,
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image(&addr,
+        if let Err(e) = crate::transfer::send_image(&addr, album,
                 &dataset, &geohash, pixel_coverage, "MODIS",
                 &RAW_SOURCE, subdataset, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);

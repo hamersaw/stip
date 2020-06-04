@@ -149,12 +149,16 @@ subcommands:
             - load:
                 about: initialize load data task
                 args:
-                    - GLOB:
+                    - ALBUM:
                         index: 1
+                        required: true
+                        help: stip album
+                    - GLOB:
+                        index: 2
                         required: true
                         help: images location glob
                     - LOAD_FORMAT:
-                        index: 2
+                        index: 3
                         required: true
                         possible_values: 
                             - modis
@@ -223,6 +227,10 @@ subcommands:
             - split:
                 about: split images with a new geohash precision
                 args:
+                    - ALBUM:
+                        index: 1
+                        required: true
+                        help: stip album
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp

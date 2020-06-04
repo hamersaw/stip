@@ -10,9 +10,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize, 
-        record: &PathBuf, x_interval: f64, y_interval: f64)
-        -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
+        precision: usize, record: &PathBuf, x_interval: f64,
+        y_interval: f64) -> Result<(), Box<dyn Error>> {
     // open geotiff file
     let tif_path = record.with_extension("tif");
     let filename = tif_path.file_name().unwrap()
@@ -64,7 +64,7 @@ pub fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image(&addr,
+        if let Err(e) = crate::transfer::send_image(&addr, album,
                 &dataset, &geohash, pixel_coverage, "NAIP",
                 &RAW_SOURCE, 0, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);

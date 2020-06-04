@@ -19,6 +19,7 @@ pub enum LoadFormat {
 }
 
 pub struct LoadEarthExplorerTask {
+    album: String,
     dht: Arc<RwLock<Dht>>,
     glob: String,
     load_format: LoadFormat,
@@ -27,10 +28,11 @@ pub struct LoadEarthExplorerTask {
 }
 
 impl LoadEarthExplorerTask {
-    pub fn new(dht: Arc<RwLock<Dht>>, glob: String,
+    pub fn new(album: String, dht: Arc<RwLock<Dht>>, glob: String,
             load_format: LoadFormat, precision: usize,
             thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
+            album: album,
             dht: dht,
             glob: glob,
             load_format: load_format,
@@ -42,6 +44,8 @@ impl LoadEarthExplorerTask {
 
 impl Task for LoadEarthExplorerTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+        // TODO - check if album exists?
+
         // search for image files
         let mut records = Vec::new();
         for entry in glob::glob(&self.glob)? {
@@ -56,6 +60,7 @@ impl Task for LoadEarthExplorerTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
+            let album_clone = self.album.clone();
             let dht_clone = self.dht.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
@@ -79,14 +84,14 @@ impl Task for LoadEarthExplorerTask {
                     // process record
                     let result = match load_format {
                         LoadFormat::MODIS => modis::process(
-                            &dht_clone, precision, &record,
-                            x_interval, y_interval),
+                            &album_clone, &dht_clone, precision,
+                            &record, x_interval, y_interval),
                         LoadFormat::NAIP => naip::process(
-                            &dht_clone, precision, &record,
-                            x_interval, y_interval),
+                            &album_clone, &dht_clone, precision,
+                            &record, x_interval, y_interval),
                         LoadFormat::Sentinel => sentinel_2::process(
-                            &dht_clone, precision, &record,
-                            x_interval, y_interval),
+                            &album_clone, &dht_clone, precision,
+                            &record, x_interval, y_interval),
                     };
 
                     // process result

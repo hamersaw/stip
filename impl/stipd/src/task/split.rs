@@ -11,6 +11,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct SplitTask {
+    album: String,
     dht: Arc<RwLock<Dht>>,
     end_timestamp: Option<i64>,
     geohash: Option<String>,
@@ -24,12 +25,14 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(dht: Arc<RwLock<Dht>>, end_timestamp: Option<i64>,
-            geohash: Option<String>, geohash_bound: Option<String>,
+    pub fn new(album: String, dht: Arc<RwLock<Dht>>,
+            end_timestamp: Option<i64>, geohash: Option<String>,
+            geohash_bound: Option<String>,
             image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
+            album: album,
             dht: dht,
             end_timestamp: end_timestamp,
             geohash: geohash,
@@ -46,6 +49,8 @@ impl SplitTask {
 
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+        // TODO - check album exists
+
         // search for images using ImageManager
         let mut records: Vec<(Image, Vec<StFile>)> = {
             let image_manager = self.image_manager.read().unwrap();
@@ -76,6 +81,7 @@ impl Task for SplitTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
+            let album_clone = self.album.clone();
             let dht_clone = self.dht.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
@@ -96,7 +102,7 @@ impl Task for SplitTask {
                     };
 
                     // process record
-                    match process(&dht_clone, precision_clone,
+                    match process(&album_clone, &dht_clone, precision_clone,
                             &record, x_interval, y_interval) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
@@ -162,7 +168,7 @@ impl Task for SplitTask {
     }
 }
 
-fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
+fn process(album: &str, dht: &Arc<RwLock<Dht>>, precision: usize,
         record: &(Image, Vec<StFile>), x_interval: f64,
         y_interval: f64) -> Result<(), Box<dyn Error>> {
     let image = &record.0;
@@ -208,7 +214,7 @@ fn process(dht: &Arc<RwLock<Dht>>, precision: usize,
             };
 
             // send image to new host
-            if let Err(e) = crate::transfer::send_image(&addr,
+            if let Err(e) = crate::transfer::send_image(&addr, album,
                     &dataset, &geohash, file.1, &image.2,
                     SPLIT_SOURCE, file.2, &image.4, image.5) {
                 warn!("failed to write image to node {}: {}", addr, e);
