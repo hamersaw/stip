@@ -117,4 +117,3 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - st-image - on split, fill vectors with 'no_data_value'
 #### ALBUMS
 - add images to AlbumIndex on write
-- load existing images on 'open'

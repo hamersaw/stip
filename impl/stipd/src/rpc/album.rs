@@ -2,7 +2,7 @@ use protobuf::{Album, AlbumBroadcastReply, AlbumBroadcastRequest, AlbumBroadcast
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
-use crate::album::{AlbumManager, AlbumIndex, Geocode};
+use crate::album::{AlbumManager, Geocode};
 use crate::task::TaskManager;
 use crate::task::open::OpenTask;
 
@@ -164,11 +164,9 @@ impl AlbumManagement for AlbumManagementImpl {
                     Geocode::QuadTile => protobuf::Geocode::Quadtile,
                 };
 
-                let (index, status) = match album.get_index() {
-                    Some(AlbumIndex::Sqlite) =>
-                        (Some(protobuf::AlbumIndex::Sqlite as i32),
-                            protobuf::AlbumStatus::Open),
-                    None => (None, protobuf::AlbumStatus::Closed),
+                let status = match album.get_index() {
+                    Some(_) => protobuf::AlbumStatus::Open,
+                    None => protobuf::AlbumStatus::Closed,
                 };
 
                 // add Album protobuf
@@ -176,7 +174,6 @@ impl AlbumManagement for AlbumManagementImpl {
                     dht_key_length: dht_key_length,
                     geocode: geocode as i32,
                     id: id.to_string(),
-                    index: index,
                     status: status as i32,
                 });
             }
@@ -195,11 +192,17 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumOpenRequest: {:?}", request);
         let request = request.get_ref();
 
+        // open album
         let album = {
             // TODO - unwrap on option
             let album_manager = self.album_manager.read().unwrap();
             album_manager.get(&request.id).unwrap().clone()
         };
+
+        {
+            let mut album = album.write().unwrap();
+            album.open();
+        }
 
         // initialize task
         let task = OpenTask::new(album, request.thread_count as u8);

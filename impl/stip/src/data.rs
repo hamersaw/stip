@@ -216,6 +216,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize DataSearchRequest
     let request = DataSearchRequest {
+        album: search_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
     };
 

@@ -4,6 +4,9 @@ use gdal::raster::{Dataset, Driver};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+mod index;
+use index::AlbumIndex;
+
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::error::Error;
@@ -13,9 +16,14 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::os::unix::fs::PermissionsExt;
 
-pub enum AlbumIndex {
-    Sqlite,
-}
+// count, geohash, platform, precision, source
+pub type Extent = (i64, String, String, u8, String);
+
+// cloud_coverage, geohash, platform, source, tile, timestamp
+pub type Image = (Option<f64>, String, String, String, String, i64);
+
+// path, pixel_coverage, subdataset
+pub type StFile = (String, f64, u8);
 
 #[derive(Clone, Copy, FromPrimitive)]
 pub enum Geocode {
@@ -186,8 +194,30 @@ impl Album {
             pixel_coverage: f64, platform: &str, source: &str,
             subdataset: u8, tile: &str, timestamp: i64) 
             -> Result<(), Box<dyn Error>> {
-        println!("TODO - load {} {} {}", geohash, tile, source);
-        Ok(())
+        match &mut self.index {
+            Some(index) => Ok(index.load(cloud_coverage,
+                geohash, pixel_coverage, platform, source,
+                subdataset, tile, timestamp)?),
+            None => Err("unable to search on closed album".into()),
+        }
+    }
+
+    pub fn open(&mut self) {
+        self.index = Some(AlbumIndex::new());
+    }
+
+    pub fn search(&self, end_timestamp: &Option<i64>,
+            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            min_pixel_coverage: &Option<f64>, platform: &Option<String>,
+            recurse: bool, source: &Option<String>,
+            start_timestamp: &Option<i64>)
+            -> Result<Vec<Extent>, Box<dyn Error>> {
+        match &self.index {
+            Some(index) => Ok(index.search(end_timestamp, geohash,
+                max_cloud_coverage, min_pixel_coverage, platform,
+                recurse, source, start_timestamp)),
+            None => Err("unable to search on closed album".into()),
+        }
     }
 
     pub fn write(&mut self, dataset: &mut Dataset, geohash: &str,
@@ -245,9 +275,11 @@ impl Album {
         dataset_copy.set_metadata_item("TIMESTAMP",
             &timestamp.to_string(), "STIP").unwrap();
 
-        // TODO - load data in index
-        //self.load(None, geohash, pixel_coverage,
-        //    platform, source, subdataset, tile, timestamp)?;
+        // if album is open -> load data
+        if let Some(_) = self.index {
+            self.load(None, geohash, pixel_coverage,
+                platform, source, subdataset, tile, timestamp)?;
+        }
 
         Ok(())
     }

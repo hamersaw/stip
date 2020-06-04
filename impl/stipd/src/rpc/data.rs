@@ -3,6 +3,7 @@ use swarm::prelude::Dht;
 use tokio::sync::mpsc::Receiver;
 use tonic::{Request, Response, Status};
 
+use crate::album::AlbumManager;
 use crate::image::ImageManager;
 use crate::task::TaskManager;
 use crate::task::fill::FillTask;
@@ -13,16 +14,19 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 pub struct DataManagementImpl {
-    image_manager: Arc<RwLock<ImageManager>>,
+    album_manager: Arc<RwLock<AlbumManager>>,
     dht: Arc<RwLock<Dht>>,
+    image_manager: Arc<RwLock<ImageManager>>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl DataManagementImpl {
-    pub fn new(dht: Arc<RwLock<Dht>>,
+    pub fn new(album_manager: Arc<RwLock<AlbumManager>>,
+            dht: Arc<RwLock<Dht>>,
             image_manager: Arc<RwLock<ImageManager>>,
             task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
         DataManagementImpl {
+            album_manager: album_manager,
             dht: dht,
             image_manager: image_manager,
             task_manager: task_manager,
@@ -222,13 +226,19 @@ impl DataManagement for DataManagementImpl {
         let request = request.get_ref();
         let filter = &request.filter;
 
-        // search for requested images
+        // retrieve album - TODO unwrap on option
+        let album = {
+            let album_manager = self.album_manager.read().unwrap();
+            album_manager.get(&request.album).unwrap().clone()
+        };
+
+        // search for requested images - TODO unwrap on search result
         let extents: Vec<Extent> = {
-            let image_manager = self.image_manager.read().unwrap();
-            image_manager.search(&filter.end_timestamp, &filter.geohash,
+            let album = album.read().unwrap();
+            album.search(&filter.end_timestamp, &filter.geohash,
                 &filter.max_cloud_coverage, &filter.min_pixel_coverage,
                 &filter.platform, filter.recurse, &filter.source,
-                &filter.start_timestamp).iter()
+                &filter.start_timestamp).unwrap().iter()
                     .map(|x| Extent {
                         count: x.0 as u32,
                         geohash: x.1.clone(),

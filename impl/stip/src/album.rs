@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseRequest, AlbumCreateRequest, AlbumIndex, AlbumListRequest, AlbumManagementClient, AlbumOpenRequest, AlbumStatus, Geocode};
+use protobuf::{AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseRequest, AlbumCreateRequest, AlbumListRequest, AlbumManagementClient, AlbumOpenRequest, AlbumStatus, Geocode};
 use tonic::Request;
 
 use std::{error, io};
@@ -112,20 +112,13 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let reply = reply.get_ref();
 
     // print information
-    println!("{:<24}{:<12}{:<16}{:<8}{:<12}", "id",
-        "geocode", "dht_key_length", "status", "index");
-    println!("--------------------------------------------------------------------");
+    println!("{:<24}{:<12}{:<16}{:<8}", "id",
+        "geocode", "dht_key_length", "status");
+    println!("--------------------------------------------------------");
     for album in reply.albums.iter() {
         let geocode = match Geocode::from_i32(album.geocode).unwrap() {
             Geocode::Geohash => "geohash",
             Geocode::Quadtile => "quadtile",
-        };
-
-        let index = match album.index {
-            Some(index) => match AlbumIndex::from_i32(index).unwrap() {
-                AlbumIndex::Sqlite => "sqlite",
-            },
-            None => "none",
         };
 
         let status = match AlbumStatus::from_i32(album.status).unwrap() {
@@ -133,8 +126,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
             AlbumStatus::Open => "open",
         };
 
-        println!("{:<24}{:<12}{:<16}{:<8}{:<12}", album.id, geocode,
-            album.dht_key_length.unwrap_or(0), status, index);
+        println!("{:<24}{:<12}{:<16}{:<8}", album.id, geocode,
+            album.dht_key_length.unwrap_or(0), status);
     }
 
     Ok(())
@@ -149,16 +142,9 @@ async fn open(matches: &ArgMatches, _: &ArgMatches,
     let mut client = AlbumManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // parse arguments
-    let index = match open_matches.value_of("INDEX") {
-        Some("sqlite") => AlbumIndex::Sqlite as i32,
-        _ => unimplemented!(),
-    };
-
     // initialize request
     let open_request = AlbumOpenRequest {
         id: open_matches.value_of("ID").unwrap().to_string(),
-        index: index,
         task_id: crate::u64_opt(open_matches.value_of("task_id"))?,
         thread_count: open_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,

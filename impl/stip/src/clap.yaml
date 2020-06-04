@@ -53,10 +53,6 @@ subcommands:
                         index: 1
                         required: true
                         help: unique album identifier
-                    - INDEX:
-                        index: 2
-                        required: true
-                        help: album image index
                     - task_id:
                         help: manually set task identifier
                         long: task_id
@@ -196,6 +192,10 @@ subcommands:
             - search:
                 about: search for images
                 args:
+                    - ALBUM:
+                        index: 1
+                        required: true
+                        help: stip album
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp

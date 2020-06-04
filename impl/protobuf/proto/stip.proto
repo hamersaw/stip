@@ -18,12 +18,7 @@ message Album {
     optional uint32 dhtKeyLength = 1;
     required Geocode geocode = 2;
     required string id = 3;
-    optional AlbumIndex index = 4;
-    required AlbumStatus status = 5;
-}
-
-enum AlbumIndex {
-    SQLITE = 0;
+    required AlbumStatus status = 4;
 }
 
 enum AlbumStatus {
@@ -86,9 +81,8 @@ message AlbumListReply {
 // Open Messages
 message AlbumOpenRequest {
     required string id = 1;
-    required AlbumIndex index = 2;
-    optional uint64 taskId = 3;
-    required uint32 threadCount = 4;
+    optional uint64 taskId = 2;
+    required uint32 threadCount = 3;
 }
 
 message AlbumOpenReply {
@@ -198,7 +192,8 @@ message Extent {
 }
 
 message DataSearchRequest {
-    required Filter filter = 1; 
+    required string album = 1;
+    required Filter filter = 2; 
 }
 
 // Split Messages
