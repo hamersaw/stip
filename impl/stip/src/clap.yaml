@@ -15,6 +15,30 @@ args:
         short: p
         takes_value: true
 subcommands:
+    - album:
+        about: manage application albums
+        subcommands:
+            - create:
+                about: create a new album
+                args:
+                    - ID:
+                        index: 1
+                        required: true
+                        help: unique album identifier
+                    - SPATIAL_HASH_ALGORITHM:
+                        index: 2
+                        required: true
+                        possible_values: 
+                            - geohash
+                            - quadtile
+                        help: spatial hash algorithm
+                    - dht_hash_characters:
+                        help: number of spatial hash characters to process in dht hash
+                        long: dht_characters
+                        short: d
+                        takes_value: true
+            - list:
+                about: list all cluster albums
     - data:
         about: manage application data
         subcommands:

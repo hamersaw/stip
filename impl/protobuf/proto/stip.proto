@@ -3,6 +3,50 @@ syntax = "proto2";
 package stip;
 
 /*
+ * AlbumManagement Service
+ */
+service AlbumManagement {
+    rpc Create (AlbumCreateRequest) returns (AlbumCreateReply);
+    rpc List (AlbumListRequest) returns (AlbumListReply);
+}
+
+// Album Messages
+message Album {
+    optional uint32 dhtHashCharacters = 1;
+    required string id = 2;
+    required SpatialHashAlgorithm spatialHashAlgorithm = 3;
+    required AlbumStatus status = 4;
+}
+
+enum SpatialHashAlgorithm {
+    GEOHASH = 0;
+    QUADTILE = 1;
+}
+
+enum AlbumStatus {
+    CLOSED = 0;
+    OPEN = 1;
+}
+
+// Create Messages
+message AlbumCreateRequest {
+    optional uint32 dhtHashCharacters = 1;
+    required string id = 2;
+    required SpatialHashAlgorithm spatialHashAlgorithm = 3;
+}
+
+message AlbumCreateReply {
+}
+
+// List Messages
+message AlbumListRequest {
+}
+
+message AlbumListReply {
+    repeated Album albums = 1;
+}
+
+/*
  * DataManagement Service
  */
 service DataManagement {
@@ -118,48 +162,6 @@ message DataSplitRequest {
 
 message DataSplitReply {
     required uint64 taskId = 1;
-}
-
-/*
- * EnvironmentManagement Service
- */
-service EnvironmentManagement {
-    rpc Initialize (EnvironmentInitializeRequest)
-        returns (EnvironmentInitializeReply);
-    rpc List (EnvironmentListRequest) returns (EnvironmentListReply);
-}
-
-// Environment Messages
-message Environment {
-    optional uint32 dhtHashCharacters = 1;
-    required uint32 hashBits = 2;
-    required string id = 3;    
-    required uint32 imageProjection = 4;
-    required EnvironmentStatus status = 5;
-}
-
-enum EnvironmentStatus {
-    AVAILABLE = 0;
-    LOADED = 1;
-}
-
-// Initialize Messages
-message EnvironmentInitializeRequest {
-    optional uint32 dhtHashCharacters = 1;
-    required uint32 hashBits = 2;
-    required string id = 3;
-    required uint32 imageProjection = 4;
-}
-
-message EnvironmentInitializeReply {
-}
-
-// List Messages
-message EnvironmentListRequest {
-}
-
-message EnvironmentListReply {
-    repeated Environment environments = 1;
 }
 
 /*
