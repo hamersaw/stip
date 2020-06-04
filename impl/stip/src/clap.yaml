@@ -18,6 +18,13 @@ subcommands:
     - album:
         about: manage application albums
         subcommands:
+            - close:
+                about: close an album
+                args:
+                    - ID:
+                        index: 1
+                        required: true
+                        help: unique album identifier
             - create:
                 about: create a new album
                 args:
@@ -39,6 +46,17 @@ subcommands:
                         takes_value: true
             - list:
                 about: list all cluster albums
+            - open:
+                about: open an album
+                args:
+                    - ID:
+                        index: 1
+                        required: true
+                        help: unique album identifier
+                    - INDEX:
+                        index: 2
+                        required: true
+                        help: album image index
     - data:
         about: manage application data
         subcommands:

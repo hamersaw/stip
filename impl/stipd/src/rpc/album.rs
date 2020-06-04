@@ -1,7 +1,7 @@
-use protobuf::{Album, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement};
+use protobuf::{Album, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumOpenReply, AlbumOpenRequest};
 use tonic::{Request, Response, Status};
 
-use crate::album::{AlbumManager, AlbumStatus, Geocode};
+use crate::album::{AlbumManager, AlbumIndex, Geocode};
 
 use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
@@ -21,6 +21,25 @@ impl AlbumManagementImpl {
 
 #[tonic::async_trait]
 impl AlbumManagement for AlbumManagementImpl {
+    async fn close(&self, request: Request<AlbumCloseRequest>)
+            -> Result<Response<AlbumCloseReply>, Status> {
+        trace!("AlbumCloseRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // TODO - close the album
+        /*{
+            let mut album_manager =
+                self.album_manager.write().unwrap();
+            album_manager.create(dht_key_length, geocode,
+                &request.id).unwrap()
+        }*/
+
+        // initialize reply
+        let reply = AlbumCloseReply {};
+
+        Ok(Response::new(reply))
+    }
+
     async fn create(&self, request: Request<AlbumCreateRequest>)
             -> Result<Response<AlbumCreateReply>, Status> {
         trace!("AlbumCreateRequest: {:?}", request);
@@ -60,24 +79,22 @@ impl AlbumManagement for AlbumManagementImpl {
         {
             let album_manager = self.album_manager.read().unwrap();
             for (id, album) in album_manager.iter() {
-                let (dht_key_length, geocode,
-                    status) = album.get_metadata();
-
                 // parse album metadata
-                let dht_key_length = match dht_key_length {
+                let dht_key_length = match album.get_dht_key_length() {
                     Some(value) => Some(value as u32),
                     None => None,
                 };
 
-                let geocode = match geocode {
+                let geocode = match album.get_geocode() {
                     Geocode::Geohash => protobuf::Geocode::Geohash,
                     Geocode::QuadTile => protobuf::Geocode::Quadtile,
                 };
 
-                let status = match status {
-                    AlbumStatus::Closed =>
-                        protobuf::AlbumStatus::Closed,
-                    AlbumStatus::Open => protobuf::AlbumStatus::Open,
+                let (index, status) = match album.get_index() {
+                    Some(AlbumIndex::Sqlite) =>
+                        (Some(protobuf::AlbumIndex::Sqlite as i32),
+                            protobuf::AlbumStatus::Open),
+                    None => (None, protobuf::AlbumStatus::Closed),
                 };
 
                 // add Album protobuf
@@ -85,6 +102,7 @@ impl AlbumManagement for AlbumManagementImpl {
                     dht_key_length: dht_key_length,
                     geocode: geocode as i32,
                     id: id.to_string(),
+                    index: index,
                     status: status as i32,
                 });
             }
@@ -94,6 +112,25 @@ impl AlbumManagement for AlbumManagementImpl {
         let reply = AlbumListReply {
             albums: albums,
         };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn open(&self, request: Request<AlbumOpenRequest>)
+            -> Result<Response<AlbumOpenReply>, Status> {
+        trace!("AlbumOpenRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // TODO - open the album
+        /*{
+            let mut album_manager =
+                self.album_manager.write().unwrap();
+            album_manager.create(dht_key_length, geocode,
+                &request.id).unwrap()
+        }*/
+
+        // initialize reply
+        let reply = AlbumOpenReply {};
 
         Ok(Response::new(reply))
     }

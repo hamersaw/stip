@@ -6,8 +6,10 @@ package stip;
  * AlbumManagement Service
  */
 service AlbumManagement {
+    rpc Close (AlbumCloseRequest) returns (AlbumCloseReply);
     rpc Create (AlbumCreateRequest) returns (AlbumCreateReply);
     rpc List (AlbumListRequest) returns (AlbumListReply);
+    rpc Open (AlbumOpenRequest) returns (AlbumOpenReply);
 }
 
 // Album Messages
@@ -15,7 +17,12 @@ message Album {
     optional uint32 dhtKeyLength = 1;
     required Geocode geocode = 2;
     required string id = 3;
-    required AlbumStatus status = 4;
+    optional AlbumIndex index = 4;
+    required AlbumStatus status = 5;
+}
+
+enum AlbumIndex {
+    SQLITE = 0;
 }
 
 enum AlbumStatus {
@@ -26,6 +33,14 @@ enum AlbumStatus {
 enum Geocode {
     GEOHASH = 0;
     QUADTILE = 1;
+}
+
+// Close Messages
+message AlbumCloseRequest {
+    required string id = 1;
+}
+
+message AlbumCloseReply {
 }
 
 // Create Messages
@@ -44,6 +59,15 @@ message AlbumListRequest {
 
 message AlbumListReply {
     repeated Album albums = 1;
+}
+
+// Open Messages
+message AlbumOpenRequest {
+    required string id = 1;
+    required AlbumIndex index = 2;
+}
+
+message AlbumOpenReply {
 }
 
 /*
