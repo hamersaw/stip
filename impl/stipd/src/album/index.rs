@@ -58,24 +58,25 @@ pub struct AlbumIndex {
 }
 
 impl AlbumIndex {
-    pub fn new() -> AlbumIndex {
-        // initialize sqlite connection - TODO error
-        let conn = Connection::open_in_memory().unwrap();
-        conn.execute(CREATE_FILES_TABLE_STMT, rusqlite::params![]).unwrap();
-        conn.execute(CREATE_IMAGES_TABLE_STMT, rusqlite::params![]).unwrap();
-        //conn.execute(CREATE_INDEX_STMT, rusqlite::params![]).unwrap();
+    pub fn new() -> Result<AlbumIndex, Box<dyn Error>> {
+        // initialize sqlite connection
+        let conn = Connection::open_in_memory()?;
+        conn.execute(CREATE_FILES_TABLE_STMT, rusqlite::params![])?;
+        conn.execute(CREATE_IMAGES_TABLE_STMT, rusqlite::params![])?;
+        //conn.execute(CREATE_INDEX_STMT, rusqlite::params![])?;
 
-        AlbumIndex {
+        Ok(AlbumIndex {
             conn: Mutex::new(conn),
             id: 1000,
-        }
+        })
     }
 
     pub fn list(&self, end_timestamp: &Option<i64>,
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
-            start_timestamp: &Option<i64>) -> Vec<(Image, Vec<StFile>)> {
+            start_timestamp: &Option<i64>)
+            -> Result<Vec<(Image, Vec<StFile>)>, Box<dyn Error>> {
         // lock the sqlite connection
         let conn = self.conn.lock().unwrap();
 
@@ -112,8 +113,8 @@ impl AlbumIndex {
         // append LIST_ORDER_BY_STMT to stmt_str
         stmt_str.push_str(LIST_ORDER_BY_STMT);
 
-        // execute query - TODO error
-        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        // execute query
+        let mut stmt = conn.prepare(&stmt_str)?;
         let images_iter = stmt.query_map(&params, |row| {
             let geohash: String = row.get(1)?;
             let platform: String = row.get(3)?;
@@ -129,7 +130,7 @@ impl AlbumIndex {
                     source, tile, row.get(7)?),
                 //(path.to_string_lossy().to_string(),
                 ("TODO - PATH".to_string(), row.get(2)?, subdataset)))
-        }).unwrap();
+        })?;
 
         // process images
         let mut images: Vec<(Image, Vec<StFile>)> = Vec::new();
@@ -147,7 +148,7 @@ impl AlbumIndex {
             }
         }
 
-        images
+        Ok(images)
     }
 
     pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,
@@ -158,13 +159,12 @@ impl AlbumIndex {
         let conn = self.conn.lock().unwrap();
 
         // check if tile, geohash combination is already registered
-        // execute query - TODO error
-        let mut stmt = conn.prepare(ID_SELECT_STMT)
-            .expect("prepare id select");
+        // execute query
+        let mut stmt = conn.prepare(ID_SELECT_STMT)?;
         let ids: Vec<i64> = stmt.query_map(
             rusqlite::params![geohash, tile],
             |row| { Ok(row.get(0)?) }
-        ).unwrap().map(|x| x.unwrap()).collect();
+        )?.map(|x| x.unwrap()).collect();
 
         let id = match ids.len() {
             1 => ids[0],
@@ -190,7 +190,8 @@ impl AlbumIndex {
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
-            start_timestamp: &Option<i64>) -> Vec<Extent> {
+            start_timestamp: &Option<i64>)
+            -> Result<Vec<Extent>, Box<dyn Error>> {
         // lock the sqlite connection
         let conn = self.conn.lock().unwrap();
  
@@ -233,14 +234,17 @@ impl AlbumIndex {
         // append SEARCH_GROUP_BY_STMT to stmt_str
         stmt_str.push_str(SEARCH_GROUP_BY_STMT);
 
-        // execute query - TODO error
-        let mut stmt = conn.prepare(&stmt_str).expect("prepare select");
+        // execute query
+        let mut stmt = conn.prepare(&stmt_str)?;
         let extent_iter = stmt.query_map(&params, |row| {
             Ok((row.get(0)?, row.get(1)?, row.get(2)?, 
                 row.get(3)?, row.get(4)?))
-        }).unwrap();
+        })?;
 
-        extent_iter.map(|x| x.unwrap()).collect()
+        let extents: Vec<Extent> =
+            extent_iter.map(|x| x.unwrap()).collect();
+
+        Ok(extents)
     }
 }
 

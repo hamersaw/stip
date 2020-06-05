@@ -1,4 +1,5 @@
 use chrono::prelude::{TimeZone, Utc};
+use failure::ResultExt;
 use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
@@ -36,18 +37,18 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    // split image with geohash precision - TODO error
+    // split image with geohash precision
     for dataset_split in st_image::prelude::split(&dataset,
-            4326, x_interval, y_interval).unwrap() {
+            4326, x_interval, y_interval).compat()? {
         let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
         let coordinate = Coordinate{x: win_max_x, y: win_max_y};
         let geohash = geohash::encode(coordinate, precision)?;
 
-        // perform dataset split - TODO error
-        let dataset = dataset_split.dataset().unwrap();
+        // perform dataset split
+        let dataset = dataset_split.dataset().compat()?;
 
-        // if image has 0.0 coverage -> don't process - TODO error
-        let pixel_coverage = st_image::coverage(&dataset).unwrap();
+        // if image has 0.0 coverage -> don't process
+        let pixel_coverage = st_image::coverage(&dataset).compat()?;
         if pixel_coverage == 0f64 {
             continue;
         }

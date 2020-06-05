@@ -1,4 +1,5 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 use num_derive::FromPrimitive;
@@ -194,7 +195,7 @@ impl Album {
         match &self.index {
             Some(index) => Ok(index.list(end_timestamp, geohash,
                 max_cloud_coverage, min_pixel_coverage, platform,
-                recurse, source, start_timestamp)),
+                recurse, source, start_timestamp)?),
             None => Err("unable to search on closed album".into()),
         }
     }
@@ -211,8 +212,9 @@ impl Album {
         }
     }
 
-    pub fn open(&mut self) {
-        self.index = Some(AlbumIndex::new());
+    pub fn open(&mut self) -> Result<(), Box<dyn Error>> {
+        self.index = Some(AlbumIndex::new()?);
+        Ok(())
     }
 
     pub fn search(&self, end_timestamp: &Option<i64>,
@@ -224,7 +226,7 @@ impl Album {
         match &self.index {
             Some(index) => Ok(index.search(end_timestamp, geohash,
                 max_cloud_coverage, min_pixel_coverage, platform,
-                recurse, source, start_timestamp)),
+                recurse, source, start_timestamp)?),
             None => Err("unable to search on closed album".into()),
         }
     }
@@ -242,7 +244,7 @@ impl Album {
         }
 
         // open GeoTiff driver
-        let driver = Driver::get("GTiff").unwrap();
+        let driver = Driver::get("GTiff").compat()?;
 
         // copy image to GeoTiff format
         let mut c_options = vec![
@@ -250,10 +252,9 @@ impl Album {
             std::ptr::null_mut()
         ];
 
-        // TODO error
         let path_str = path.to_string_lossy();
         let mut dataset_copy = dataset.create_copy(&driver,
-            &path_str, Some(c_options.as_mut_ptr())).unwrap();
+            &path_str, Some(c_options.as_mut_ptr())).compat()?;
 
         // clean up potential memory leaks
         unsafe {
@@ -269,20 +270,20 @@ impl Album {
         permissions.set_mode(0o644);
         std::fs::set_permissions(&path, permissions)?;
 
-        // set dataset metadata attributes - TODO error
+        // set dataset metadata attributes
         dataset_copy.set_metadata_item("GEOHASH",
-            geohash, "STIP").unwrap();
+            geohash, "STIP").compat()?;
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
-            &pixel_coverage.to_string(), "STIP").unwrap();
+            &pixel_coverage.to_string(), "STIP").compat()?;
         dataset_copy.set_metadata_item("PLATFORM",
-            platform, "STIP").unwrap();
+            platform, "STIP").compat()?;
         dataset_copy.set_metadata_item("SOURCE",
-            source, "STIP").unwrap();
+            source, "STIP").compat()?;
         dataset_copy.set_metadata_item("SUBDATASET",
-            &subdataset.to_string(), "STIP").unwrap();
-        dataset_copy.set_metadata_item("TILE", tile, "STIP").unwrap();
+            &subdataset.to_string(), "STIP").compat()?;
+        dataset_copy.set_metadata_item("TILE", tile, "STIP").compat()?;
         dataset_copy.set_metadata_item("TIMESTAMP",
-            &timestamp.to_string(), "STIP").unwrap();
+            &timestamp.to_string(), "STIP").compat()?;
 
         // if album is open -> load data
         if let Some(_) = self.index {

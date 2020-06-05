@@ -1,3 +1,4 @@
+use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::Dataset;
 
@@ -121,25 +122,28 @@ impl Task for OpenTask {
 
 fn process(album: &Arc<RwLock<Album>>, record: &PathBuf)
         -> Result<(), Box<dyn Error>> {
-    let dataset = Dataset::open(&record).unwrap();
+    let dataset = Dataset::open(&record).compat()?;
 
-    // TODO - error
     let cloud_coverage =
             match dataset.metadata_item("CLOUD_COVERAGE", "STIP") {
         Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
         None => None,
     };
-    let geohash = dataset.metadata_item("GEOHASH", "STIP").unwrap();
+    let geohash = dataset.metadata_item("GEOHASH", "STIP")
+        .ok_or("image geohash metadata not found")?;
     let path = record.to_string_lossy().to_string();
     let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
-        .unwrap().parse::<f64>()?;
-    let platform = dataset.metadata_item("PLATFORM", "STIP").unwrap();
-    let source = dataset.metadata_item("SOURCE", "STIP").unwrap();
+        .ok_or("image pixel coverage metadata not found")?.parse::<f64>()?;
+    let platform = dataset.metadata_item("PLATFORM", "STIP")
+        .ok_or("image platform metadata not found")?;
+    let source = dataset.metadata_item("SOURCE", "STIP")
+        .ok_or("image source metadata not found")?;
     let subdataset = dataset.metadata_item("SUBDATASET", "STIP")
-        .unwrap().parse::<u8>()?;
-    let tile = dataset.metadata_item("TILE", "STIP").unwrap();
+        .ok_or("image subdataset metadata not found")?.parse::<u8>()?;
+    let tile = dataset.metadata_item("TILE", "STIP")
+        .ok_or("image tile metadata not found")?;
     let timestamp = dataset.metadata_item("TIMESTAMP", "STIP")
-        .unwrap().parse::<i64>()?;
+        .ok_or("image timestamp metadata not found")?.parse::<i64>()?;
 
     let mut album = album.write().unwrap();
     album.load(cloud_coverage, &geohash, pixel_coverage,

@@ -224,7 +224,10 @@ impl AlbumManagement for AlbumManagementImpl {
         // open album
         {
             let mut album = album.write().unwrap();
-            album.open();
+            if let Err(e) = album.open() {
+                return Err(Status::new(Code::Unknown,
+                    format!("failed to open album: {}", e)))
+            }
         }
 
         // initialize task

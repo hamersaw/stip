@@ -199,7 +199,10 @@ impl DataManagement for DataManagementImpl {
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);
         tokio::spawn(async move {
             for image in images {
-                tx.send(Ok(image)).await.unwrap(); // TODO - error
+                if let Err(e) = tx.send(Ok(image)).await {
+                    warn!("failed to send image list: {}", e);
+                    break;
+                }
             }
         });
 
@@ -232,8 +235,8 @@ impl DataManagement for DataManagementImpl {
             let mut task_manager = self.task_manager.write().unwrap();
             match task_manager.execute(task, request.task_id) {
                 Ok(task_id) => task_id,
-                Err(e) => return Err(Status::new(Code::Unknown,
-                    format!("failed to start LoadEarthExplorerTask: {}", e))),
+                Err(e) => return Err(Status::new(Code::Unknown, format!(
+                    "failed to start LoadEarthExplorerTask: {}", e))),
             }
         };
 
@@ -282,7 +285,10 @@ impl DataManagement for DataManagementImpl {
         let (mut tx, rx) = tokio::sync::mpsc::channel(4);
         tokio::spawn(async move {
             for extent in extents {
-                tx.send(Ok(extent)).await.unwrap(); // TODO - error
+                if let Err(e) = tx.send(Ok(extent)).await {
+                    warn!("failed to send extent list: {}", e);
+                    break;
+                }
             }
         });
 

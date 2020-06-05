@@ -1,4 +1,5 @@
 use chrono::prelude::{DateTime, Utc};
+use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 use gdal::raster::types::GdalType;
@@ -16,8 +17,7 @@ use std::sync::{Arc, RwLock};
 pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
         precision: usize, record: &PathBuf, x_interval: f64,
         y_interval: f64) -> Result<(), Box<dyn Error>> {
-    // TODO - error
-    let dataset = Dataset::open(&record).unwrap();
+    let dataset = Dataset::open(&record).compat()?;
  
     // parse metadata
     let tile_path = record.with_extension("");
@@ -72,8 +72,8 @@ fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
         dht: &Arc<RwLock<Dht>>, subdataset: u8, tile: &str,
         timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geohash, dataset) in datasets.iter() {
-        // if image has 0.0 coverage -> don't process - TODO error
-        let pixel_coverage = st_image::coverage(&dataset).unwrap();
+        // if image has 0.0 coverage -> don't process
+        let pixel_coverage = st_image::coverage(&dataset).compat()?;
         if pixel_coverage == 0f64 {
             continue;
         }
@@ -109,16 +109,16 @@ fn split_subdatasets<T: GdalType>(subdatasets: Vec<(&str, &str)>,
         let path = PathBuf::from(name);
         let dataset = Dataset::open(&path).expect("subdataset open");
 
-        // TODO - error
+        // split dataset
         for dataset_split in st_image::prelude::split(&dataset,
-                4326, x_interval, y_interval).unwrap() {
+                4326, x_interval, y_interval).compat()? {
             let (_, win_max_x, _, win_max_y) =
                 dataset_split.coordinates();
             let coordinate = Coordinate{x: win_max_x, y: win_max_y};
             let geohash = geohash::encode(coordinate, precision)?;
 
-            // perform dataset split - TODO error
-            let dataset = dataset_split.dataset().unwrap();
+            // perform dataset split
+            let dataset = dataset_split.dataset().compat()?;
             let (x, y) = dataset.size();
 
             // TODO - tmp print
@@ -126,26 +126,24 @@ fn split_subdatasets<T: GdalType>(subdatasets: Vec<(&str, &str)>,
 
             // if geohash dataset does not exist -> create it
             if !datasets.contains_key(&geohash) {
-                // TODO - error
                 let dst_dataset = driver.create_with_band_type::<T>(
                     "", x as isize, y as isize,
-                    subdatasets.len() as isize).unwrap();
+                    subdatasets.len() as isize).compat()?;
 
-                // TODO - error
                 dst_dataset.set_geo_transform(
-                    &dataset.geo_transform().unwrap()).unwrap();
+                    &dataset.geo_transform().compat()?).compat()?;
                 dst_dataset.set_projection(
-                    &dataset.projection()).unwrap();
+                    &dataset.projection()).compat()?;
 
                 datasets.insert(geohash.clone(), dst_dataset);
             }
 
             let dst_dataset = datasets.get(&geohash).unwrap();
 
-            // copy image raster - TODO error
+            // copy image raster
             //println!("  COPYING RASTER: {:?}", dataset.band_type(1)); 
             st_image::prelude::copy_raster(&dataset, 1, (0, 0), (x, y),
-                dst_dataset, (i + 1) as isize, (0, 0), (x, y)).unwrap();
+                dst_dataset, (i + 1) as isize, (0, 0), (x, y)).compat()?;
         }
     }
 
