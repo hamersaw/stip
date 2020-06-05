@@ -1,7 +1,7 @@
 use tonic::{Code, Status};
 
 pub mod album;
-pub mod data;
+pub mod image;
 pub mod node;
 pub mod task;
 

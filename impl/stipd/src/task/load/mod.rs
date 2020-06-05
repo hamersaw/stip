@@ -12,7 +12,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 #[derive(Clone)]
-pub enum LoadFormat {
+pub enum ImageFormat {
     MODIS,
     NAIP,
     Sentinel,
@@ -21,21 +21,21 @@ pub enum LoadFormat {
 pub struct LoadEarthExplorerTask {
     album: String,
     dht: Arc<RwLock<Dht>>,
+    format: ImageFormat,
     glob: String,
-    load_format: LoadFormat,
     precision: usize,
     thread_count: u8,
 }
 
 impl LoadEarthExplorerTask {
-    pub fn new(album: String, dht: Arc<RwLock<Dht>>, glob: String,
-            load_format: LoadFormat, precision: usize,
+    pub fn new(album: String, dht: Arc<RwLock<Dht>>,
+            format: ImageFormat, glob: String, precision: usize,
             thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
             album: album,
             dht: dht,
+            format: format,
             glob: glob,
-            load_format: load_format,
             precision: precision,
             thread_count: thread_count,
         }
@@ -64,7 +64,7 @@ impl Task for LoadEarthExplorerTask {
             let dht_clone = self.dht.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
-            let load_format = self.load_format.clone();
+            let format = self.format.clone();
             let precision = self.precision.clone();
             let receiver_clone = receiver.clone();
 
@@ -82,14 +82,14 @@ impl Task for LoadEarthExplorerTask {
                     };
 
                     // process record
-                    let result = match load_format {
-                        LoadFormat::MODIS => modis::process(
+                    let result = match format {
+                        ImageFormat::MODIS => modis::process(
                             &album_clone, &dht_clone, precision,
                             &record, x_interval, y_interval),
-                        LoadFormat::NAIP => naip::process(
+                        ImageFormat::NAIP => naip::process(
                             &album_clone, &dht_clone, precision,
                             &record, x_interval, y_interval),
-                        LoadFormat::Sentinel => sentinel_2::process(
+                        ImageFormat::Sentinel => sentinel_2::process(
                             &album_clone, &dht_clone, precision,
                             &record, x_interval, y_interval),
                     };

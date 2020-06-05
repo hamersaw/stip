@@ -54,6 +54,7 @@ impl AlbumManagement for AlbumManagementImpl {
         let mut close_replies = HashMap::new();
         let mut open_replies = HashMap::new();
 
+        let mut task_id = None;
         for (node_id, addr) in dht_nodes {
             // initialize grpc client
             let mut client = match AlbumManagementClient::connect(
@@ -86,14 +87,24 @@ impl AlbumManagement for AlbumManagementImpl {
                         reply.get_ref().to_owned());
                 },
                 AlbumBroadcastType::AlbumOpen => {
-                    let reply = match client.open(request
-                            .open_request.clone().unwrap()).await {
+                    // compile new AlbumOpenRequest
+                    let mut open_request =
+                        request.open_request.clone().unwrap();
+                    if let Some(task_id) = task_id {
+                        open_request.task_id = Some(task_id);
+                    }
+
+                    // submit request
+                    let reply = match client.open(open_request).await {
                         Ok(reply) => reply,
                         Err(e) => return Err(Status::new(Code::Unknown,
                             format!("open broadcast failed: {}", e))),
                     };
                     open_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
+
+                    // process reply
+                    task_id = Some(reply.get_ref().task_id);
                 },
             };
         }

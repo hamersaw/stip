@@ -2,7 +2,7 @@
 extern crate log;
 
 use comm::Server as CommServer;
-use protobuf::{DataManagementServer, AlbumManagementServer, NodeManagementServer, TaskManagementServer};
+use protobuf::{ImageManagementServer, AlbumManagementServer, NodeManagementServer, TaskManagementServer};
 use structopt::StructOpt;
 use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
 use tonic::transport::Server;
@@ -15,7 +15,7 @@ mod task;
 use task::TaskManager;
 mod rpc;
 use rpc::album::AlbumManagementImpl;
-use rpc::data::DataManagementImpl;
+use rpc::image::ImageManagementImpl;
 use rpc::node::NodeManagementImpl;
 use rpc::task::TaskManagementImpl;
 mod transfer;
@@ -143,13 +143,13 @@ fn main() {
 
     let album_management = AlbumManagementImpl::new(
         album_manager.clone(), dht.clone(), task_manager.clone());
-    let data_management = DataManagementImpl::new(
+    let image_management = ImageManagementImpl::new(
         album_manager, dht.clone(), task_manager.clone());
     let node_management = NodeManagementImpl::new(dht.clone());
     let task_management = TaskManagementImpl::new(dht, task_manager);
 
     if let Err(e) = start_rpc_server(addr, album_management,
-            data_management, node_management, task_management) {
+            image_management, node_management, task_management) {
         panic!("failed to start rpc server: {}", e);
     }
 
@@ -160,13 +160,13 @@ fn main() {
 #[tokio::main]
 async fn start_rpc_server(addr: SocketAddr, 
         album_management: AlbumManagementImpl,
-        data_management: DataManagementImpl,
+        image_management: ImageManagementImpl,
         node_management: NodeManagementImpl,
         task_management: TaskManagementImpl)
         -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(AlbumManagementServer::new(album_management))
-        .add_service(DataManagementServer::new(data_management))
+        .add_service(ImageManagementServer::new(image_management))
         .add_service(NodeManagementServer::new(node_management))
         .add_service(TaskManagementServer::new(task_management))
         .serve(addr).await?;

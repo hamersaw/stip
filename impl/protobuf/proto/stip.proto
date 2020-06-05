@@ -90,15 +90,15 @@ message AlbumOpenReply {
 }
 
 /*
- * DataManagement Service
+ * ImageManagement Service
  */
-service DataManagement {
-    rpc Broadcast (DataBroadcastRequest) returns (DataBroadcastReply);
-    rpc Fill (DataFillRequest) returns (DataFillReply);
-    rpc List (DataListRequest) returns (stream Image);
-    rpc Load (DataLoadRequest) returns (DataLoadReply);
-    rpc Search (DataSearchRequest) returns (stream Extent);
-    rpc Split (DataSplitRequest) returns (DataSplitReply);
+service ImageManagement {
+    rpc Broadcast (ImageBroadcastRequest) returns (ImageBroadcastReply);
+    rpc Fill (ImageFillRequest) returns (ImageFillReply);
+    rpc List (ImageListRequest) returns (stream Image);
+    rpc Store (ImageStoreRequest) returns (ImageStoreReply);
+    rpc Search (ImageSearchRequest) returns (stream Extent);
+    rpc Split (ImageSplitRequest) returns (ImageSplitReply);
 }
 
 message Filter {
@@ -113,32 +113,32 @@ message Filter {
 }
 
 // Broadcast Messages
-enum DataBroadcastType {
+enum ImageBroadcastType {
     FILL = 0;
     SPLIT = 1;
 }
 
-message DataBroadcastRequest {
-    required DataBroadcastType messageType = 1;    
-    optional DataFillRequest fillRequest = 2;
-    optional DataSplitRequest splitRequest = 3;
+message ImageBroadcastRequest {
+    required ImageBroadcastType messageType = 1;    
+    optional ImageFillRequest fillRequest = 2;
+    optional ImageSplitRequest splitRequest = 3;
 }
 
-message DataBroadcastReply {
-    required DataBroadcastType messageType = 1;    
-    map<uint32, DataFillReply> fillReplies = 2;
-    map<uint32, DataSplitReply> splitReplies = 3;
+message ImageBroadcastReply {
+    required ImageBroadcastType messageType = 1;    
+    map<uint32, ImageFillReply> fillReplies = 2;
+    map<uint32, ImageSplitReply> splitReplies = 3;
 }
 
 // Fill Messages
-message DataFillRequest {
+message ImageFillRequest {
     required Filter filter = 1;
     optional uint64 taskId = 2;
     required uint32 threadCount = 3;
     required int64 windowSeconds = 4;
 }
 
-message DataFillReply {
+message ImageFillReply {
     required uint64 taskId = 1;
 }
 
@@ -158,28 +158,28 @@ message File {
     required int32 subdataset = 3;
 }
 
-message DataListRequest {
+message ImageListRequest {
     required string album = 1;
     required Filter filter = 2; 
 }
 
 // Load Messages
-enum LoadFormat {
+enum ImageFormat {
     MODIS = 0;
     NAIP = 1;
     SENTINEL = 2;
 }
 
-message DataLoadRequest {
+message ImageStoreRequest {
     required string album = 1;
-    required string glob = 2;
-    required LoadFormat loadFormat = 3;
+    required ImageFormat format = 2;
+    required string glob = 3;
     required uint32 precision = 4;
     optional uint64 taskId = 5;
     required uint32 threadCount = 6;
 }
 
-message DataLoadReply {
+message ImageStoreReply {
     required uint64 task_id = 1;
 }
 
@@ -192,13 +192,13 @@ message Extent {
     required string source = 5;
 }
 
-message DataSearchRequest {
+message ImageSearchRequest {
     required string album = 1;
     required Filter filter = 2; 
 }
 
 // Split Messages
-message DataSplitRequest {
+message ImageSplitRequest {
     required string album = 1;
     required Filter filter = 2; 
     optional string geohashBound = 3;
@@ -207,7 +207,7 @@ message DataSplitRequest {
     required uint32 threadCount = 6;
 }
 
-message DataSplitReply {
+message ImageSplitReply {
     required uint64 taskId = 1;
 }
 

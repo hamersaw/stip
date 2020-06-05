@@ -7,9 +7,8 @@ use std::{error, io};
 pub fn process(matches: &ArgMatches, cluster_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match cluster_matches.subcommand() {
-        ("list", Some(list_matches)) => {
-            list(&matches, &cluster_matches, &list_matches)
-        },
+        ("list", Some(list_matches)) =>
+            list(&matches, &cluster_matches, &list_matches),
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
     };

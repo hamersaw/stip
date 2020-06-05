@@ -1,4 +1,4 @@
-use protobuf::{self, DataBroadcastReply, DataBroadcastRequest, DataBroadcastType, DataFillReply, DataFillRequest, DataListRequest, DataManagement, DataManagementClient, DataLoadReply, DataLoadRequest, DataSearchRequest, DataSplitReply, DataSplitRequest, Extent, File, Image, LoadFormat as ProtoLoadFormat};
+use protobuf::{self, ImageBroadcastReply, ImageBroadcastRequest, ImageBroadcastType, ImageFillReply, ImageFillRequest, ImageListRequest, ImageManagement, ImageManagementClient, ImageStoreReply, ImageStoreRequest, ImageSearchRequest, ImageSplitReply, ImageSplitRequest, Extent, File, Image, ImageFormat as ProtoImageFormat};
 use swarm::prelude::Dht;
 use tokio::sync::mpsc::Receiver;
 use tonic::{Code, Request, Response, Status};
@@ -7,23 +7,23 @@ use crate::album::AlbumManager;
 use crate::image::ImageManager;
 use crate::task::TaskManager;
 use crate::task::fill::FillTask;
-use crate::task::load::{LoadEarthExplorerTask, LoadFormat};
+use crate::task::load::{LoadEarthExplorerTask, ImageFormat};
 use crate::task::split::SplitTask;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-pub struct DataManagementImpl {
+pub struct ImageManagementImpl {
     album_manager: Arc<RwLock<AlbumManager>>,
     dht: Arc<RwLock<Dht>>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
-impl DataManagementImpl {
+impl ImageManagementImpl {
     pub fn new(album_manager: Arc<RwLock<AlbumManager>>,
             dht: Arc<RwLock<Dht>>,
-            task_manager: Arc<RwLock<TaskManager>>) -> DataManagementImpl {
-        DataManagementImpl {
+            task_manager: Arc<RwLock<TaskManager>>) -> ImageManagementImpl {
+        ImageManagementImpl {
             album_manager: album_manager,
             dht: dht,
             task_manager: task_manager,
@@ -32,10 +32,10 @@ impl DataManagementImpl {
 }
 
 #[tonic::async_trait]
-impl DataManagement for DataManagementImpl {
-    async fn broadcast(&self, request: Request<DataBroadcastRequest>)
-            -> Result<Response<DataBroadcastReply>, Status> {
-        trace!("DataBroadcastRequest: {:?}", request);
+impl ImageManagement for ImageManagementImpl {
+    async fn broadcast(&self, request: Request<ImageBroadcastRequest>)
+            -> Result<Response<ImageBroadcastReply>, Status> {
+        trace!("ImageBroadcastRequest: {:?}", request);
         let request = request.get_ref();
 
         // copy valid dht nodes
@@ -59,7 +59,7 @@ impl DataManagement for DataManagementImpl {
         let mut task_id = None;
         for (node_id, addr) in dht_nodes {
             // initialize grpc client
-            let mut client = match DataManagementClient::connect(
+            let mut client = match ImageManagementClient::connect(
                     format!("http://{}", addr)).await {
                 Ok(client) => client,
                 Err(e) => return Err(Status::new(Code::Unavailable,
@@ -67,8 +67,8 @@ impl DataManagement for DataManagementImpl {
             };
 
             // execute message at dht node
-            match DataBroadcastType::from_i32(request.message_type).unwrap() {
-                DataBroadcastType::Fill => {
+            match ImageBroadcastType::from_i32(request.message_type).unwrap() {
+                ImageBroadcastType::Fill => {
                     // compile new FillRequest
                     let mut fill_request =
                         request.fill_request.clone().unwrap();
@@ -88,7 +88,7 @@ impl DataManagement for DataManagementImpl {
                     // process reply
                     task_id = Some(reply.get_ref().task_id);
                 },
-                DataBroadcastType::Split => {
+                ImageBroadcastType::Split => {
                     // compile new SplitRequest
                     let mut split_request =
                         request.split_request.clone().unwrap();
@@ -112,7 +112,7 @@ impl DataManagement for DataManagementImpl {
         }
 
         // initialize reply
-        let reply = DataBroadcastReply {
+        let reply = ImageBroadcastReply {
             message_type: request.message_type,
             fill_replies: fill_replies,
             split_replies: split_replies,
@@ -121,9 +121,9 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(reply))
     }
 
-    async fn fill(&self, request: Request<DataFillRequest>)
-            -> Result<Response<DataFillReply>, Status> {
-        trace!("DataFillRequest: {:?}", request);
+    async fn fill(&self, request: Request<ImageFillRequest>)
+            -> Result<Response<ImageFillReply>, Status> {
+        trace!("ImageFillRequest: {:?}", request);
         let request = request.get_ref();
 
         // initialize task
@@ -141,7 +141,7 @@ impl DataManagement for DataManagementImpl {
         let task_id = 0; // TODO - fix fill
 
         // initialize reply
-        let reply = DataFillReply {
+        let reply = ImageFillReply {
             task_id: task_id,
         };
 
@@ -149,9 +149,9 @@ impl DataManagement for DataManagementImpl {
     }
 
     type ListStream = Receiver<Result<Image, Status>>;
-    async fn list(&self, request: Request<DataListRequest>)
+    async fn list(&self, request: Request<ImageListRequest>)
             -> Result<Response<Self::ListStream>, Status> {
-        trace!("DataListRequest: {:?}", request);
+        trace!("ImageListRequest: {:?}", request);
         let request = request.get_ref();
         let filter = &request.filter;
 
@@ -209,49 +209,10 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(rx))
     }
 
-    async fn load(&self, request: Request<DataLoadRequest>)
-            -> Result<Response<DataLoadReply>, Status> {
-        trace!("DataLoadRequest: {:?}", request);
-        let request = request.get_ref();
- 
-        // ensure album exists
-        let _ = crate::rpc::assert_album_exists(
-            &self.album_manager, &request.album)?;
-
-        // initialize task
-        let load_format = match ProtoLoadFormat
-                ::from_i32(request.load_format).unwrap() {
-            ProtoLoadFormat::Modis => LoadFormat::MODIS,
-            ProtoLoadFormat::Naip => LoadFormat::NAIP,
-            ProtoLoadFormat::Sentinel => LoadFormat::Sentinel,
-        };
-
-        let task = LoadEarthExplorerTask::new(request.album.clone(),
-            self.dht.clone(), request.glob.clone(), load_format,
-            request.precision as usize, request.thread_count as u8);
-
-        // execute task using task manager
-        let task_id = {
-            let mut task_manager = self.task_manager.write().unwrap();
-            match task_manager.execute(task, request.task_id) {
-                Ok(task_id) => task_id,
-                Err(e) => return Err(Status::new(Code::Unknown, format!(
-                    "failed to start LoadEarthExplorerTask: {}", e))),
-            }
-        };
-
-        // initialize reply
-        let reply = DataLoadReply {
-            task_id: task_id,
-        };
-
-        Ok(Response::new(reply))
-    }
-
     type SearchStream = Receiver<Result<Extent, Status>>;
-    async fn search(&self, request: Request<DataSearchRequest>)
+    async fn search(&self, request: Request<ImageSearchRequest>)
             -> Result<Response<Self::SearchStream>, Status> {
-        trace!("DataSearchRequest: {:?}", request);
+        trace!("ImageSearchRequest: {:?}", request);
         let request = request.get_ref();
         let filter = &request.filter;
 
@@ -295,8 +256,8 @@ impl DataManagement for DataManagementImpl {
         Ok(Response::new(rx))
     }
 
-    async fn split(&self, request: Request<DataSplitRequest>)
-            -> Result<Response<DataSplitReply>, Status> {
+    async fn split(&self, request: Request<ImageSplitRequest>)
+            -> Result<Response<ImageSplitReply>, Status> {
         trace!("SplitRequest: {:?}", request);
         let request = request.get_ref();
         let filter = &request.filter;
@@ -317,7 +278,46 @@ impl DataManagement for DataManagementImpl {
         let task_id = 0; // TODO - fix split
  
         // initialize reply
-        let reply = DataSplitReply {
+        let reply = ImageSplitReply {
+            task_id: task_id,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn store(&self, request: Request<ImageStoreRequest>)
+            -> Result<Response<ImageStoreReply>, Status> {
+        trace!("ImageStoreRequest: {:?}", request);
+        let request = request.get_ref();
+ 
+        // ensure album exists
+        let _ = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.album)?;
+
+        // initialize task
+        let format = match ProtoImageFormat
+                ::from_i32(request.format).unwrap() {
+            ProtoImageFormat::Modis => ImageFormat::MODIS,
+            ProtoImageFormat::Naip => ImageFormat::NAIP,
+            ProtoImageFormat::Sentinel => ImageFormat::Sentinel,
+        };
+
+        let task = LoadEarthExplorerTask::new(request.album.clone(),
+            self.dht.clone(), format, request.glob.clone(),
+            request.precision as usize, request.thread_count as u8);
+
+        // execute task using task manager
+        let task_id = {
+            let mut task_manager = self.task_manager.write().unwrap();
+            match task_manager.execute(task, request.task_id) {
+                Ok(task_id) => task_id,
+                Err(e) => return Err(Status::new(Code::Unknown, format!(
+                    "failed to start LoadEarthExplorerTask: {}", e))),
+            }
+        };
+
+        // initialize reply
+        let reply = ImageStoreReply {
             task_id: task_id,
         };
 

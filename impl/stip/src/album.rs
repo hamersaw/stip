@@ -161,5 +161,11 @@ async fn open(matches: &ArgMatches, _: &ArgMatches,
     let reply = client.broadcast(request).await?;
     let reply = reply.get_ref();
 
+    // print information
+    for (node_id, open_reply) in reply.open_replies.iter() {
+        println!("task starting on node '{}' with id '{}'",
+            node_id, open_reply.task_id);
+    }
+
     Ok(())
 }

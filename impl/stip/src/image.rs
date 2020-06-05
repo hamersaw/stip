@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{NodeManagementClient, DataBroadcastRequest, DataBroadcastType, DataFillRequest, DataListRequest, Extent, Filter, LoadFormat, DataLoadRequest, DataManagementClient, DataSearchRequest, DataSplitRequest, NodeListRequest};
+use protobuf::{NodeManagementClient, ImageBroadcastRequest, ImageBroadcastType, ImageFillRequest, ImageListRequest, Extent, Filter, ImageFormat, ImageStoreRequest, ImageManagementClient, ImageSearchRequest, ImageSplitRequest, NodeListRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -8,21 +8,16 @@ use std::collections::BTreeMap;
 pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match data_matches.subcommand() {
-        ("fill", Some(fill_matches)) => {
-            fill(&matches, &data_matches, &fill_matches)
-        },
-        ("list", Some(list_matches)) => {
-            list(&matches, &data_matches, &list_matches)
-        },
-        ("load", Some(load_matches)) => {
-            load(&matches, &data_matches, &load_matches)
-        },
-        ("search", Some(search_matches)) => {
-            search(&matches, &data_matches, &search_matches)
-        },
-        ("split", Some(split_matches)) => {
-            split(&matches, &data_matches, &split_matches)
-        },
+        ("fill", Some(fill_matches)) =>
+            fill(&matches, &data_matches, &fill_matches),
+        ("list", Some(list_matches)) =>
+            list(&matches, &data_matches, &list_matches),
+        ("search", Some(search_matches)) =>
+            search(&matches, &data_matches, &search_matches),
+        ("split", Some(split_matches)) =>
+            split(&matches, &data_matches, &split_matches),
+        ("store", Some(store_matches)) =>
+            store(&matches, &data_matches, &store_matches),
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
     };
@@ -38,12 +33,12 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = ImageManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // TODO - fix fill
-    /*// initialize DataFillRequest
-    let fill_request = DataFillRequest {
+    /*// initialize ImageFillRequest
+    let fill_request = ImageFillRequest {
         band: crate::string_opt(fill_matches.value_of("band")),
         end_timestamp: crate::i64_opt(
             fill_matches.value_of("end_timestamp"))?,
@@ -60,8 +55,8 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     };
  
     // initialize request
-    let request = Request::new(DataBroadcastRequest {
-        message_type: DataBroadcastType::Fill as i32,
+    let request = Request::new(ImageBroadcastRequest {
+        message_type: ImageBroadcastType::Fill as i32,
         fill_request: Some(fill_request),
         split_request: None,
     });
@@ -111,8 +106,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
             list_matches.value_of("start_timestamp"))?,
     };
 
-    // initialize DataListRequest
-    let request = DataListRequest {
+    // initialize ImageListRequest
+    let request = ImageListRequest {
         album: list_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
     };
@@ -123,8 +118,8 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         "pixel_coverage", "cloud_coverage", "subdataset", "path");
     println!("------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for node in node_list_reply.nodes.iter() {
-        // initialize DataManagement grpc client
-        let mut client = DataManagementClient::connect(
+        // initialize ImageManagement grpc client
+        let mut client = ImageManagementClient::connect(
             format!("http://{}", node.rpc_addr)).await?;
 
         // iterate over image stream
@@ -145,36 +140,36 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
 }
 
 #[tokio::main]
-async fn load(matches: &ArgMatches, _: &ArgMatches,
-        load_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+async fn store(matches: &ArgMatches, _: &ArgMatches,
+        store_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = ImageManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // parse load format
-    let load_format = match load_matches.value_of("LOAD_FORMAT") {
-        Some("modis") => LoadFormat::Modis as i32,
-        Some("naip") => LoadFormat::Naip as i32,
-        Some("sentinel") => LoadFormat::Sentinel as i32,
+    let format = match store_matches.value_of("FORMAT") {
+        Some("modis") => ImageFormat::Modis as i32,
+        Some("naip") => ImageFormat::Naip as i32,
+        Some("sentinel") => ImageFormat::Sentinel as i32,
         _ => unimplemented!(),
     };
 
-    // initialize DataLoadRequest
-    let request = Request::new(DataLoadRequest {
-        album: load_matches.value_of("ALBUM").unwrap().to_string(),
-        glob: load_matches.value_of("GLOB").unwrap().to_string(),
-        load_format: load_format,
-        precision: load_matches.value_of("precision")
+    // initialize ImageStoreRequest
+    let request = Request::new(ImageStoreRequest {
+        album: store_matches.value_of("ALBUM").unwrap().to_string(),
+        format: format,
+        glob: store_matches.value_of("GLOB").unwrap().to_string(),
+        precision: store_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
-        task_id: crate::u64_opt(load_matches.value_of("task_id"))?,
-        thread_count: load_matches.value_of("thread_count")
+        task_id: crate::u64_opt(store_matches.value_of("task_id"))?,
+        thread_count: store_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
     });
 
     // retrieve reply
-    let reply = client.load(request).await?;
+    let reply = client.store(request).await?;
     let reply = reply.get_ref();
 
     // print information
@@ -215,8 +210,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
             search_matches.value_of("start_timestamp"))?,
     };
 
-    // initialize DataSearchRequest
-    let request = DataSearchRequest {
+    // initialize ImageSearchRequest
+    let request = ImageSearchRequest {
         album: search_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
     };
@@ -224,8 +219,8 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     // TODO - maintains streams vector
     let mut clients = Vec::new();
     for node in node_list_reply.nodes.iter() {
-        // initialize DataManagement grpc client
-        let client = DataManagementClient::connect(
+        // initialize ImageManagement grpc client
+        let client = ImageManagementClient::connect(
             format!("http://{}", node.rpc_addr)).await?;
 
         clients.push(client);
@@ -290,7 +285,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
-    let mut client = DataManagementClient::connect(
+    let mut client = ImageManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
     // initialize Filter
@@ -307,8 +302,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
             split_matches.value_of("start_timestamp"))?,
     };
 
-    // initialize DataSplitRequest
-    let split_request = DataSplitRequest {
+    // initialize ImageSplitRequest
+    let split_request = ImageSplitRequest {
         album: split_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
         geohash_bound: crate::string_opt(
@@ -321,8 +316,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     };
 
     // initialize request
-    let request = Request::new(DataBroadcastRequest {
-        message_type: DataBroadcastType::Split as i32,
+    let request = Request::new(ImageBroadcastRequest {
+        message_type: ImageBroadcastType::Split as i32,
         fill_request: None,
         split_request: Some(split_request),
     });

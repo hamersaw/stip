@@ -8,9 +8,8 @@ use std::collections::HashMap;
 pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match task_matches.subcommand() {
-        ("list", Some(list_matches)) => {
-            list(&matches, &task_matches, &list_matches)
-        },
+        ("list", Some(list_matches)) =>
+            list(&matches, &task_matches, &list_matches),
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
             format!("unknown subcommand '{}'", cmd)))),
     };

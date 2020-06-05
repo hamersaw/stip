@@ -3,7 +3,7 @@ extern crate clap;
 use clap::App;
 
 mod album;
-mod data;
+mod image;
 mod node;
 mod task;
 
@@ -17,8 +17,8 @@ fn main() {
     match matches.subcommand() {
         ("album", Some(album_matches)) =>
             album::process(&matches, &album_matches),
-        ("data", Some(data_matches)) =>
-            data::process(&matches, &data_matches),
+        ("image", Some(image_matches)) =>
+            image::process(&matches, &image_matches),
         ("node", Some(node_matches)) =>
             node::process(&matches, &node_matches),
         ("task", Some(task_matches)) =>

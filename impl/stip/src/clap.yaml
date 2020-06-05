@@ -64,11 +64,11 @@ subcommands:
                         long: threads
                         short: t
                         takes_value: true
-    - data:
-        about: manage application data
+    - image:
+        about: manage application images
         subcommands:
             - fill:
-                about: initialize fill data task
+                about: initialize image fill task
                 args:
                     - end_timestamp:
                         help: end timestamp for temporal range
@@ -156,42 +156,6 @@ subcommands:
                         help: start timestamp for temporal range
                         long: start_timestamp
                         short: a
-                        takes_value: true
-            - load:
-                about: initialize load data task
-                args:
-                    - ALBUM:
-                        index: 1
-                        required: true
-                        help: stip album
-                    - GLOB:
-                        index: 2
-                        required: true
-                        help: images location glob
-                    - LOAD_FORMAT:
-                        index: 3
-                        required: true
-                        possible_values: 
-                            - modis
-                            - naip
-                            - sentinel
-                        help: dataset load format
-                    - precision:
-                        help: geohash precision
-                        long: precision
-                        required: true
-                        short: l
-                        takes_value: true
-                    - task_id:
-                        help: manually set task identifier
-                        long: task_id
-                        short: d
-                        takes_value: true
-                    - thread_count:
-                        default_value: "4"
-                        help: thread count for processing task
-                        long: threads
-                        short: t
                         takes_value: true
             - search:
                 about: search for images
@@ -288,6 +252,42 @@ subcommands:
                         takes_value: true
                     - thread_count:
                         default_value: "1"
+                        help: thread count for processing task
+                        long: threads
+                        short: t
+                        takes_value: true
+            - store:
+                about: initialize image store task
+                args:
+                    - ALBUM:
+                        index: 1
+                        required: true
+                        help: stip album
+                    - GLOB:
+                        index: 2
+                        required: true
+                        help: images location glob
+                    - FORMAT:
+                        index: 3
+                        required: true
+                        possible_values: 
+                            - modis
+                            - naip
+                            - sentinel
+                        help: dataset image format
+                    - precision:
+                        help: geohash precision
+                        long: precision
+                        required: true
+                        short: l
+                        takes_value: true
+                    - task_id:
+                        help: manually set task identifier
+                        long: task_id
+                        short: d
+                        takes_value: true
+                    - thread_count:
+                        default_value: "4"
                         help: thread count for processing task
                         long: threads
                         short: t

@@ -108,19 +108,17 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip data fill -p NAIP
 
 ## TODO
-- __change 'data' to 'image' on commands__
-- **fix conversion of GdalError to Box<dyn Error>**
 - **fix pixel coverage filter on 'data search'**
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
+- 'task clear' to clear tracked tasks
 #### ALBUMS
 - documentation
 - cloud coverage computation on sentinel-2 data
-- 'album open' shared task id
-    - write back task id to client
-- fix all kinds of unwraps - this is embarassing code
-- populate 'path' on 'data list'
 - data split - fix v4.0
 - data fill - fix v4.0
-- data load -> consult album.geocode to determine split parameters
+- data load
+    - consult album.geocode to determine split parameters
+    - album.dht_key_length for distribution
+- **populate 'path' on 'data list'**
