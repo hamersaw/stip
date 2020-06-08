@@ -151,11 +151,6 @@ impl AlbumManagement for AlbumManagementImpl {
             &self.album_manager, &request.id)?;
 
         // parse arguments
-        let dht_key_length = match request.dht_key_length {
-            Some(value) => Some(value as u8),
-            None => None,
-        };
-
         let geocode = match protobuf::Geocode
                 ::from_i32(request.geocode).unwrap() {
             protobuf::Geocode::Geohash => Geocode::Geohash,
@@ -166,7 +161,7 @@ impl AlbumManagement for AlbumManagementImpl {
         {
             let mut album_manager = self.album_manager.write().unwrap();
             if let Err(e) = album_manager.create(
-                    dht_key_length, geocode, &request.id) {
+                    request.dht_key_length as i8, geocode, &request.id) {
                 return Err(Status::new(Code::Unknown,
                     format!("failed to create album: {}", e)));
             }
@@ -190,11 +185,6 @@ impl AlbumManagement for AlbumManagementImpl {
                 let album = album.read().unwrap();
 
                 // parse album metadata
-                let dht_key_length = match album.get_dht_key_length() {
-                    Some(value) => Some(value as u32),
-                    None => None,
-                };
-
                 let geocode = match album.get_geocode() {
                     Geocode::Geohash => protobuf::Geocode::Geohash,
                     Geocode::QuadTile => protobuf::Geocode::Quadtile,
@@ -207,7 +197,7 @@ impl AlbumManagement for AlbumManagementImpl {
 
                 // add Album protobuf
                 albums.push(Album {
-                    dht_key_length: dht_key_length,
+                    dht_key_length: album.get_dht_key_length() as i32,
                     geocode: geocode as i32,
                     id: id.to_string(),
                     status: status as i32,

@@ -24,7 +24,7 @@ pub fn assert_album_not_exists(album_manager: &Arc<RwLock<AlbumManager>>,
     let album_manager = album_manager.read().unwrap();
     match album_manager.get(album) {
         Some(_) => return Err(Status::new(Code::AlreadyExists,
-            format!("album '{}' does not exist", album))),
+            format!("album '{}' already exists", album))),
         None => Ok(()),
     }
 }

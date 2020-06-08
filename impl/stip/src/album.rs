@@ -62,12 +62,6 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
         format!("http://{}:{}", ip_address, port)).await?;
 
     // parse arguments
-    let dht_key_length = 
-            match create_matches.value_of("dht_key_length") {
-        Some(value) => Some(value.parse::<u32>()?),
-        None => None,
-    };
-
     let geocode = match create_matches.value_of("GEOCODE") {
         Some("geohash") => Geocode::Geohash as i32,
         Some("quadtile") => Geocode::Quadtile as i32,
@@ -76,7 +70,8 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
 
     // initialize request
     let create_request = AlbumCreateRequest {
-        dht_key_length: dht_key_length,
+        dht_key_length: create_matches.value_of("dht_key_length")
+            .unwrap().parse::<i32>()?,
         geocode: geocode,
         id: create_matches.value_of("ID").unwrap().to_string(),
     };
@@ -127,7 +122,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         };
 
         println!("{:<24}{:<12}{:<16}{:<8}", album.id, geocode,
-            album.dht_key_length.unwrap_or(0), status);
+            album.dht_key_length, status);
     }
 
     Ok(())

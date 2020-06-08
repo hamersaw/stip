@@ -6,6 +6,7 @@ use geohash::Coordinate;
 use swarm::prelude::Dht;
 use zip::ZipArchive;
 
+use crate::album::Geocode;
 use crate::image::RAW_SOURCE;
 
 use std::error::Error;
@@ -15,9 +16,9 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
-        precision: usize, record: &PathBuf, x_interval: f64,
-        y_interval: f64) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+        geocode: Geocode, precision: usize, record: &PathBuf,
+        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
     // compute tile name
     let tile_path = record.with_extension("");
     let tile = tile_path.file_name()
@@ -102,7 +103,8 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
             }
 
             // lookup geohash in dht
-            let addr = match crate::task::dht_lookup(&dht, &geohash) {
+            let addr = match crate::task::dht_lookup(
+                    &dht, dht_key_length, &geohash) {
                 Ok(addr) => addr,
                 Err(e) => {
                     warn!("{}", e);

@@ -291,10 +291,16 @@ impl ImageManagement for ImageManagementImpl {
         let request = request.get_ref();
  
         // ensure album exists
-        let _ = crate::rpc::assert_album_exists(
+        let album = crate::rpc::assert_album_exists(
             &self.album_manager, &request.album)?;
 
         // initialize task
+        let (dht_key_length, geocode) = {
+            let album = album.read().unwrap();
+            (album.get_dht_key_length().clone(),
+                album.get_geocode().clone())
+        };
+
         let format = match ProtoImageFormat
                 ::from_i32(request.format).unwrap() {
             ProtoImageFormat::Modis => ImageFormat::MODIS,
@@ -303,8 +309,9 @@ impl ImageManagement for ImageManagementImpl {
         };
 
         let task = LoadEarthExplorerTask::new(request.album.clone(),
-            self.dht.clone(), format, request.glob.clone(),
-            request.precision as usize, request.thread_count as u8);
+            self.dht.clone(), dht_key_length, format, geocode,
+            request.glob.clone(), request.precision as usize,
+            request.thread_count as u8);
 
         // execute task using task manager
         let task_id = {

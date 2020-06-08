@@ -4,6 +4,7 @@ use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
 
+use crate::album::Geocode;
 use crate::image::RAW_SOURCE;
 
 use std::error::Error;
@@ -11,9 +12,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
-        precision: usize, record: &PathBuf, x_interval: f64,
-        y_interval: f64) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+        geocode: Geocode, precision: usize, record: &PathBuf,
+        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
     // open geotiff file
     let tif_path = record.with_extension("tif");
     let filename = tif_path.file_name().unwrap()
@@ -56,7 +57,8 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
         //println!("{} {} {}", tile, geohash, pixel_coverage);
 
         // lookup geohash in dht
-        let addr = match crate::task::dht_lookup(&dht, &geohash) {
+        let addr = match crate::task::dht_lookup(
+                &dht, dht_key_length, &geohash) {
             Ok(addr) => addr,
             Err(e) => {
                 warn!("{}", e);

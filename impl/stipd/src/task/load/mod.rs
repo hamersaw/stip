@@ -4,6 +4,7 @@ mod modis;
 mod naip;
 mod sentinel_2;
 
+use crate::album::Geocode;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::error::Error;
@@ -21,20 +22,24 @@ pub enum ImageFormat {
 pub struct LoadEarthExplorerTask {
     album: String,
     dht: Arc<RwLock<Dht>>,
+    dht_key_length: i8,
     format: ImageFormat,
+    geocode: Geocode,
     glob: String,
     precision: usize,
     thread_count: u8,
 }
 
 impl LoadEarthExplorerTask {
-    pub fn new(album: String, dht: Arc<RwLock<Dht>>,
-            format: ImageFormat, glob: String, precision: usize,
-            thread_count: u8) -> LoadEarthExplorerTask {
+    pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
+            format: ImageFormat, geocode: Geocode, glob: String,
+            precision: usize, thread_count: u8) -> LoadEarthExplorerTask {
         LoadEarthExplorerTask {
             album: album,
             dht: dht,
+            dht_key_length: dht_key_length,
             format: format,
+            geocode: geocode,
             glob: glob,
             precision: precision,
             thread_count: thread_count,
@@ -44,8 +49,6 @@ impl LoadEarthExplorerTask {
 
 impl Task for LoadEarthExplorerTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // TODO - check if album exists?
-
         // search for image files
         let mut records = Vec::new();
         for entry in glob::glob(&self.glob)? {
@@ -62,6 +65,8 @@ impl Task for LoadEarthExplorerTask {
         for _ in 0..self.thread_count {
             let album_clone = self.album.clone();
             let dht_clone = self.dht.clone();
+            let dht_key_length = self.dht_key_length.clone();
+            let geocode = self.geocode.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let format = self.format.clone();
@@ -84,13 +89,16 @@ impl Task for LoadEarthExplorerTask {
                     // process record
                     let result = match format {
                         ImageFormat::MODIS => modis::process(
-                            &album_clone, &dht_clone, precision,
+                            &album_clone, &dht_clone,
+                            dht_key_length, geocode, precision,
                             &record, x_interval, y_interval),
                         ImageFormat::NAIP => naip::process(
-                            &album_clone, &dht_clone, precision,
+                            &album_clone, &dht_clone,
+                            dht_key_length, geocode, precision,
                             &record, x_interval, y_interval),
                         ImageFormat::Sentinel => sentinel_2::process(
-                            &album_clone, &dht_clone, precision,
+                            &album_clone, &dht_clone,
+                            dht_key_length, geocode, precision,
                             &record, x_interval, y_interval),
                     };
 

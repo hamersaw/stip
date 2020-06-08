@@ -27,7 +27,7 @@ impl OpenTask {
 impl Task for OpenTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
-        let mut records: Vec<PathBuf> = {
+        let records: Vec<PathBuf> = {
             let album = self.album.read().unwrap();
             album.get_paths()?
         };

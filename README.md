@@ -118,7 +118,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - cloud coverage computation on sentinel-2 data
 - data split - fix v4.0
 - data fill - fix v4.0
-- data load
-    - consult album.geocode to determine split parameters
-    - album.dht_key_length for distribution
+- **data load - consult album.geocode to determine split parameters**
 - **populate 'path' on 'data list'**

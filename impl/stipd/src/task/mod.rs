@@ -99,8 +99,19 @@ pub enum TaskStatus {
     Running,
 }
 
-fn dht_lookup(dht: &Arc<RwLock<Dht>>, geohash: &str)
-        -> Result<SocketAddr, Box<dyn Error>> {
+fn dht_lookup(dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+        geohash: &str) -> Result<SocketAddr, Box<dyn Error>> {
+    // compute dht geohash using dht_key_length
+    let geohash = match dht_key_length {
+        0 => geohash,
+        x if x > 0 && x < geohash.len() as i8 =>
+            &geohash[x as usize..],
+        x if x < 0 && x > (-1 * geohash.len() as i8) =>
+            &geohash[..(geohash.len() as i8 + x) as usize],
+        _ => return Err(format!("dht key length '{}' invalid for '{}'",
+                dht_key_length, geohash).into()),
+    };
+
     // compute geohash hash
     let mut hasher = DefaultHasher::new();
     hasher.write(geohash.as_bytes());

@@ -40,6 +40,7 @@ subcommands:
                             - quadtile
                         help: album geocode
                     - dht_key_length:
+                        default_value: "0"
                         help: key length for geocode dht hash
                         long: dht_key_length
                         short: d

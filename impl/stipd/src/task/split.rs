@@ -2,6 +2,7 @@ use gdal::raster::Dataset;
 use geohash::Coordinate;
 use swarm::prelude::Dht;
 
+use crate::album::Geocode;
 use crate::image::{ImageManager, Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
@@ -13,7 +14,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 pub struct SplitTask {
     album: String,
     dht: Arc<RwLock<Dht>>,
+    dht_key_length: i8,
     end_timestamp: Option<i64>,
+    geocode: Geocode,
     geohash: Option<String>,
     geohash_bound: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
@@ -25,16 +28,18 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(album: String, dht: Arc<RwLock<Dht>>,
-            end_timestamp: Option<i64>, geohash: Option<String>,
-            geohash_bound: Option<String>,
+    pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
+            end_timestamp: Option<i64>, geocode: Geocode,
+            geohash: Option<String>, geohash_bound: Option<String>,
             image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
             album: album,
             dht: dht,
+            dht_key_length: dht_key_length,
             end_timestamp: end_timestamp,
+            geocode: geocode,
             geohash: geohash,
             geohash_bound: geohash_bound,
             image_manager: image_manager,
@@ -49,8 +54,6 @@ impl SplitTask {
 
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // TODO - check album exists
-
         // search for images using ImageManager
         let mut records: Vec<(Image, Vec<StFile>)> = {
             let image_manager = self.image_manager.read().unwrap();
@@ -83,6 +86,8 @@ impl Task for SplitTask {
         for _ in 0..self.thread_count {
             let album_clone = self.album.clone();
             let dht_clone = self.dht.clone();
+            let dht_key_length = self.dht_key_length.clone();
+            let geocode = self.geocode.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
@@ -102,7 +107,8 @@ impl Task for SplitTask {
                     };
 
                     // process record
-                    match process(&album_clone, &dht_clone, precision_clone,
+                    match process(&album_clone, &dht_clone,
+                            dht_key_length, geocode, precision_clone,
                             &record, x_interval, y_interval) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
@@ -168,9 +174,9 @@ impl Task for SplitTask {
     }
 }
 
-fn process(album: &str, dht: &Arc<RwLock<Dht>>, precision: usize,
-        record: &(Image, Vec<StFile>), x_interval: f64,
-        y_interval: f64) -> Result<(), Box<dyn Error>> {
+fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+        geocode: Geocode, precision: usize, record: &(Image, Vec<StFile>),
+        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
     let image = &record.0;
     for file in record.1.iter() {
         // check if path exists
@@ -205,7 +211,8 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, precision: usize,
             }
 
             // lookup geohash in dht
-            let addr = match crate::task::dht_lookup(&dht, &geohash) {
+            let addr = match crate::task::dht_lookup(
+                    &dht, dht_key_length, &geohash) {
                 Ok(addr) => addr,
                 Err(e) => {
                     warn!("{}", e);

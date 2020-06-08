@@ -6,6 +6,7 @@ use gdal::raster::types::GdalType;
 use geohash::{self, Coordinate};
 use swarm::prelude::Dht;
 
+use crate::album::Geocode;
 use crate::image::RAW_SOURCE;
 
 use std::collections::HashMap;
@@ -14,9 +15,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
-        precision: usize, record: &PathBuf, x_interval: f64,
-        y_interval: f64) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+        geocode: Geocode, precision: usize, record: &PathBuf,
+        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
     let dataset = Dataset::open(&record).compat()?;
  
     // parse metadata
@@ -57,20 +58,20 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
     let quality_datasets = split_subdatasets::<u8>(
         quality_subdatasets, precision, x_interval, y_interval)?;
     process_splits(album, &quality_datasets,
-        &dht, 0, &tile, timestamp)?;
+        &dht, dht_key_length, 0, &tile, timestamp)?;
 
     // process reflectance subdatasets
     let reflectance_datasets = split_subdatasets::<i16>(
         reflectance_subdatasets, precision, x_interval, y_interval)?;
     process_splits(album, &reflectance_datasets,
-        &dht, 1, &tile, timestamp)?;
+        &dht, dht_key_length, 1, &tile, timestamp)?;
 
     Ok(())
 }
 
 fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
-        dht: &Arc<RwLock<Dht>>, subdataset: u8, tile: &str,
-        timestamp: i64) -> Result<(), Box<dyn Error>> {
+        dht: &Arc<RwLock<Dht>>, dht_key_length: i8, subdataset: u8, 
+        tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geohash, dataset) in datasets.iter() {
         // if image has 0.0 coverage -> don't process
         let pixel_coverage = st_image::coverage(&dataset).compat()?;
@@ -81,7 +82,8 @@ fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
         //println!("{} {} {}", tile, geohash, pixel_coverage);
 
         // lookup geohash in dht
-        let addr = match crate::task::dht_lookup(&dht, &geohash) {
+        let addr = match crate::task::dht_lookup(
+                &dht, dht_key_length, &geohash) {
             Ok(addr) => addr,
             Err(e) => {
                 warn!("{}", e);

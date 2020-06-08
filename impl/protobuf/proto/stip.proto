@@ -15,7 +15,7 @@ service AlbumManagement {
 
 // Album Messages
 message Album {
-    optional uint32 dhtKeyLength = 1;
+    required int32 dhtKeyLength = 1;
     required Geocode geocode = 2;
     required string id = 3;
     required AlbumStatus status = 4;
@@ -62,7 +62,7 @@ message AlbumCloseReply {
 
 // Create Messages
 message AlbumCreateRequest {
-    optional uint32 dhtKeyLength = 1;
+    required int32 dhtKeyLength = 1;
     required Geocode geocode = 2;
     required string id = 3;
 }

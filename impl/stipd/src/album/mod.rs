@@ -52,11 +52,7 @@ impl AlbumManager {
             path.set_extension("meta");
             let mut file = File::open(&path)?;
 
-            let dht_key_length = match file.read_u8()? {
-                0 => None,
-                x => Some(x),
-            };
-
+            let dht_key_length = file.read_i8()?;
             let geocode_value = file.read_u8()?;
             let geocode: Geocode =
                     match FromPrimitive::from_u8(geocode_value) {
@@ -87,8 +83,8 @@ impl AlbumManager {
         self.albums.get(name)
     }
 
-    pub fn create(&mut self, dht_key_length: Option<u8>,
-            geocode: Geocode, id: &str) -> Result<(), Box<dyn Error>> {
+    pub fn create(&mut self, dht_key_length: i8, geocode: Geocode,
+            id: &str) -> Result<(), Box<dyn Error>> {
         // create album directory
         let mut path = self.directory.clone();
         path.push(id);
@@ -103,11 +99,7 @@ impl AlbumManager {
         path.set_extension("meta");
         let mut file = File::create(&path)?;
 
-        match dht_key_length {
-            Some(dht_key_length) => file.write_u8(dht_key_length)?,
-            None => file.write_u8(0)?,
-        };
-
+        file.write_i8(dht_key_length)?;
         file.write_u8(geocode as u8)?;
         path.pop();
 
@@ -129,7 +121,7 @@ impl AlbumManager {
 }
 
 pub struct Album {
-    dht_key_length: Option<u8>,
+    dht_key_length: i8,
     directory: PathBuf,
     geocode: Geocode,
     index: Option<AlbumIndex>,
@@ -140,7 +132,7 @@ impl Album {
         self.index = None;
     }
 
-    pub fn get_dht_key_length(&self) -> Option<u8> {
+    pub fn get_dht_key_length(&self) -> i8 {
         self.dht_key_length
     }
 
