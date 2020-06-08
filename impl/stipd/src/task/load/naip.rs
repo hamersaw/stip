@@ -42,9 +42,11 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
     for dataset_split in st_image::prelude::split(&dataset,
             geocode, precision).compat()? {
         // calculate split dataset geocode
-        let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
+        let (win_min_x, win_max_x, win_min_y, win_max_y) =
+            dataset_split.coordinates();
         let split_geocode = geocode.get_code(
-            win_max_x, win_max_y, precision)?;
+            (win_min_x + win_max_x) / 2.0,
+            (win_min_y + win_max_y) / 2.0, precision)?;
 
         // perform dataset split
         let dataset = dataset_split.dataset().compat()?;

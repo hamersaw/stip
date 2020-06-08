@@ -189,9 +189,11 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
         for dataset_split in st_image::prelude::split(&dataset,
                 geocode, precision).unwrap() {
             // calculate split dataset geocode
-            let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
+            let (win_min_x, win_max_x, win_min_y, win_max_y) =
+                dataset_split.coordinates();
             let split_geocode = geocode.get_code(
-                win_max_x, win_max_y, precision)?;
+                (win_min_x + win_max_x) / 2.0,
+                (win_min_y + win_max_y) / 2.0, precision)?;
 
             //  skip if geocode doesn't 'start_with' base image geocode
             if !split_geocode.starts_with(&image.1) {
