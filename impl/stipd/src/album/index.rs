@@ -15,7 +15,7 @@ const CREATE_FILES_TABLE_STMT: &str =
 const CREATE_IMAGES_TABLE_STMT: &str =
 "CREATE TABLE images (
     cloud_coverage  FLOAT NULL,
-    geohash         TEXT NOT NULL,
+    geocode         TEXT NOT NULL,
     id              BIGINT PRIMARY KEY,
     platform        TEXT NOT NULL,
     source          TEXT NOT NULL,
@@ -27,7 +27,7 @@ const CREATE_IMAGES_TABLE_STMT: &str =
 //"CREATE INDEX idx_images ON images(platform, pixel_coverage)";
 
 const INSERT_IMAGES_STMT: &str =
-"INSERT INTO images (cloud_coverage, geohash,
+"INSERT INTO images (cloud_coverage, geocode,
     id, platform, source, tile, timestamp)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
@@ -36,21 +36,21 @@ const INSERT_FILES_STMT: &str =
 VALUES (?1, ?2, ?3)";
 
 const ID_SELECT_STMT: &str =
-"SELECT id from images WHERE geohash = ?1 AND tile = ?2";
+"SELECT id from images WHERE geocode = ?1 AND tile = ?2";
 
 const LIST_SELECT_STMT: &str =
-"SELECT cloud_coverage, geohash, pixel_coverage,
+"SELECT cloud_coverage, geocode, pixel_coverage,
     platform, source, subdataset, tile, timestamp
 FROM images JOIN files ON images.id = files.image_id";
 
 const LIST_ORDER_BY_STMT: &str =
-" ORDER BY images.tile, images.geohash, images.timestamp, files.subdataset";
+" ORDER BY images.tile, images.geocode, images.timestamp, files.subdataset";
 
 const SEARCH_SELECT_STMT: &str =
-"SELECT COUNT(*) as count, SUBSTR(geohash, 0, REPLACE_LENGTH) as geohash_search, platform, LENGTH(geohash) as precision, source FROM images";
+"SELECT COUNT(*) as count, SUBSTR(geocode, 0, REPLACE_LENGTH) as geocode_search, platform, LENGTH(geocode) as precision, source FROM images";
 
 const SEARCH_GROUP_BY_STMT: &str =
-" GROUP BY geohash_search, platform, precision, source";
+" GROUP BY geocode_search, platform, precision, source";
 
 pub struct AlbumIndex {
     conn: Mutex<Connection>,
@@ -72,7 +72,7 @@ impl AlbumIndex {
     }
 
     pub fn list(&self, album: &Album, end_timestamp: &Option<i64>,
-            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            geocode: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
             start_timestamp: &Option<i64>)
@@ -98,15 +98,15 @@ impl AlbumIndex {
         append_stmt_filter("timestamp", start_timestamp,
             &mut stmt_str, ">=", &mut params);
 
-        let geohash_glob = match geohash {
-            Some(geohash) => Some(format!("{}%", geohash)),
+        let geocode_glob = match geocode {
+            Some(geocode) => Some(format!("{}%", geocode)),
             None => None,
         };
 
         match recurse {
-            true => append_stmt_filter("geohash", &geohash_glob,
+            true => append_stmt_filter("geocode", &geocode_glob,
                 &mut stmt_str, "LIKE", &mut params),
-            false => append_stmt_filter("geohash", geohash,
+            false => append_stmt_filter("geocode", geocode,
                 &mut stmt_str, "=", &mut params),
         }
 
@@ -116,17 +116,17 @@ impl AlbumIndex {
         // execute query
         let mut stmt = conn.prepare(&stmt_str)?;
         let images_iter = stmt.query_map(&params, |row| {
-            let geohash: String = row.get(1)?;
+            let geocode: String = row.get(1)?;
             let platform: String = row.get(3)?;
             let source: String = row.get(4)?;
             let subdataset: u8 = row.get(5)?;
             let tile: String = row.get(6)?;
  
             // TODO - error
-            let path = album.get_image_path(false, &geohash,
+            let path = album.get_image_path(false, &geocode,
                 &platform, &source, subdataset, &tile).unwrap();
 
-            Ok(((row.get(0)?, geohash, platform,
+            Ok(((row.get(0)?, geocode, platform,
                     source, tile, row.get(7)?),
                 (path.to_string_lossy().to_string(),
                     row.get(2)?, subdataset)))
@@ -137,7 +137,7 @@ impl AlbumIndex {
         for (image, mut file) in images_iter.map(|x| x.unwrap()) {
             match images.last_mut() {
                 Some((i, f)) => {
-                    // if geohash and tile match -> append file to files
+                    // if geocode and tile match -> append file to files
                     //   else -> add new image
                     match i.1 == image.1 && i.5 == image.5 {
                         true => f.push(file),
@@ -151,18 +151,18 @@ impl AlbumIndex {
         Ok(images)
     }
 
-    pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,
+    pub fn load(&mut self, cloud_coverage: Option<f64>, geocode: &str,
             pixel_coverage: f64, platform: &str, source: &str,
             subdataset: u8, tile: &str, timestamp: i64) 
             -> Result<(), Box<dyn Error>> {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
 
-        // check if tile, geohash combination is already registered
+        // check if tile, geocode combination is already registered
         // execute query
         let mut stmt = conn.prepare(ID_SELECT_STMT)?;
         let ids: Vec<i64> = stmt.query_map(
-            rusqlite::params![geohash, tile],
+            rusqlite::params![geocode, tile],
             |row| { Ok(row.get(0)?) }
         )?.map(|x| x.unwrap()).collect();
 
@@ -170,7 +170,7 @@ impl AlbumIndex {
             1 => ids[0],
             _ => {
                 conn.execute(INSERT_IMAGES_STMT, rusqlite::params![
-                    cloud_coverage, geohash, self.id,
+                    cloud_coverage, geocode, self.id,
                     platform, source, tile, timestamp
                 ])?;
 
@@ -187,7 +187,7 @@ impl AlbumIndex {
     }
 
     pub fn search(&self, end_timestamp: &Option<i64>,
-            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            geocode: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
             start_timestamp: &Option<i64>)
@@ -196,8 +196,8 @@ impl AlbumIndex {
         let conn = self.conn.lock().unwrap();
  
         // initialize the SELECT command and parameters
-        let replace_length = match geohash {
-            Some(geohash) => format!("{}", geohash.len() + 2),
+        let replace_length = match geocode {
+            Some(geocode) => format!("{}", geocode.len() + 2),
             None => "2".to_string(),
         };
 
@@ -219,15 +219,15 @@ impl AlbumIndex {
         append_stmt_filter("timestamp", start_timestamp,
             &mut stmt_str, ">=", &mut params);
 
-        let geohash_glob = match geohash {
-            Some(geohash) => Some(format!("{}%", geohash)),
+        let geocode_glob = match geocode {
+            Some(geocode) => Some(format!("{}%", geocode)),
             None => None,
         };
 
         match recurse {
-            true => append_stmt_filter("geohash", &geohash_glob,
+            true => append_stmt_filter("geocode", &geocode_glob,
                 &mut stmt_str, "LIKE", &mut params),
-            false => append_stmt_filter("geohash", geohash,
+            false => append_stmt_filter("geocode", geocode,
                 &mut stmt_str, "=", &mut params),
         }
 

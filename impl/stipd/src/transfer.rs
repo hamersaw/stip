@@ -40,7 +40,7 @@ impl StreamHandler for TransferStreamHandler {
                 // read everything
                 let album = read_string(stream)?;
                 let mut dataset = st_image::prelude::read(stream)?;
-                let geohash = read_string(stream)?;
+                let geocode = read_string(stream)?;
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
                 let platform = read_string(stream)?;
                 let source = read_string(stream)?;
@@ -53,7 +53,7 @@ impl StreamHandler for TransferStreamHandler {
                 match album_manager.get(&album) {
                     Some(album) => {
                         let mut album = album.write().unwrap();
-                        album.write(&mut dataset, &geohash,
+                        album.write(&mut dataset, &geocode,
                             pixel_coverage, &platform, &source,
                             subdataset, &tile, timestamp)?;
                     },
@@ -61,7 +61,7 @@ impl StreamHandler for TransferStreamHandler {
                 }
                 /*let mut image_manager =
                     self.image_manager.write().unwrap();
-                image_manager.write(&mut dataset, &geohash,
+                image_manager.write(&mut dataset, &geocode,
                     pixel_coverage, &platform, &source,
                     subdataset, &tile, timestamp)?;*/
 
@@ -86,7 +86,7 @@ pub fn read_string<T: Read>(reader: &mut T)
 }
 
 pub fn send_image(addr: &SocketAddr, album: &str, dataset: &Dataset,
-        geohash: &str, pixel_coverage: f64, platform: &str,
+        geocode: &str, pixel_coverage: f64, platform: &str,
         source: &str, subdataset: u8, tile: &str, timestamp: i64)
         -> Result<(), Box<dyn Error>> {
     // open connection
@@ -96,7 +96,7 @@ pub fn send_image(addr: &SocketAddr, album: &str, dataset: &Dataset,
     // write everything
     write_string(&album, &mut stream)?;
     st_image::prelude::write(&dataset, &mut stream)?;
-    write_string(&geohash, &mut stream)?;
+    write_string(&geocode, &mut stream)?;
     stream.write_f64::<BigEndian>(pixel_coverage)?;
     write_string(&platform, &mut stream)?;
     write_string(&source, &mut stream)?;

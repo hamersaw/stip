@@ -129,8 +129,8 @@ fn process(album: &Arc<RwLock<Album>>, record: &PathBuf)
         Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
         None => None,
     };
-    let geohash = dataset.metadata_item("GEOHASH", "STIP")
-        .ok_or("image geohash metadata not found")?;
+    let geocode = dataset.metadata_item("GEOCODE", "STIP")
+        .ok_or("image geocode metadata not found")?;
     let path = record.to_string_lossy().to_string();
     let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
         .ok_or("image pixel coverage metadata not found")?.parse::<f64>()?;
@@ -146,7 +146,7 @@ fn process(album: &Arc<RwLock<Album>>, record: &PathBuf)
         .ok_or("image timestamp metadata not found")?.parse::<i64>()?;
 
     let mut album = album.write().unwrap();
-    album.load(cloud_coverage, &geohash, pixel_coverage,
+    album.load(cloud_coverage, &geocode, pixel_coverage,
         &platform, &source, subdataset, &tile, timestamp)?;
 
     Ok(())

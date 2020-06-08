@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 pub struct FillTask {
     band: Option<String>,
     end_timestamp: Option<i64>,
-    geohash: Option<String>,
+    geocode: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     recurse: bool,
@@ -23,14 +23,14 @@ pub struct FillTask {
 
 impl FillTask {
     pub fn new(band: Option<String>, end_timestamp: Option<i64>,
-            geohash: Option<String>, image_manager: Arc<RwLock<ImageManager>>,
+            geocode: Option<String>, image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8,
             window_seconds: i64) -> FillTask {
         FillTask {
             band: band,
             end_timestamp: end_timestamp,
-            geohash: geohash,
+            geocode: geocode,
             image_manager: image_manager,
             platform: platform,
             recurse: recurse,
@@ -48,20 +48,20 @@ impl Task for FillTask {
         let mut images: Vec<ImageMetadata> = {
             let image_manager = self.image_manager.read().unwrap();
             image_manager.list(&self.end_timestamp,
-                &self.geohash, &None, &None, &self.platform,
+                &self.geocode, &None, &None, &self.platform,
                 self.recurse, &None, &self.start_timestamp)
         };
 
-        // order by platform, geohash, band
+        // order by platform, geocode, band
         images.sort_by(|a, b| {
             let platform_cmp = a.platform.cmp(&b.platform);
             if platform_cmp != CmpOrdering::Equal {
                 return platform_cmp;
             }
 
-            let geohash_cmp = a.geohash.cmp(&b.geohash);
-            if geohash_cmp != CmpOrdering::Equal {
-                return geohash_cmp;
+            let geocode_cmp = a.geocode.cmp(&b.geocode);
+            if geocode_cmp != CmpOrdering::Equal {
+                return geocode_cmp;
             }
 
             a.timestamp.cmp(&b.timestamp)
@@ -72,10 +72,10 @@ impl Task for FillTask {
         let mut images_buf: Vec<ImageMetadata> = Vec::new();
 
         let mut platform = "";
-        let mut geohash = "";
+        let mut geocode = "";
         let mut timestamp = 0i64;
         for image in images.iter() {
-            if image.platform != platform || image.geohash != geohash
+            if image.platform != platform || image.geocode != geocode
                     || image.timestamp - timestamp > self.window_seconds {
                 // process images_buf
                 if images_buf.len() >= 2 {
@@ -85,9 +85,9 @@ impl Task for FillTask {
                     images_buf.clear();
                 }
 
-                // reset geohash and timestamp
+                // reset geocode and timestamp
                 platform = &image.platform;
-                geohash = &image.geohash;
+                geocode = &image.geocode;
                 timestamp = image.timestamp;
             }
 
@@ -245,7 +245,7 @@ impl Task for FillTask {
         let tile_id = &path.file_name().unwrap().to_string_lossy();
 
         let mut image_manager = image_manager.write().unwrap();
-        image_manager.write(&image.platform, &image.geohash, 
+        image_manager.write(&image.platform, &image.geocode, 
             FILLED_SOURCE, &tile_id, image.timestamp,
             pixel_coverage, &mut dataset)?;
     }

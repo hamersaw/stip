@@ -42,7 +42,7 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
         band: crate::string_opt(fill_matches.value_of("band")),
         end_timestamp: crate::i64_opt(
             fill_matches.value_of("end_timestamp"))?,
-        geohash: crate::string_opt(fill_matches.value_of("geohash")),
+        geocode: crate::string_opt(fill_matches.value_of("geocode")),
         platform: crate::string_opt(fill_matches.value_of("platform")),
         recurse: fill_matches.is_present("recurse"),
         start_timestamp: crate::i64_opt(
@@ -94,7 +94,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     let filter = Filter {
         end_timestamp: crate::i64_opt(
             list_matches.value_of("end_timestamp"))?,
-        geohash: crate::string_opt(list_matches.value_of("geohash")),
+        geocode: crate::string_opt(list_matches.value_of("geocode")),
         max_cloud_coverage: crate::f64_opt(
             list_matches.value_of("max_cloud_coverage"))?,
         min_pixel_coverage: crate::f64_opt(
@@ -114,7 +114,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
 
     // iterate over each available node
     println!("{:<8}{:<12}{:<10}{:<8}{:<12}{:<16}{:<16}{:<12}{:<80}",
-        "node", "platform", "geohash", "source", "timestamp",
+        "node", "platform", "geocode", "source", "timestamp",
         "pixel_coverage", "cloud_coverage", "subdataset", "path");
     println!("------------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
     for node in node_list_reply.nodes.iter() {
@@ -128,7 +128,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
         while let Some(image) = stream.message().await? {
             for file in image.files.iter() {
                 println!("{:<8}{:<12}{:<10}{:<8}{:<12}{:<16.5}{:<16.5}{:<12}{:<80}",
-                    node.id, image.platform, image.geohash,
+                    node.id, image.platform, image.geocode,
                     image.source, image.timestamp, file.pixel_coverage,
                     image.cloud_coverage.unwrap_or(-1.0),
                     file.subdataset, file.path);
@@ -198,7 +198,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     let filter = Filter {
         end_timestamp: crate::i64_opt(
             search_matches.value_of("end_timestamp"))?,
-        geohash: crate::string_opt(search_matches.value_of("geohash")),
+        geocode: crate::string_opt(search_matches.value_of("geocode")),
         max_cloud_coverage: crate::f64_opt(
             search_matches.value_of("max_cloud_coverage"))?,
         min_pixel_coverage: crate::f64_opt(
@@ -244,11 +244,11 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
     while streams.len() != 0 {
         stream_index = (stream_index + 1) % streams.len();
         if let Some(extent) = streams[stream_index].message().await? {
-            let geohash_map = platform_map.entry(
+            let geocode_map = platform_map.entry(
                 extent.platform.clone()).or_insert(BTreeMap::new());
 
-            let source_map = geohash_map.entry(
-                extent.geohash.clone()).or_insert(BTreeMap::new());
+            let source_map = geocode_map.entry(
+                extent.geocode.clone()).or_insert(BTreeMap::new());
 
             let count_map = source_map.entry(
                 extent.source.clone()).or_insert(BTreeMap::new());
@@ -263,14 +263,14 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
 
     // print summarized data
     println!("{:<16}{:<10}{:<12}{:<12}{:<12}", "platform",
-        "geohash", "source", "precision", "count");
+        "geocode", "source", "precision", "count");
     println!("--------------------------------------------------------------");
-    for (platform, geohash_map) in platform_map.iter() {
-        for (geohash, source_map) in geohash_map.iter() {
+    for (platform, geocode_map) in platform_map.iter() {
+        for (geocode, source_map) in geocode_map.iter() {
             for (source, count_map) in source_map.iter() {
                 for (precision, count) in count_map.iter() {
                     println!("{:<16}{:<10}{:<12}{:<12}{:<12}",
-                        platform, geohash, source, precision, count);
+                        platform, geocode, source, precision, count);
                 }
             }
         }
@@ -292,7 +292,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let filter = Filter {
         end_timestamp: crate::i64_opt(
             split_matches.value_of("end_timestamp"))?,
-        geohash: crate::string_opt(split_matches.value_of("geohash")),
+        geocode: crate::string_opt(split_matches.value_of("geocode")),
         max_cloud_coverage: None,
         min_pixel_coverage: None,
         platform: crate::string_opt(split_matches.value_of("platform")),
@@ -306,8 +306,8 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     let split_request = ImageSplitRequest {
         album: split_matches.value_of("ALBUM").unwrap().to_string(),
         filter: filter,
-        geohash_bound: crate::string_opt(
-            split_matches.value_of("geohash_bound")),
+        geocode_bound: crate::string_opt(
+            split_matches.value_of("geocode_bound")),
         precision: split_matches.value_of("precision")
             .unwrap().parse::<u32>()?,
         task_id: crate::u64_opt(split_matches.value_of("task_id"))?,

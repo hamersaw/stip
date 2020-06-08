@@ -79,9 +79,7 @@ fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
             continue;
         }
 
-        //println!("{} {} {}", tile, geohash, pixel_coverage);
-
-        // lookup geohash in dht
+        // lookup geocode in dht
         let addr = match crate::task::dht_lookup(
                 &dht, dht_key_length, &geocode) {
             Ok(addr) => addr,
@@ -125,10 +123,7 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
             let dataset = dataset_split.dataset().compat()?;
             let (x, y) = dataset.size();
 
-            // TODO - tmp print
-            //println!("      {} - {:?}", geohash, dataset.size());
-
-            // if geohash dataset does not exist -> create it
+            // if geocode dataset does not exist -> create it
             if !datasets.contains_key(&split_geocode) {
                 let dst_dataset = driver.create_with_band_type::<T>(
                     "", x as isize, y as isize,

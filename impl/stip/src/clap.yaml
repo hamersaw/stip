@@ -38,7 +38,7 @@ subcommands:
                         possible_values: 
                             - geohash
                             - quadtile
-                        help: album geocode
+                        help: album geocode algorithm
                     - dht_key_length:
                         default_value: "0"
                         help: key length for geocode dht hash
@@ -76,9 +76,9 @@ subcommands:
                         long: end_timestamp
                         short: e
                         takes_value: true
-                    - geohash:
-                        help: image geohash boundary
-                        long: geohash
+                    - geocode:
+                        help: image geocode boundary
+                        long: geocode
                         short: g
                         takes_value: true
                     - platform:
@@ -87,7 +87,7 @@ subcommands:
                         short: p
                         takes_value: true
                     - recurse:
-                        help: recurse through geohashes
+                        help: recurse through geocodes
                         long: recurse
                         short: r
                     - start_timestamp:
@@ -124,9 +124,9 @@ subcommands:
                         long: end_timestamp
                         short: e
                         takes_value: true
-                    - geohash:
-                        help: image geohash boundary
-                        long: geohash
+                    - geocode:
+                        help: image geocode boundary
+                        long: geocode
                         short: g
                         takes_value: true
                     - max_cloud_coverage:
@@ -145,7 +145,7 @@ subcommands:
                         short: p
                         takes_value: true
                     - recurse:
-                        help: recurse through geohashes
+                        help: recurse through geocodes
                         long: recurse
                         short: r
                     - source:
@@ -170,9 +170,9 @@ subcommands:
                         long: end_timestamp
                         short: e
                         takes_value: true
-                    - geohash:
-                        help: image geohash boundary
-                        long: geohash
+                    - geocode:
+                        help: image geocode boundary
+                        long: geocode
                         short: g
                         takes_value: true
                     - max_cloud_coverage:
@@ -191,7 +191,7 @@ subcommands:
                         short: p
                         takes_value: true
                     - recurse:
-                        help: recurse through geohashes
+                        help: recurse through geocodes
                         long: recurse
                         short: r
                     - source:
@@ -205,7 +205,7 @@ subcommands:
                         short: a
                         takes_value: true
             - split:
-                about: split images with a new geohash precision
+                about: split images with a new geocode precision
                 args:
                     - ALBUM:
                         index: 1
@@ -216,14 +216,14 @@ subcommands:
                         long: end_timestamp
                         short: e
                         takes_value: true
-                    - geohash:
-                        help: image geohash boundary
-                        long: geohash
+                    - geocode:
+                        help: image geocode boundary
+                        long: geocode
                         short: g
                         takes_value: true
-                    - geohash_bound:
-                        help: boundary for resulting geohash splits
-                        long: geohash_bound
+                    - geocode_bound:
+                        help: boundary for resulting geocode splits
+                        long: geocode_bound
                         short: b
                         takes_value: true
                     - platform:
@@ -232,13 +232,13 @@ subcommands:
                         short: p
                         takes_value: true
                     - precision:
-                        help: geohash precision
+                        help: geocode precision
                         long: precision
                         required: true
                         short: l
                         takes_value: true
                     - recurse:
-                        help: recurse through geohashes
+                        help: recurse through geocodes
                         long: recurse
                         short: r
                     - start_timestamp:
@@ -277,7 +277,7 @@ subcommands:
                             - sentinel
                         help: dataset image format
                     - precision:
-                        help: geohash precision
+                        help: geocode precision
                         long: precision
                         required: true
                         short: l

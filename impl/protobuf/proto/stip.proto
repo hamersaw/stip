@@ -103,7 +103,7 @@ service ImageManagement {
 
 message Filter {
     optional int64 endTimestamp = 1;
-    optional string geohash = 2;
+    optional string geocode = 2;
     optional double maxCloudCoverage = 3;
     optional double minPixelCoverage = 4;
     optional string platform = 5;
@@ -145,7 +145,7 @@ message ImageFillReply {
 // List Messages
 message Image {
     optional double cloudCoverage = 1;
-    required string geohash = 2;
+    required string geocode = 2;
     repeated File files = 3;
     required string platform = 4;
     required string source = 5;
@@ -186,7 +186,7 @@ message ImageStoreReply {
 // Search Messages
 message Extent {
     required uint32 count = 1;
-    required string geohash = 2;
+    required string geocode = 2;
     required string platform = 3;
     required uint32 precision = 4;
     required string source = 5;
@@ -201,7 +201,7 @@ message ImageSearchRequest {
 message ImageSplitRequest {
     required string album = 1;
     required Filter filter = 2; 
-    optional string geohashBound = 3;
+    optional string geocodeBound = 3;
     required uint32 precision = 4;
     optional uint64 taskId = 5;
     required uint32 threadCount = 6;

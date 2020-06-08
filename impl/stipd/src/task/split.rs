@@ -1,5 +1,4 @@
 use gdal::raster::Dataset;
-use geohash::Coordinate;
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
@@ -16,9 +15,9 @@ pub struct SplitTask {
     dht: Arc<RwLock<Dht>>,
     dht_key_length: i8,
     end_timestamp: Option<i64>,
-    geocode: Geocode,
-    geohash: Option<String>,
-    geohash_bound: Option<String>,
+    geocode: Option<String>,
+    geocode_algorithm: Geocode,
+    geocode_bound: Option<String>,
     image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     precision: usize,
@@ -29,8 +28,8 @@ pub struct SplitTask {
 
 impl SplitTask {
     pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
-            end_timestamp: Option<i64>, geocode: Geocode,
-            geohash: Option<String>, geohash_bound: Option<String>,
+            end_timestamp: Option<i64>, geocode: Option<String>,
+            geocode_algorithm: Geocode, geocode_bound: Option<String>,
             image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
@@ -40,8 +39,8 @@ impl SplitTask {
             dht_key_length: dht_key_length,
             end_timestamp: end_timestamp,
             geocode: geocode,
-            geohash: geohash,
-            geohash_bound: geohash_bound,
+            geocode_algorithm: geocode_algorithm,
+            geocode_bound: geocode_bound,
             image_manager: image_manager,
             platform: platform,
             precision: precision,
@@ -58,21 +57,21 @@ impl Task for SplitTask {
         let mut records: Vec<(Image, Vec<StFile>)> = {
             let image_manager = self.image_manager.read().unwrap();
             image_manager.list(&self.end_timestamp,
-                &self.geohash, &None, &None, &self.platform,
+                &self.geocode, &None, &None, &self.platform,
                 self.recurse, &Some(RAW_SOURCE.to_string()),
                 &self.start_timestamp)
         };
 
-        // filter by geohash precision length
+        // filter by geocode precision length
         records = records.into_iter().filter(|x| {
                 (x.0).1.len() < self.precision as usize
             }).collect();
 
-        // filter by result bounding geohash if necessary
-        if let Some(geohash) = &self.geohash_bound {
+        // filter by result bounding geocode if necessary
+        if let Some(geocode) = &self.geocode_bound {
             records = records.into_iter().filter(|(image, _)| {
-                    image.1.starts_with(geohash)
-                        || geohash.starts_with(&image.1)
+                    image.1.starts_with(geocode)
+                        || geocode.starts_with(&image.1)
                 }).collect();
         }
 
@@ -87,7 +86,7 @@ impl Task for SplitTask {
             let album_clone = self.album.clone();
             let dht_clone = self.dht.clone();
             let dht_key_length = self.dht_key_length.clone();
-            let geocode = self.geocode.clone();
+            let geocode_algorithm = self.geocode_algorithm.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
@@ -104,7 +103,7 @@ impl Task for SplitTask {
 
                     // process record
                     match process(&album_clone, &dht_clone,
-                            dht_key_length, geocode,
+                            dht_key_length, geocode_algorithm,
                             precision_clone, &record) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
@@ -185,7 +184,7 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
         // open image - TODO error
         let dataset = Dataset::open(&path).unwrap();
 
-        // split image with geohash precision - TODO error
+        // split image with geocode precision - TODO error
         for dataset_split in st_image::prelude::split(&dataset,
                 geocode, precision).unwrap() {
             // calculate split dataset geocode
@@ -209,7 +208,7 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
                 continue;
             }
 
-            // lookup geohash in dht
+            // lookup geocode in dht
             let addr = match crate::task::dht_lookup(
                     &dht, dht_key_length, &split_geocode) {
                 Ok(addr) => addr,

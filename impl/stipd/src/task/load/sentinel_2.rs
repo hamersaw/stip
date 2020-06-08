@@ -86,7 +86,7 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
         let path = PathBuf::from(name);
         let dataset = Dataset::open(&path).compat()?;
 
-        // split image with geohash precision
+        // split image with geocode precision
         for dataset_split in st_image::prelude::split(&dataset,
                 geocode, precision).compat()? {
             // calculate split dataset geocode
@@ -105,7 +105,7 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
                 continue;
             }
 
-            // lookup geohash in dht
+            // lookup geocode in dht
             let addr = match crate::task::dht_lookup(
                     &dht, dht_key_length, &split_geocode) {
                 Ok(addr) => addr,

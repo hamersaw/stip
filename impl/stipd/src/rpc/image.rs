@@ -128,7 +128,7 @@ impl ImageManagement for ImageManagementImpl {
 
         // initialize task
         /*let task = FillTask::new(
-            request.end_timestamp.clone(), request.geohash.clone(),
+            request.end_timestamp.clone(), request.geocode.clone(),
             self.image_manager.clone(), request.platform.clone(),
             request.recurse, request.start_timestamp.clone(),
             request.thread_count as u8, request.window_seconds);
@@ -164,7 +164,7 @@ impl ImageManagement for ImageManagementImpl {
         {
             let album = album.read().unwrap();
             let image_iter = match album.list(&filter.end_timestamp,
-                    &filter.geohash, &filter.max_cloud_coverage,
+                    &filter.geocode, &filter.max_cloud_coverage,
                     &filter.min_pixel_coverage, &filter.platform,
                     filter.recurse, &filter.source,
                     &filter.start_timestamp) {
@@ -186,7 +186,7 @@ impl ImageManagement for ImageManagementImpl {
 
                 images.push(Image {
                     cloud_coverage: i.0,
-                    geohash: i.1,
+                    geocode: i.1,
                     files: files,
                     platform: i.2,
                     source: i.3,
@@ -224,7 +224,7 @@ impl ImageManagement for ImageManagementImpl {
         let extents: Vec<Extent> = {
             let album = album.read().unwrap();
             let extent_iter = match album.search(&filter.end_timestamp,
-                    &filter.geohash, &filter.max_cloud_coverage,
+                    &filter.geocode, &filter.max_cloud_coverage,
                     &filter.min_pixel_coverage, &filter.platform,
                     filter.recurse, &filter.source,
                     &filter.start_timestamp) {
@@ -235,7 +235,7 @@ impl ImageManagement for ImageManagementImpl {
             
             extent_iter.iter().map(|x| Extent {
                 count: x.0 as u32,
-                geohash: x.1.clone(),
+                geocode: x.1.clone(),
                 platform: x.2.clone(),
                 precision: x.3 as u32,
                 source: x.4.clone(),
@@ -265,7 +265,7 @@ impl ImageManagement for ImageManagementImpl {
         /*// initialize task
         let task = SplitTask::new(request.album.clone(),
             self.dht.clone(), filter.end_timestamp.clone(),
-            filter.geohash.clone(), request.geohash_bound.clone(), 
+            filter.geocode.clone(), request.geocode_bound.clone(), 
             self.image_manager.clone(), filter.platform.clone(),
             request.precision as usize, filter.recurse,
             filter.start_timestamp.clone(), request.thread_count as u8);

@@ -18,10 +18,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::os::unix::fs::PermissionsExt;
 
-// count, geohash, platform, precision, source
+// count, geocode, platform, precision, source
 pub type Extent = (i64, String, String, u8, String);
 
-// cloud_coverage, geohash, platform, source, tile, timestamp
+// cloud_coverage, geocode, platform, source, tile, timestamp
 pub type Image = (Option<f64>, String, String, String, String, i64);
 
 // path, pixel_coverage, subdataset
@@ -138,12 +138,12 @@ impl Album {
         &self.geocode
     }
 
-    pub fn get_image_path(&self, create: bool, geohash: &str,
+    pub fn get_image_path(&self, create: bool, geocode: &str,
             platform: &str, source: &str, subdataset: u8,
             tile: &str) -> Result<PathBuf, Box<dyn Error>> {
-        // create directory 'self.directory/platform/geohash/source'
+        // create directory 'self.directory/platform/geocode/source'
         let mut path = self.directory.clone();
-        for filename in vec!(platform, geohash, source) {
+        for filename in vec!(platform, geocode, source) {
             path.push(filename);
             if create && !path.exists() {
                 std::fs::create_dir(&path)?;
@@ -177,26 +177,26 @@ impl Album {
     }
 
     pub fn list(&self, end_timestamp: &Option<i64>,
-            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            geocode: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
             start_timestamp: &Option<i64>)
             -> Result<Vec<(Image, Vec<StFile>)>, Box<dyn Error>> {
         match &self.index {
-            Some(index) => Ok(index.list(&self, end_timestamp, geohash,
+            Some(index) => Ok(index.list(&self, end_timestamp, geocode,
                 max_cloud_coverage, min_pixel_coverage, platform,
                 recurse, source, start_timestamp)?),
             None => Err("unable to search on closed album".into()),
         }
     }
 
-    pub fn load(&mut self, cloud_coverage: Option<f64>, geohash: &str,
+    pub fn load(&mut self, cloud_coverage: Option<f64>, geocode: &str,
             pixel_coverage: f64, platform: &str, source: &str,
             subdataset: u8, tile: &str, timestamp: i64) 
             -> Result<(), Box<dyn Error>> {
         match &mut self.index {
             Some(index) => Ok(index.load(cloud_coverage,
-                geohash, pixel_coverage, platform, source,
+                geocode, pixel_coverage, platform, source,
                 subdataset, tile, timestamp)?),
             None => Err("unable to search on closed album".into()),
         }
@@ -208,25 +208,25 @@ impl Album {
     }
 
     pub fn search(&self, end_timestamp: &Option<i64>,
-            geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
+            geocode: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
             start_timestamp: &Option<i64>)
             -> Result<Vec<Extent>, Box<dyn Error>> {
         match &self.index {
-            Some(index) => Ok(index.search(end_timestamp, geohash,
+            Some(index) => Ok(index.search(end_timestamp, geocode,
                 max_cloud_coverage, min_pixel_coverage, platform,
                 recurse, source, start_timestamp)?),
             None => Err("unable to search on closed album".into()),
         }
     }
 
-    pub fn write(&mut self, dataset: &mut Dataset, geohash: &str,
+    pub fn write(&mut self, dataset: &mut Dataset, geocode: &str,
             pixel_coverage: f64, platform: &str, source: &str,
             subdataset: u8, tile: &str, timestamp: i64)
             -> Result<(), Box<dyn Error>> {
         // get image path
-        let path = self.get_image_path(true, geohash,
+        let path = self.get_image_path(true, geocode,
             platform, source, subdataset, tile)?;
 
         if path.exists() { // attempting to rewrite existing file
@@ -261,8 +261,8 @@ impl Album {
         std::fs::set_permissions(&path, permissions)?;
 
         // set dataset metadata attributes
-        dataset_copy.set_metadata_item("GEOHASH",
-            geohash, "STIP").compat()?;
+        dataset_copy.set_metadata_item("GEOCODE",
+            geocode, "STIP").compat()?;
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
             &pixel_coverage.to_string(), "STIP").compat()?;
         dataset_copy.set_metadata_item("PLATFORM",
@@ -277,7 +277,7 @@ impl Album {
 
         // if album is open -> load data
         if let Some(_) = self.index {
-            self.load(None, geohash, pixel_coverage,
+            self.load(None, geocode, pixel_coverage,
                 platform, source, subdataset, tile, timestamp)?;
         }
 
