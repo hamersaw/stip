@@ -1,6 +1,6 @@
 use rusqlite::{Connection, ToSql};
 
-use crate::album::{Extent, Image, StFile};
+use crate::album::{Album, Extent, Image, StFile};
 
 use std::error::Error;
 use std::sync::Mutex;
@@ -71,7 +71,7 @@ impl AlbumIndex {
         })
     }
 
-    pub fn list(&self, end_timestamp: &Option<i64>,
+    pub fn list(&self, album: &Album, end_timestamp: &Option<i64>,
             geohash: &Option<String>, max_cloud_coverage: &Option<f64>,
             min_pixel_coverage: &Option<f64>, platform: &Option<String>,
             recurse: bool, source: &Option<String>,
@@ -123,13 +123,13 @@ impl AlbumIndex {
             let tile: String = row.get(6)?;
  
             // TODO - error
-            //let path = self.get_image_path(false, &geohash,
-            //    &platform, &source, subdataset, &tile).unwrap();
+            let path = album.get_image_path(false, &geohash,
+                &platform, &source, subdataset, &tile).unwrap();
 
             Ok(((row.get(0)?, geohash, platform,
                     source, tile, row.get(7)?),
-                //(path.to_string_lossy().to_string(),
-                ("TODO - PATH".to_string(), row.get(2)?, subdataset)))
+                (path.to_string_lossy().to_string(),
+                    row.get(2)?, subdataset)))
         })?;
 
         // process images

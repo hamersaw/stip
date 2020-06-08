@@ -183,7 +183,7 @@ impl Album {
             start_timestamp: &Option<i64>)
             -> Result<Vec<(Image, Vec<StFile>)>, Box<dyn Error>> {
         match &self.index {
-            Some(index) => Ok(index.list(end_timestamp, geohash,
+            Some(index) => Ok(index.list(&self, end_timestamp, geohash,
                 max_cloud_coverage, min_pixel_coverage, platform,
                 recurse, source, start_timestamp)?),
             None => Err("unable to search on closed album".into()),
