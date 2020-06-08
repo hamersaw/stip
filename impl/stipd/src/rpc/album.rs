@@ -1,8 +1,9 @@
 use protobuf::{Album, AlbumBroadcastReply, AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumManagementClient, AlbumOpenReply, AlbumOpenRequest};
+use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
 
-use crate::album::{AlbumManager, Geocode};
+use crate::album::AlbumManager;
 use crate::task::TaskManager;
 use crate::task::open::OpenTask;
 

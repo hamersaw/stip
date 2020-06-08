@@ -2,9 +2,9 @@ use chrono::prelude::{TimeZone, Utc};
 use failure::ResultExt;
 use gdal::raster::Dataset;
 use geohash::Coordinate;
+use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
-use crate::album::Geocode;
 use crate::image::RAW_SOURCE;
 
 use std::error::Error;
@@ -12,9 +12,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
-        geocode: Geocode, precision: usize, record: &PathBuf,
-        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
+        dht_key_length: i8, geocode: Geocode, precision: usize,
+        record: &PathBuf) -> Result<(), Box<dyn Error>> {
     // open geotiff file
     let tif_path = record.with_extension("tif");
     let filename = tif_path.file_name().unwrap()
@@ -40,10 +40,11 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
 
     // split image with geohash precision
     for dataset_split in st_image::prelude::split(&dataset,
-            4326, x_interval, y_interval).compat()? {
+            geocode, precision).compat()? {
+        // calculate split dataset geocode
         let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
-        let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-        let geohash = geohash::encode(coordinate, precision)?;
+        let split_geocode = geocode.get_code(
+            win_max_x, win_max_y, precision)?;
 
         // perform dataset split
         let dataset = dataset_split.dataset().compat()?;
@@ -58,7 +59,7 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
 
         // lookup geohash in dht
         let addr = match crate::task::dht_lookup(
-                &dht, dht_key_length, &geohash) {
+                &dht, dht_key_length, &split_geocode) {
             Ok(addr) => addr,
             Err(e) => {
                 warn!("{}", e);
@@ -68,7 +69,7 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image(&addr, album,
-                &dataset, &geohash, pixel_coverage, "NAIP",
+                &dataset, &split_geocode, pixel_coverage, "NAIP",
                 &RAW_SOURCE, 0, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }

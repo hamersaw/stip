@@ -4,6 +4,7 @@ use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use st_image::prelude::Geocode;
 
 mod index;
 use index::AlbumIndex;
@@ -25,12 +26,6 @@ pub type Image = (Option<f64>, String, String, String, String, i64);
 
 // path, pixel_coverage, subdataset
 pub type StFile = (String, f64, u8);
-
-#[derive(Clone, Copy, FromPrimitive)]
-pub enum Geocode {
-    Geohash = 1,
-    QuadTile = 2,
-}
 
 pub struct AlbumManager {
     directory: PathBuf,
@@ -54,10 +49,10 @@ impl AlbumManager {
 
             let dht_key_length = file.read_i8()?;
             let geocode_value = file.read_u8()?;
-            let geocode: Geocode =
-                    match FromPrimitive::from_u8(geocode_value) {
-                Some(x) => x,
-                None => return Err(format!("unknown geocode {}",
+            let geocode: Geocode = match geocode_value {
+                0 => Geocode::Geohash,
+                1 => Geocode::QuadTile,
+                _ => return Err(format!("unknown geocode {}",
                     geocode_value).into()),
             };
 
@@ -100,7 +95,10 @@ impl AlbumManager {
         let mut file = File::create(&path)?;
 
         file.write_i8(dht_key_length)?;
-        file.write_u8(geocode as u8)?;
+        match geocode {
+            Geocode::Geohash => file.write_u8(0)?,
+            Geocode::QuadTile => file.write_u8(1)?,
+        }
         path.pop();
 
         // add album to map

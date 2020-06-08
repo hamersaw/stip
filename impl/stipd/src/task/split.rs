@@ -1,8 +1,8 @@
 use gdal::raster::Dataset;
 use geohash::Coordinate;
+use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
-use crate::album::Geocode;
 use crate::image::{ImageManager, Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
@@ -93,10 +93,6 @@ impl Task for SplitTask {
             let precision_clone = self.precision.clone();
             let receiver_clone = receiver.clone();
 
-            // compute geohash intervals for given precision
-            let (y_interval, x_interval) =
-                st_image::prelude::get_geohash_intervals(self.precision);
-
             let join_handle = std::thread::spawn(move || {
                 // iterate over records
                 loop {
@@ -108,8 +104,8 @@ impl Task for SplitTask {
 
                     // process record
                     match process(&album_clone, &dht_clone,
-                            dht_key_length, geocode, precision_clone,
-                            &record, x_interval, y_interval) {
+                            dht_key_length, geocode,
+                            precision_clone, &record) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
                             warn!("skipping record '{:?}': {}",
@@ -175,8 +171,8 @@ impl Task for SplitTask {
 }
 
 fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
-        geocode: Geocode, precision: usize, record: &(Image, Vec<StFile>),
-        x_interval: f64, y_interval: f64) -> Result<(), Box<dyn Error>> {
+        geocode: Geocode, precision: usize,
+        record: &(Image, Vec<StFile>)) -> Result<(), Box<dyn Error>> {
     let image = &record.0;
     for file in record.1.iter() {
         // check if path exists
@@ -191,13 +187,14 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
 
         // split image with geohash precision - TODO error
         for dataset_split in st_image::prelude::split(&dataset,
-                4326, x_interval, y_interval).unwrap() {
+                geocode, precision).unwrap() {
+            // calculate split dataset geocode
             let (_, win_max_x, _, win_max_y) = dataset_split.coordinates();
-            let coordinate = Coordinate{x: win_max_x, y: win_max_y};
-            let geohash = geohash::encode(coordinate, precision)?;
+            let split_geocode = geocode.get_code(
+                win_max_x, win_max_y, precision)?;
 
-            //  skip if geohash doesn't 'start_with' base image geohash
-            if !geohash.starts_with(&image.1) {
+            //  skip if geocode doesn't 'start_with' base image geocode
+            if !split_geocode.starts_with(&image.1) {
                 continue;
             }
 
@@ -212,7 +209,7 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
 
             // lookup geohash in dht
             let addr = match crate::task::dht_lookup(
-                    &dht, dht_key_length, &geohash) {
+                    &dht, dht_key_length, &split_geocode) {
                 Ok(addr) => addr,
                 Err(e) => {
                     warn!("{}", e);
@@ -222,7 +219,7 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
 
             // send image to new host
             if let Err(e) = crate::transfer::send_image(&addr, album,
-                    &dataset, &geohash, file.1, &image.2,
+                    &dataset, &split_geocode, file.1, &image.2,
                     SPLIT_SOURCE, file.2, &image.4, image.5) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }

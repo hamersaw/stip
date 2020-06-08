@@ -1,10 +1,10 @@
+use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
 mod modis;
 mod naip;
 mod sentinel_2;
 
-use crate::album::Geocode;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::error::Error;
@@ -73,10 +73,6 @@ impl Task for LoadEarthExplorerTask {
             let precision = self.precision.clone();
             let receiver_clone = receiver.clone();
 
-            // compute geohash intervals for given precision
-            let (y_interval, x_interval) =
-                st_image::prelude::get_geohash_intervals(self.precision);
-
             let join_handle = std::thread::spawn(move || {
                 // iterate over records
                 loop {
@@ -89,17 +85,14 @@ impl Task for LoadEarthExplorerTask {
                     // process record
                     let result = match format {
                         ImageFormat::MODIS => modis::process(
-                            &album_clone, &dht_clone,
-                            dht_key_length, geocode, precision,
-                            &record, x_interval, y_interval),
+                            &album_clone, &dht_clone, dht_key_length,
+                            geocode, precision, &record),
                         ImageFormat::NAIP => naip::process(
-                            &album_clone, &dht_clone,
-                            dht_key_length, geocode, precision,
-                            &record, x_interval, y_interval),
+                            &album_clone, &dht_clone, dht_key_length,
+                            geocode, precision, &record),
                         ImageFormat::Sentinel => sentinel_2::process(
-                            &album_clone, &dht_clone,
-                            dht_key_length, geocode, precision,
-                            &record, x_interval, y_interval),
+                            &album_clone, &dht_clone, dht_key_length,
+                            geocode, precision, &record),
                     };
 
                     // process result
