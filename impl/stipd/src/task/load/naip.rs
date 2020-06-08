@@ -1,7 +1,6 @@
 use chrono::prelude::{TimeZone, Utc};
 use failure::ResultExt;
 use gdal::raster::Dataset;
-use geohash::Coordinate;
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 

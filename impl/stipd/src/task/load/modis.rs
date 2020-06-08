@@ -3,7 +3,6 @@ use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
 use gdal::raster::types::GdalType;
-use geohash::{self, Coordinate};
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 

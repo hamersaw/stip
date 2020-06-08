@@ -2,7 +2,6 @@ use chrono::prelude::{DateTime, Utc};
 use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::Dataset;
-use geohash::Coordinate;
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 use zip::ZipArchive;
