@@ -115,6 +115,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - 'task clear' to clear tracked tasks
 #### ALBUMS
 - documentation
-- cloud coverage computation on sentinel-2 data
-- data split - fix v4.0
+- __data split - fix v4.0__
 - data fill - fix v4.0

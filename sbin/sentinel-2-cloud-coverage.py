@@ -17,7 +17,6 @@ import stippy
 BANDS = [(2, 1), (0, 1), (0,3), (1, 1),
     (0, 4), (1, 4), (2, 2), (2, 3), (1, 5), (1, 6)]
 
-#def compute_cloud_coverage(directory, platform, geohash, source, tile):
 def compute_cloud_coverage(image):
     # compute max width and height
     width = 0
@@ -74,7 +73,7 @@ def process(image):
         return
 
     cloud_coverage = compute_cloud_coverage(image)
-    print(image.geohash + ' ' + str(cloud_coverage))
+    print(image.geocode + ' ' + str(cloud_coverage))
 
     # update all existing image bands
     processed = []
@@ -93,6 +92,7 @@ def process(image):
 if __name__ == "__main__":
     # parse arguments
     parser = argparse.ArgumentParser(description='compute cloud coverage')
+    parser.add_argument('album', type=str, help='stip album')
     parser.add_argument('-i', '--ip-address', type=str,
         help='stip host ip address', default='127.0.0.1')
     parser.add_argument('-p', '--port', type=int,
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     host_addr = args.ip_address + ':' + str(args.port)
     images = []
     for (node, image) in stippy.list_node_images(
-            host_addr, platform='Sentinel-2'):
+            host_addr, args.album, platform='Sentinel-2'):
         images.append(image)
 
     # process images
