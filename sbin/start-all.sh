@@ -40,7 +40,7 @@ while read line; do
     fi
 
     seedaddr=$host
-    seedport=$port
+    seedport=$gossipport
 
     echo "starting node $nodeid"
     if [ $host == "127.0.0.1" ]; then
