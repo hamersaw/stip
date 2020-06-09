@@ -48,11 +48,12 @@ impl AlbumManager {
             path.pop();
 
             // add album to map
-            albums.insert(id,
+            albums.insert(id.clone(),
                 Arc::new(RwLock::new(Album {
                     dht_key_length: dht_key_length,
                     directory: path,
                     geocode: geocode,
+                    id: id,
                     index: None,
                 })));
         }
@@ -96,6 +97,7 @@ impl AlbumManager {
                 dht_key_length: dht_key_length,
                 directory: path,
                 geocode: geocode,
+                id: id.to_string(),
                 index: None,
             })));
 
@@ -111,6 +113,7 @@ pub struct Album {
     dht_key_length: i8,
     directory: PathBuf,
     geocode: Geocode,
+    id: String,
     index: Option<AlbumIndex>,
 }
 
@@ -125,6 +128,10 @@ impl Album {
 
     pub fn get_geocode(&self) -> &Geocode {
         &self.geocode
+    }
+
+    pub fn get_id(&self) -> &str {
+        &self.id
     }
 
     pub fn get_image_path(&self, create: bool, geocode: &str,

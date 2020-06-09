@@ -128,8 +128,8 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 ## TODO
 - **fix pixel coverage filter on 'image search'**
 - __image fill - fix v0.4__
-- __image split - fix v0.4__
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
+- StoreEarthExplorerTask - pass Arc<RwLock<Album>> instead of album, dht_key_length, geocode
 - 'task clear' to clear tracked tasks

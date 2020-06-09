@@ -1,8 +1,10 @@
+use failure::ResultExt;
 use gdal::raster::Dataset;
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
-use crate::{RAW_SOURCE, SPLIT_SOURCE};
+use crate::{Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
+use crate::album::Album;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::error::Error;
@@ -11,12 +13,10 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct SplitTask {
-    album: String,
+    album: Arc<RwLock<Album>>,
     dht: Arc<RwLock<Dht>>,
-    dht_key_length: i8,
     end_timestamp: Option<i64>,
     geocode: Option<String>,
-    geocode_algorithm: Geocode,
     geocode_bound: Option<String>,
     platform: Option<String>,
     precision: usize,
@@ -26,18 +26,16 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
+    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<RwLock<Dht>>,
             end_timestamp: Option<i64>, geocode: Option<String>,
-            geocode_algorithm: Geocode, geocode_bound: Option<String>,
-            platform: Option<String>, precision: usize, recurse: bool,
+            geocode_bound: Option<String>, platform: Option<String>,
+            precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
             album: album,
             dht: dht,
-            dht_key_length: dht_key_length,
             end_timestamp: end_timestamp,
             geocode: geocode,
-            geocode_algorithm: geocode_algorithm,
             geocode_bound: geocode_bound,
             platform: platform,
             precision: precision,
@@ -50,14 +48,12 @@ impl SplitTask {
 
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        unimplemented!();
-        /*// search for images using ImageManager
+        // search for images using Album
         let mut records: Vec<(Image, Vec<StFile>)> = {
-            let image_manager = self.image_manager.read().unwrap();
-            image_manager.list(&self.end_timestamp,
-                &self.geocode, &None, &None, &self.platform,
-                self.recurse, &Some(RAW_SOURCE.to_string()),
-                &self.start_timestamp)
+            let album = self.album.read().unwrap();
+            album.list(&self.end_timestamp, &self.geocode, &None, &None,
+                &self.platform, self.recurse, 
+                &Some(RAW_SOURCE.to_string()), &self.start_timestamp)?
         };
 
         // filter by geocode precision length
@@ -81,10 +77,13 @@ impl Task for SplitTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
-            let album_clone = self.album.clone();
+            let (album, dht_key_length, geocode) = {
+                let album = self.album.read().unwrap();
+                (album.get_id().to_string(), album.get_dht_key_length(),
+                    album.get_geocode().clone())
+            };
+
             let dht_clone = self.dht.clone();
-            let dht_key_length = self.dht_key_length.clone();
-            let geocode_algorithm = self.geocode_algorithm.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let precision_clone = self.precision.clone();
@@ -100,9 +99,8 @@ impl Task for SplitTask {
                     };
 
                     // process record
-                    match process(&album_clone, &dht_clone,
-                            dht_key_length, geocode_algorithm,
-                            precision_clone, &record) {
+                    match process(&album, &dht_clone, dht_key_length,
+                            geocode, precision_clone, &record) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
                             warn!("skipping record '{:?}': {}",
@@ -163,11 +161,11 @@ impl Task for SplitTask {
         });
 
         // return task handle
-        Ok(task_handle)*/
+        Ok(task_handle)
     }
 }
 
-/*fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
         geocode: Geocode, precision: usize,
         record: &(Image, Vec<StFile>)) -> Result<(), Box<dyn Error>> {
     let image = &record.0;
@@ -179,12 +177,12 @@ impl Task for SplitTask {
                 path.to_string_lossy()).into());
         }
 
-        // open image - TODO error
-        let dataset = Dataset::open(&path).unwrap();
+        // open image
+        let dataset = Dataset::open(&path).compat()?;
 
-        // split image with geocode precision - TODO error
+        // split image with geocode precision
         for dataset_split in st_image::prelude::split(&dataset,
-                geocode, precision).unwrap() {
+                geocode, precision).compat()? {
             // calculate split dataset geocode
             let (win_min_x, win_max_x, win_min_y, win_max_y) =
                 dataset_split.coordinates();
@@ -197,11 +195,11 @@ impl Task for SplitTask {
                 continue;
             }
 
-            // perform dataset split - TODO error
-            let dataset = dataset_split.dataset().unwrap();
+            // perform dataset split
+            let dataset = dataset_split.dataset().compat()?;
 
-            // if image has 0.0 coverage -> don't process - TODO error
-            let pixel_coverage = st_image::coverage(&dataset).unwrap();
+            // if image has 0.0 coverage -> don't process
+            let pixel_coverage = st_image::coverage(&dataset).compat()?;
             if pixel_coverage == 0f64 {
                 continue;
             }
@@ -226,4 +224,4 @@ impl Task for SplitTask {
     }
 
     Ok(())
-}*/
+}

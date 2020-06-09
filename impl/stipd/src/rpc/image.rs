@@ -257,24 +257,30 @@ impl ImageManagement for ImageManagementImpl {
 
     async fn split(&self, request: Request<ImageSplitRequest>)
             -> Result<Response<ImageSplitReply>, Status> {
-        trace!("SplitRequest: {:?}", request);
+        trace!("ImageSplitRequest: {:?}", request);
         let request = request.get_ref();
         let filter = &request.filter;
 
-        /*// initialize task
-        let task = SplitTask::new(request.album.clone(),
-            self.dht.clone(), filter.end_timestamp.clone(),
-            filter.geocode.clone(), request.geocode_bound.clone(), 
-            self.image_manager.clone(), filter.platform.clone(),
+        // ensure album exists
+        let album = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.album)?;
+
+        // initialize task
+        let task = SplitTask::new(album.clone(), self.dht.clone(),
+            filter.end_timestamp.clone(), filter.geocode.clone(),
+            request.geocode_bound.clone(), filter.platform.clone(),
             request.precision as usize, filter.recurse,
             filter.start_timestamp.clone(), request.thread_count as u8);
 
-        // execute task using task manager - TODO error
+        // execute task using task manager
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            task_manager.execute(task, request.task_id).unwrap()
-        };*/
-        let task_id = 0; // TODO - fix split
+            match task_manager.execute(task, request.task_id) {
+                Ok(task_id) => task_id,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to start OpenTask: {}", e))),
+            }
+        };
  
         // initialize reply
         let reply = ImageSplitReply {
