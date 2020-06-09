@@ -19,7 +19,7 @@ pub enum ImageFormat {
     Sentinel,
 }
 
-pub struct LoadEarthExplorerTask {
+pub struct StoreEarthExplorerTask {
     album: String,
     dht: Arc<RwLock<Dht>>,
     dht_key_length: i8,
@@ -30,11 +30,11 @@ pub struct LoadEarthExplorerTask {
     thread_count: u8,
 }
 
-impl LoadEarthExplorerTask {
+impl StoreEarthExplorerTask {
     pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
             format: ImageFormat, geocode: Geocode, glob: String,
-            precision: usize, thread_count: u8) -> LoadEarthExplorerTask {
-        LoadEarthExplorerTask {
+            precision: usize, thread_count: u8) -> StoreEarthExplorerTask {
+        StoreEarthExplorerTask {
             album: album,
             dht: dht,
             dht_key_length: dht_key_length,
@@ -47,7 +47,7 @@ impl LoadEarthExplorerTask {
     }
 }
 
-impl Task for LoadEarthExplorerTask {
+impl Task for StoreEarthExplorerTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for image files
         let mut records = Vec::new();

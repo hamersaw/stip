@@ -59,11 +59,6 @@ impl StreamHandler for TransferStreamHandler {
                     },
                     None => warn!("album '{}' does not exist", album),
                 }
-                /*let mut image_manager =
-                    self.image_manager.write().unwrap();
-                image_manager.write(&mut dataset, &geocode,
-                    pixel_coverage, &platform, &source,
-                    subdataset, &tile, timestamp)?;*/
 
                 // write success
                 stream.write_u8(1)?;

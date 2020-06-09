@@ -2,7 +2,7 @@ use protobuf::{self, Task, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadca
 use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
 
-use crate::task::{TaskHandle, TaskManager, TaskStatus};
+use crate::task::{TaskManager, TaskStatus};
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

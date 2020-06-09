@@ -1,6 +1,7 @@
 use gdal::raster::Dataset;
 
-use crate::image::{FILLED_SOURCE, ImageManager};
+use crate::FILLED_SOURCE;
+use crate::album::AlbumManager;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;
@@ -10,10 +11,8 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub struct FillTask {
-    band: Option<String>,
     end_timestamp: Option<i64>,
     geocode: Option<String>,
-    image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     recurse: bool,
     start_timestamp: Option<i64>,
@@ -22,16 +21,13 @@ pub struct FillTask {
 }
 
 impl FillTask {
-    pub fn new(band: Option<String>, end_timestamp: Option<i64>,
-            geocode: Option<String>, image_manager: Arc<RwLock<ImageManager>>,
+    pub fn new(end_timestamp: Option<i64>, geocode: Option<String>,
             platform: Option<String>, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8,
             window_seconds: i64) -> FillTask {
         FillTask {
-            band: band,
             end_timestamp: end_timestamp,
             geocode: geocode,
-            image_manager: image_manager,
             platform: platform,
             recurse: recurse,
             start_timestamp: start_timestamp,

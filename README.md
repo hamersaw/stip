@@ -107,7 +107,7 @@ These commands enable searching the system for images using the metadata provide
     # search for NAIP data in the test album where the geohash starts with '9x'
     ./stip image search test -p NAIP -g 9x -r 
 
-    # search for data beginning on 2015-01-01 
+    # search for data beginning on 2015-01-01 within the test2 album
     #   where the pixel coverage is greater than 95%
     ./stip image search test2 -s 2524608000 -x 0.95
 
@@ -122,7 +122,7 @@ Images are stored at the geohash length defined during 'image store's. However, 
 #### IMAGE FILL
 Typically image datasets partition data into many tiles. The inherit tile bounds mean that often a single geohash spans multiple tiles. Therefore, when loading data, one image contains partial data whereas another contains the remaining data. The 'image fill' command attempts to identify image sets where 'complete' images may be built by combining multiple source images. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'image search' and 'image list' commands, enabling fine image processing filtering criteria.
 
-    # attempt to fill all images for the NAIP dataset
+    # attempt to fill all images in album test2 for the NAIP dataset
     ./stip image fill test2 -p NAIP
 
 ## TODO

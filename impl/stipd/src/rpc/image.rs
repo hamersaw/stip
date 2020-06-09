@@ -4,10 +4,9 @@ use tokio::sync::mpsc::Receiver;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
-use crate::image::ImageManager;
 use crate::task::TaskManager;
 use crate::task::fill::FillTask;
-use crate::task::load::{LoadEarthExplorerTask, ImageFormat};
+use crate::task::store::{StoreEarthExplorerTask, ImageFormat};
 use crate::task::split::SplitTask;
 
 use std::collections::HashMap;
@@ -308,7 +307,7 @@ impl ImageManagement for ImageManagementImpl {
             ProtoImageFormat::Sentinel => ImageFormat::Sentinel,
         };
 
-        let task = LoadEarthExplorerTask::new(request.album.clone(),
+        let task = StoreEarthExplorerTask::new(request.album.clone(),
             self.dht.clone(), dht_key_length, format, geocode,
             request.glob.clone(), request.precision as usize,
             request.thread_count as u8);
@@ -319,7 +318,7 @@ impl ImageManagement for ImageManagementImpl {
             match task_manager.execute(task, request.task_id) {
                 Ok(task_id) => task_id,
                 Err(e) => return Err(Status::new(Code::Unknown, format!(
-                    "failed to start LoadEarthExplorerTask: {}", e))),
+                    "failed to start StoreEarthExplorerTask: {}", e))),
             }
         };
 

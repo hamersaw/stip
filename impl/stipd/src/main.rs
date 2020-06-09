@@ -9,8 +9,7 @@ use tonic::transport::Server;
 
 mod album;
 use album::AlbumManager;
-mod image;
-use image::ImageManager;
+mod index;
 mod task;
 use task::TaskManager;
 mod rpc;
@@ -26,6 +25,19 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 //use std::thread;
 
+pub const FILLED_SOURCE: &'static str = "filled";
+pub const RAW_SOURCE: &'static str = "raw";
+pub const SPLIT_SOURCE: &'static str = "split";
+
+// count, geocode, platform, precision, source
+pub type Extent = (i64, String, String, u8, String);
+
+// cloud_coverage, geocode, platform, source, tile, timestamp
+pub type Image = (Option<f64>, String, String, String, String, i64);
+
+// path, pixel_coverage, subdataset
+pub type StFile = (String, f64, u8);
+
 fn main() {
     // initilaize logger
     env_logger::init();
@@ -39,15 +51,13 @@ fn main() {
             opt.directory, e);
     }
 
-    // initialize AlbumManager, ImageManager, and TaskManager
+    // initialize AlbumManager and TaskManager
     let album_manager = match AlbumManager::new(opt.directory.clone()) {
         Ok(album_manager) => album_manager,
         Err(e) => panic!("initialize AlbumManager failed: {}", e),
     };
 
     let album_manager = Arc::new(RwLock::new(album_manager));
-    let image_manager = Arc::new(RwLock::new(
-        ImageManager::new(opt.directory)));
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
     // build swarm config
@@ -84,59 +94,6 @@ fn main() {
         50, transfer_stream_handler);
 
     server.start().expect("transfer server start");
-
-    // compile vector is existing image paths
-    let paths = {
-        let image_manager = image_manager.read().unwrap();
-        match image_manager.get_paths() {
-            Ok(paths) => paths,
-            Err(e) => panic!("failed to retrieve image paths: {}", e),
-        }
-    };
-
-    // initialize image load channel
-    let (sender, receiver) = crossbeam_channel::bounded(256);
-
-    // start load theads
-    for _ in 0..opt.load_thread_count {
-        let image_manager_clone = image_manager.clone();
-        let receiver_clone = receiver.clone();
-
-        std::thread::spawn(move || {
-            loop {
-                // fetch next record
-                let mut path: PathBuf = match receiver_clone.recv() {
-                    Ok(record) => record,
-                    Err(_) => break,
-                };
-
-                // parse image metadata
-                match crate::image::to_image_metadata(&mut path) {
-                    Ok((image, file)) => {
-                        let mut image_manager = 
-                            image_manager_clone.write().unwrap();
-                        if let Err(e) = image_manager.load(
-                                image.0, &image.1, file.1, &image.2,
-                                &image.3, file.2, &image.4, image.5) {
-                            warn!("failed to load image: {}", e);
-                        }
-                    },
-                    Err(e) => warn!("failed to parse image metadata: {}", e),
-                }
-            }
-        });
-    }
- 
-    // send existing image paths to image load channel
-    let _ = std::thread::spawn(move || {
-        for path in paths {
-            if let Err(e) = sender.send(path) {
-                warn!("failed to load image path: {}", e);
-            }
-        }
-
-        drop(sender);
-    });
 
     // start GRPC server
     let addr = SocketAddr::new("0.0.0.0".parse().unwrap(), opt.rpc_port);

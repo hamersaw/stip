@@ -2,7 +2,6 @@ use protobuf::{Node, NodeListReply, NodeListRequest, NodeManagement};
 use swarm::prelude::Dht;
 use tonic::{Request, Response, Status};
 
-use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 
 pub struct NodeManagementImpl {

@@ -8,7 +8,6 @@ use crate::task::TaskManager;
 use crate::task::open::OpenTask;
 
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 
 pub struct AlbumManagementImpl {

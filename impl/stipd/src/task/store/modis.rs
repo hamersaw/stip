@@ -6,7 +6,7 @@ use gdal::raster::types::GdalType;
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
-use crate::image::RAW_SOURCE;
+use crate::RAW_SOURCE;
 
 use std::collections::HashMap;
 use std::error::Error;

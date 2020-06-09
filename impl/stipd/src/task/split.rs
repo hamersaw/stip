@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
-use crate::image::{ImageManager, Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
+use crate::{RAW_SOURCE, SPLIT_SOURCE};
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::error::Error;
@@ -18,7 +18,6 @@ pub struct SplitTask {
     geocode: Option<String>,
     geocode_algorithm: Geocode,
     geocode_bound: Option<String>,
-    image_manager: Arc<RwLock<ImageManager>>,
     platform: Option<String>,
     precision: usize,
     recurse: bool,
@@ -30,7 +29,6 @@ impl SplitTask {
     pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
             end_timestamp: Option<i64>, geocode: Option<String>,
             geocode_algorithm: Geocode, geocode_bound: Option<String>,
-            image_manager: Arc<RwLock<ImageManager>>,
             platform: Option<String>, precision: usize, recurse: bool,
             start_timestamp: Option<i64>, thread_count: u8) -> SplitTask {
         SplitTask {
@@ -41,7 +39,6 @@ impl SplitTask {
             geocode: geocode,
             geocode_algorithm: geocode_algorithm,
             geocode_bound: geocode_bound,
-            image_manager: image_manager,
             platform: platform,
             precision: precision,
             recurse: recurse,
@@ -53,7 +50,8 @@ impl SplitTask {
 
 impl Task for SplitTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // search for images using ImageManager
+        unimplemented!();
+        /*// search for images using ImageManager
         let mut records: Vec<(Image, Vec<StFile>)> = {
             let image_manager = self.image_manager.read().unwrap();
             image_manager.list(&self.end_timestamp,
@@ -165,11 +163,11 @@ impl Task for SplitTask {
         });
 
         // return task handle
-        Ok(task_handle)
+        Ok(task_handle)*/
     }
 }
 
-fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+/*fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
         geocode: Geocode, precision: usize,
         record: &(Image, Vec<StFile>)) -> Result<(), Box<dyn Error>> {
     let image = &record.0;
@@ -228,4 +226,4 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
     }
 
     Ok(())
-}
+}*/

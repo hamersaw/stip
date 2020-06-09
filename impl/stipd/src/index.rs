@@ -1,6 +1,7 @@
 use rusqlite::{Connection, ToSql};
 
-use crate::album::{Album, Extent, Image, StFile};
+use crate::{Extent, Image, StFile};
+use crate::album::Album;
 
 use std::error::Error;
 use std::sync::Mutex;
@@ -134,7 +135,7 @@ impl AlbumIndex {
 
         // process images
         let mut images: Vec<(Image, Vec<StFile>)> = Vec::new();
-        for (image, mut file) in images_iter.map(|x| x.unwrap()) {
+        for (image, file) in images_iter.map(|x| x.unwrap()) {
             match images.last_mut() {
                 Some((i, f)) => {
                     // if geocode and tile match -> append file to files

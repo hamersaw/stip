@@ -1,13 +1,11 @@
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use st_image::prelude::Geocode;
 
-mod index;
-use index::AlbumIndex;
+use crate::{Extent, Image, StFile};
+use crate::index::AlbumIndex;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
@@ -17,15 +15,6 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::os::unix::fs::PermissionsExt;
-
-// count, geocode, platform, precision, source
-pub type Extent = (i64, String, String, u8, String);
-
-// cloud_coverage, geocode, platform, source, tile, timestamp
-pub type Image = (Option<f64>, String, String, String, String, i64);
-
-// path, pixel_coverage, subdataset
-pub type StFile = (String, f64, u8);
 
 pub struct AlbumManager {
     directory: PathBuf,

@@ -131,7 +131,6 @@ fn process(album: &Arc<RwLock<Album>>, record: &PathBuf)
     };
     let geocode = dataset.metadata_item("GEOCODE", "STIP")
         .ok_or("image geocode metadata not found")?;
-    let path = record.to_string_lossy().to_string();
     let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
         .ok_or("image pixel coverage metadata not found")?.parse::<f64>()?;
     let platform = dataset.metadata_item("PLATFORM", "STIP")
