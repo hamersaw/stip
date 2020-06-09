@@ -55,65 +55,81 @@ Similar to starting the cluster, the ./sbin/stop-all.sh script has been provided
     # terminal command to stop stip cluster from root project
     ./sbin/stop-all.sh
 ### STIP
-#### CLUSTER LIST / SHOW
+#### CLUSTER LIST
 These commands are useful for identifying nodes within the cluster. They are typically used for testing or used in the background of APIs or applications when contacting each cluster node is necessary for a particular operation.
 
     # list all nodes in the cluser
     ./stip cluster list
-
-    # display information about a single cluster node
-    ./stip cluster show 0
-#### TASK LIST / SHOW
+#### TASK LIST
 Behind the scenes of stip all functionality is partitioned into a variety of tasks. Said functionality includes data loading, data splitting / merging, data filling, etc. The 'task' interface is used to monitor progress of cluster tasks.
     
     # list all cluster tasks
     ./stip task list
+#### ALBUM CREATE
+The system uses albums logically partition the dataspace. Each album is established using a unique identifier. Additionally, they define both the geocode algorithm and DHT key length for all images stored within. The geohash and quadtile geocode algorithms are currently supported. DHT key lengths which are positive use the first 'n' characters of the geocode, negative using geocode length - 'n' characters, and 0 uses the entire geocode.
 
-    # display information about a single cluster task
-    ./stip task show 1000
-#### DATA LOAD
-Data load tasks are initialized on a per-node basis, meaning each node ony processes local data. Therefore, data is typically distributed among cluster nodes to enable distributed processing. As such, a separate task must be manually started on each node to load the local data.
+    # create an album using quadtiles and distribute using the entire geocode
+    ./stip album create test quadtile
+    
+    # distribute using the first two characters of geocode
+    ./stip album create test2 geohash -d 2
 
-    # load a single modis file at geohash length 3
-    ./stip data load '~/Downloads/earth-explorer/modis/MCD43A4.A2020100.h08v05.006.2020109032339.hdf' modis -t 1 -l 3
+    # distributed using geocode length - 1 characters of geocode
+    ./stip album create test3 quadtile -d=-1
+#### ALBUM LIST
+This command lists available albums, including a variety of metadata.
 
-    # load data for the given glob with 4 threads at geohash length 6
-    ./stip data load '~/Downloads/earth-explorer/naip/test/*' naip -t 4 -l 6
+    # list albums
+    ./stip album list
+#### ALBUM OPEN / CLOSE
+Albums may be open and closed. Internally, the difference defines whether a in-memory index is mainained over the underlying dataspace. Externally, it determines whether an album may be queried or not. Since images are written to a directory, they may be written to an album regardless of whether it is open or closed. 
 
-    # load sentinel data for files with the provided glob at geohash
+    # open an album
+    ./stip album open test2
+
+    # close an album
+    ./stip album close test2
+#### IMAGE STORE
+Image tore tasks are initialized on a per-node basis, meaning each node ony processes local data. Therefore, data is typically distributed among cluster nodes to enable distributed processing. As such, a separate task must be manually started on each node to load the local data.
+
+    # store a single modis file into the test album at geohash length 3
+    ./stip image store test '~/Downloads/earth-explorer/modis/MCD43A4.A2020100.h08v05.006.2020109032339.hdf' modis -t 1 -l 3
+
+    # store images for the given glob with 4 threads at geohash length 6
+    ./stip iamge store test2 '~/Downloads/earth-explorer/naip/test/*' naip -t 4 -l 6
+
+    # store sentinel data for files with the provided glob at geohash
     #   length 5 using 2 threads and setting the task id as 1000
-    ./stip -i $(curl ifconfig.me) data load "/s/$(hostname)/a/nobackup/galileo/usgs-earth-explorer/sentinel-2/foco-20km/*T13TEE*" sentinel -t 2 -l 5 -d 1000
-#### DATA LIST / SEARCH
-These commands enable searching the system for images using the metadata provided. 'data search' provides an agglomerated data representation, presenting image geohash precision counts satisfying the query. It is useful for gaining understanding of the dataspace. With an understanding of interesting data the 'data list' command returns all metadata for images satisfying the provided filtering criteria.
+    ./stip -i $(curl ifconfig.me) image store test3 "/s/$(hostname)/a/nobackup/galileo/usgs-earth-explorer/sentinel-2/foco-20km/*T13TEE*" sentinel -t 2 -l 5 -d 1000
+#### IMAGE LIST / SEARCH
+These commands enable searching the system for images using the metadata provided. 'image search' provides an agglomerated data representation, presenting image geohash precision counts satisfying the query. It is useful for gaining understanding of the dataspace. With an understanding of interesting data the 'image list' command returns all metadata for images satisfying the provided filtering criteria.
 
-    # search for NAIP data where the geohash starts with '9x'
-    ./stip data search -p NAIP -g 9x -r 
+    # search for NAIP data in the test album where the geohash starts with '9x'
+    ./stip image search test -p NAIP -g 9x -r 
 
     # search for data beginning on 2015-01-01 
     #   where the pixel coverage is greater than 95%
-    ./stip data search -s 2524608000 -x 0.95
+    ./stip image search test2 -s 2524608000 -x 0.95
 
     # list all images from Sentinel-2 dataset for geohash '9xj3ej'
-    ./stip data list -p Sentinel-2 -g 9xj3ej
-#### DATA SPLIT
-Images are stored at the geohash length defined during data loads. However, the 'data split' command enables further partitioning of datasets. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'data search' and 'data list' commands, enabling fine image processing filtering criteria.
+    ./stip image list test3 -p Sentinel-2 -g 9xj3ej
+#### IMAGE SPLIT
+Images are stored at the geohash length defined during 'image store's. However, the 'image split' command enables further partitioning of datasets. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'image search' and 'image list' commands, enabling fine image processing filtering criteria.
 
     # split Sentinel-2 data at a geohash length of 6 
     #   for all geohashes starting with '9xj'
-    ./stip data split -p Sentinel-2 -g 9xj -r -l 6
-#### DATA FILL
-Typically image datasets partition data into many tiles. The inherit tile bounds mean that often a single geohash spans multiple tiles. Therefore, when loading data, one image contains partial data whereas another contains the remaining data. The 'data fill' command attempts to identify image sets where 'complete' images may be built by combining multiple source images. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'data search' and 'data list' commands, enabling fine image processing filtering criteria.
+    ./stip image split test -p Sentinel-2 -g 9xj -r -l 6
+#### IMAGE FILL
+Typically image datasets partition data into many tiles. The inherit tile bounds mean that often a single geohash spans multiple tiles. Therefore, when loading data, one image contains partial data whereas another contains the remaining data. The 'image fill' command attempts to identify image sets where 'complete' images may be built by combining multiple source images. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'image search' and 'image list' commands, enabling fine image processing filtering criteria.
 
     # attempt to fill all images for the NAIP dataset
-    ./stip data fill -p NAIP
+    ./stip image fill test2 -p NAIP
 
 ## TODO
-- **fix pixel coverage filter on 'data search'**
+- **fix pixel coverage filter on 'image search'**
+- __image fill - fix v0.4__
+- __image split - fix v0.4__
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
 - 'task clear' to clear tracked tasks
-#### ALBUMS
-- documentation
-- __data split - fix v4.0__
-- data fill - fix v4.0
