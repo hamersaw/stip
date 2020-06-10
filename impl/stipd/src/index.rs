@@ -27,14 +27,14 @@ const CREATE_IMAGES_TABLE_STMT: &str =
 //const CREATE_INDEX_STMT: &str =
 //"CREATE INDEX idx_images ON images(platform, pixel_coverage)";
 
+const INSERT_FILES_STMT: &str =
+"INSERT INTO files (image_id, pixel_coverage, subdataset)
+VALUES (?1, ?2, ?3)";
+
 const INSERT_IMAGES_STMT: &str =
 "INSERT INTO images (cloud_coverage, geocode,
     id, platform, source, tile, timestamp)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
-
-const INSERT_FILES_STMT: &str =
-"INSERT INTO files (image_id, pixel_coverage, subdataset)
-VALUES (?1, ?2, ?3)";
 
 const ID_SELECT_STMT: &str =
 "SELECT id from images WHERE geocode = ?1 AND tile = ?2";
@@ -48,10 +48,13 @@ const LIST_ORDER_BY_STMT: &str =
 " ORDER BY images.tile, images.geocode, images.timestamp, files.subdataset";
 
 const SEARCH_SELECT_STMT: &str =
-"SELECT COUNT(*) as count, SUBSTR(geocode, 0, REPLACE_LENGTH) as geocode_search, platform, LENGTH(geocode) as precision, source FROM images";
+"SELECT COUNT(*) as count, SUBSTR(geocode, 0, REPLACE_LENGTH) as geocode_search, platform, LENGTH(geocode) as precision, source
+FROM (SELECT DISTINCT geocode, platform, source, tile
+    FROM images
+    JOIN files ON images.id = files.image_id";
 
 const SEARCH_GROUP_BY_STMT: &str =
-" GROUP BY geocode_search, platform, precision, source";
+" ) GROUP BY geocode_search, platform, precision, source";
 
 pub struct AlbumIndex {
     conn: Mutex<Connection>,
