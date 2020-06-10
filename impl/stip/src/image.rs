@@ -216,7 +216,7 @@ async fn search(matches: &ArgMatches, _: &ArgMatches,
         filter: filter,
     };
 
-    // TODO - maintains streams vector
+    // maintain streams vector
     let mut clients = Vec::new();
     for node in node_list_reply.nodes.iter() {
         // initialize ImageManagement grpc client

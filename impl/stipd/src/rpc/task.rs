@@ -1,4 +1,4 @@
-use protobuf::{self, Task, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient};
+use protobuf::{self, Task, TaskClearReply, TaskClearRequest, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient};
 use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
 
@@ -44,6 +44,7 @@ impl TaskManagement for TaskManagementImpl {
         }
 
         // send broadcast message to each dht node
+        let mut clear_replies = HashMap::new();
         let mut list_replies = HashMap::new();
 
         for (node_id, addr) in dht_nodes {
@@ -57,6 +58,16 @@ impl TaskManagement for TaskManagementImpl {
 
             // execute message at dht node
             match TaskBroadcastType::from_i32(request.message_type).unwrap() {
+                TaskBroadcastType::TaskClear => {
+                    let reply = match client.clear(request
+                            .clear_request.clone().unwrap()).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("clear broadcast failed: {}", e))),
+                    };
+                    clear_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
                 TaskBroadcastType::TaskList => {
                     let reply = match client.list(request
                             .list_request.clone().unwrap()).await {
@@ -73,7 +84,28 @@ impl TaskManagement for TaskManagementImpl {
         // initialize reply
         let reply = TaskBroadcastReply {
             message_type: request.message_type,
+            clear_replies: clear_replies,
             list_replies: list_replies,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn clear(&self, request: Request<TaskClearRequest>)
+            -> Result<Response<TaskClearReply>, Status> {
+        trace!("TaskClearRequest: {:?}", request);
+
+        // clear completed tasks from task_manager
+        {
+            let mut task_manager = self.task_manager.write().unwrap();
+            if let Err(e) = task_manager.clear() {
+                return Err(Status::new(Code::Unknown,
+                    format!("TaskManager clear failed: {}", e)));
+            }
+        }
+
+        // initialize reply
+        let reply = TaskClearReply {
         };
 
         Ok(Response::new(reply))

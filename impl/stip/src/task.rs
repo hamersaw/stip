@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskManagementClient, TaskListRequest, TaskStatus};
+use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskClearRequest, TaskManagementClient, TaskListRequest, TaskStatus};
 use tonic::Request;
 
 use std::{error, io};
@@ -8,6 +8,8 @@ use std::collections::HashMap;
 pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match task_matches.subcommand() {
+        ("clear", Some(clear_matches)) =>
+            clear(&matches, &task_matches, &clear_matches),
         ("list", Some(list_matches)) =>
             list(&matches, &task_matches, &list_matches),
         (cmd, _) => Err(Box::new(io::Error::new(io::ErrorKind::Other,
@@ -17,6 +19,28 @@ pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
     if let Err(e) = result {
         println!("{}", e);
     }
+}
+
+#[tokio::main]
+async fn clear(matches: &ArgMatches, _: &ArgMatches,
+        clear_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = TaskManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize request
+    let request = Request::new(TaskBroadcastRequest {
+        message_type: TaskBroadcastType::TaskClear as i32,
+        clear_request: Some(TaskClearRequest {}),
+        list_request: None,
+    });
+
+    // retrieve reply
+    let _ = client.broadcast(request).await?;
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -31,6 +55,7 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     // initialize request
     let request = Request::new(TaskBroadcastRequest {
         message_type: TaskBroadcastType::TaskList as i32,
+        clear_request: None,
         list_request: Some(TaskListRequest {}),
     });
 

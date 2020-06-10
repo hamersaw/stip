@@ -46,8 +46,7 @@ async fn close(matches: &ArgMatches, _: &ArgMatches,
     });
 
     // retrieve reply
-    let reply = client.broadcast(request).await?;
-    let reply = reply.get_ref();
+    let _ = client.broadcast(request).await?;
 
     Ok(())
 }
@@ -84,8 +83,7 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
     });
 
     // retrieve reply
-    let reply = client.broadcast(request).await?;
-    let reply = reply.get_ref();
+    let _ = client.broadcast(request).await?;
 
     Ok(())
 }

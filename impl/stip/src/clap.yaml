@@ -301,5 +301,7 @@ subcommands:
     - task:
         about: manage cluster tasks
         subcommands:
+            - clear:
+                about: clear completed tasks from cluster
             - list:
                 about: list tasks from the entire cluster

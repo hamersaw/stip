@@ -68,6 +68,23 @@ impl TaskManager {
         }
     }
 
+    pub fn clear(&mut self) -> Result<(), Box<dyn Error>> {
+        // retrieve list of 'complete' ids    
+        let complete_ids: Vec<u64> = self.tasks.iter()
+            .filter(|(_, task_handle)|
+                task_handle.read().unwrap().get_status()
+                    == &TaskStatus::Complete)
+            .map(|(id, _)| id.clone())
+            .collect();
+
+        // remove complete ids
+        for complete_id in complete_ids.iter() {
+            self.tasks.remove(complete_id);
+        }
+
+        Ok(())
+    }
+
     pub fn execute(&mut self, t: impl Task, task_id: Option<u64>)
             -> Result<u64, Box<dyn Error>> {
         // initialize task id
@@ -84,15 +101,12 @@ impl TaskManager {
         Ok(task_id)
     }
 
-    pub fn get(&self, task_id: &u64) -> Option<&Arc<RwLock<TaskHandle>>> {
-        self.tasks.get(task_id)
-    }
-
     pub fn iter(&self) -> Iter<u64, Arc<RwLock<TaskHandle>>> {
         self.tasks.iter()
     }
 }
 
+#[derive(PartialEq)]
 pub enum TaskStatus {
     Complete,
     Failure(String),

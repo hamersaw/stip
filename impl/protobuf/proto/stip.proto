@@ -237,22 +237,26 @@ message NodeListReply {
  */
 service TaskManagement {
     rpc Broadcast (TaskBroadcastRequest) returns (TaskBroadcastReply);
+    rpc Clear (TaskClearRequest) returns (TaskClearReply);
     rpc List (TaskListRequest) returns (TaskListReply);
 }
 
 // Broadcast Messages
 enum TaskBroadcastType {
-    TASK_LIST = 0;
+    TASK_CLEAR = 0;
+    TASK_LIST = 1;
 }
 
 message TaskBroadcastRequest {
     required TaskBroadcastType messageType = 1;    
-    optional TaskListRequest listRequest = 2;
+    optional TaskClearRequest clearRequest = 2;
+    optional TaskListRequest listRequest = 3;
 }
 
 message TaskBroadcastReply {
     required TaskBroadcastType messageType = 1;    
-    map<uint32, TaskListReply> listReplies = 2;
+    map<uint32, TaskClearReply> clearReplies = 2;
+    map<uint32, TaskListReply> listReplies = 3;
 }
 
 // Task Messages
@@ -270,6 +274,14 @@ enum TaskStatus {
     RUNNING = 2;
 }
 
+// Clear Messages
+message TaskClearRequest {
+}
+
+message TaskClearReply {
+}
+
+// List Messages
 message TaskListRequest {
 }
 
