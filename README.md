@@ -131,5 +131,4 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
-- StoreEarthExplorerTask - pass Arc<RwLock<Album>> instead of album, dht_key_length, geocode
 - 'task clear' to clear tracked tasks

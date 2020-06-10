@@ -266,7 +266,7 @@ impl ImageManagement for ImageManagementImpl {
             &self.album_manager, &request.album)?;
 
         // initialize task
-        let task = SplitTask::new(album.clone(), self.dht.clone(),
+        let task = SplitTask::new(album, self.dht.clone(),
             filter.end_timestamp.clone(), filter.geocode.clone(),
             request.geocode_bound.clone(), filter.platform.clone(),
             request.precision as usize, filter.recurse,
@@ -300,12 +300,6 @@ impl ImageManagement for ImageManagementImpl {
             &self.album_manager, &request.album)?;
 
         // initialize task
-        let (dht_key_length, geocode) = {
-            let album = album.read().unwrap();
-            (album.get_dht_key_length().clone(),
-                album.get_geocode().clone())
-        };
-
         let format = match ProtoImageFormat
                 ::from_i32(request.format).unwrap() {
             ProtoImageFormat::Modis => ImageFormat::MODIS,
@@ -313,9 +307,8 @@ impl ImageManagement for ImageManagementImpl {
             ProtoImageFormat::Sentinel => ImageFormat::Sentinel,
         };
 
-        let task = StoreEarthExplorerTask::new(request.album.clone(),
-            self.dht.clone(), dht_key_length, format, geocode,
-            request.glob.clone(), request.precision as usize,
+        let task = StoreEarthExplorerTask::new(album, self.dht.clone(),
+            format, request.glob.clone(), request.precision as usize,
             request.thread_count as u8);
 
         // execute task using task manager

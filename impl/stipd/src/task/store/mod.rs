@@ -5,6 +5,7 @@ mod modis;
 mod naip;
 mod sentinel_2;
 
+use crate::album::Album;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::error::Error;
@@ -20,26 +21,22 @@ pub enum ImageFormat {
 }
 
 pub struct StoreEarthExplorerTask {
-    album: String,
+    album: Arc<RwLock<Album>>,
     dht: Arc<RwLock<Dht>>,
-    dht_key_length: i8,
     format: ImageFormat,
-    geocode: Geocode,
     glob: String,
     precision: usize,
     thread_count: u8,
 }
 
 impl StoreEarthExplorerTask {
-    pub fn new(album: String, dht: Arc<RwLock<Dht>>, dht_key_length: i8,
-            format: ImageFormat, geocode: Geocode, glob: String,
-            precision: usize, thread_count: u8) -> StoreEarthExplorerTask {
+    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<RwLock<Dht>>,
+            format: ImageFormat, glob: String, precision: usize,
+            thread_count: u8) -> StoreEarthExplorerTask {
         StoreEarthExplorerTask {
             album: album,
             dht: dht,
-            dht_key_length: dht_key_length,
             format: format,
-            geocode: geocode,
             glob: glob,
             precision: precision,
             thread_count: thread_count,
@@ -63,10 +60,13 @@ impl Task for StoreEarthExplorerTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
-            let album_clone = self.album.clone();
+            let (album, dht_key_length, geocode) = {
+                let album = self.album.read().unwrap();
+                (album.get_id().to_string(), album.get_dht_key_length(),
+                    album.get_geocode().clone())
+            };
+
             let dht_clone = self.dht.clone();
-            let dht_key_length = self.dht_key_length.clone();
-            let geocode = self.geocode.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
             let format = self.format.clone();
@@ -85,13 +85,13 @@ impl Task for StoreEarthExplorerTask {
                     // process record
                     let result = match format {
                         ImageFormat::MODIS => modis::process(
-                            &album_clone, &dht_clone, dht_key_length,
+                            &album, &dht_clone, dht_key_length,
                             geocode, precision, &record),
                         ImageFormat::NAIP => naip::process(
-                            &album_clone, &dht_clone, dht_key_length,
+                            &album, &dht_clone, dht_key_length,
                             geocode, precision, &record),
                         ImageFormat::Sentinel => sentinel_2::process(
-                            &album_clone, &dht_clone, dht_key_length,
+                            &album, &dht_clone, dht_key_length,
                             geocode, precision, &record),
                     };
 
