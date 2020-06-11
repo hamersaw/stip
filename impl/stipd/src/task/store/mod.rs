@@ -1,4 +1,3 @@
-use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
 mod modis;

@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{NodeManagementClient, ImageBroadcastRequest, ImageBroadcastType, ImageFillRequest, ImageListRequest, Extent, Filter, ImageFormat, ImageStoreRequest, ImageManagementClient, ImageSearchRequest, ImageSplitRequest, NodeListRequest};
+use protobuf::{NodeManagementClient, ImageBroadcastRequest, ImageBroadcastType, ImageCoalesceRequest, ImageFillRequest, ImageListRequest, Extent, Filter, ImageFormat, ImageStoreRequest, ImageManagementClient, ImageSearchRequest, ImageSplitRequest, NodeListRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
     let result: Result<(), Box<dyn error::Error>> 
             = match data_matches.subcommand() {
+        ("coalesce", Some(coalesce_matches)) =>
+            coalesce(&matches, &data_matches, &coalesce_matches),
         ("fill", Some(fill_matches)) =>
             fill(&matches, &data_matches, &fill_matches),
         ("list", Some(list_matches)) =>
@@ -25,6 +27,66 @@ pub fn process(matches: &ArgMatches, data_matches: &ArgMatches) {
     if let Err(e) = result {
         println!("{}", e);
     }
+}
+
+#[tokio::main]
+async fn coalesce(matches: &ArgMatches, _: &ArgMatches,
+        coalesce_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = ImageManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize Filter
+    let filter = Filter {
+        end_timestamp: crate::i64_opt(
+            coalesce_matches.value_of("end_timestamp"))?,
+        geocode: crate::string_opt(
+            coalesce_matches.value_of("geocode")),
+        max_cloud_coverage: crate::f64_opt(
+            coalesce_matches.value_of("max_cloud_coverage"))?,
+        min_pixel_coverage: crate::f64_opt(
+            coalesce_matches.value_of("min_pixel_coverage"))?,
+        platform: crate::string_opt(
+            coalesce_matches.value_of("platform")),
+        recurse: coalesce_matches.is_present("recurse"),
+        source: crate::string_opt(coalesce_matches.value_of("source")),
+        start_timestamp: crate::i64_opt(
+            coalesce_matches.value_of("start_timestamp"))?,
+    };
+
+    // initialize ImageCoalesceRequest
+    let coalesce_request = ImageCoalesceRequest {
+        album: coalesce_matches.value_of("ALBUM").unwrap().to_string(),
+        filter: filter,
+        platform: coalesce_matches.value_of("PLATFORM").unwrap().to_string(),
+        task_id: crate::u64_opt(coalesce_matches.value_of("task_id"))?,
+        thread_count: coalesce_matches.value_of("thread_count")
+            .unwrap().parse::<u32>()?,
+        window_seconds: coalesce_matches.value_of("window_seconds")
+            .unwrap().parse::<i64>()?,
+    };
+
+    // initialize request
+    let request = Request::new(ImageBroadcastRequest {
+        message_type: ImageBroadcastType::Coalesce as i32,
+        coalesce_request: Some(coalesce_request),
+        fill_request: None,
+        split_request: None,
+    });
+
+    // retrieve reply
+    let reply = client.broadcast(request).await?;
+    let reply = reply.get_ref();
+
+    // print information
+    for (node_id, coalesce_reply) in reply.coalesce_replies.iter() {
+        println!("task starting on node '{}' with id '{}'",
+            node_id, coalesce_reply.task_id);
+    }
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -318,6 +380,7 @@ async fn split(matches: &ArgMatches, _: &ArgMatches,
     // initialize request
     let request = Request::new(ImageBroadcastRequest {
         message_type: ImageBroadcastType::Split as i32,
+        coalesce_request: None,
         fill_request: None,
         split_request: Some(split_request),
     });

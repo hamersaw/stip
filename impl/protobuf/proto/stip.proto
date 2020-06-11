@@ -94,6 +94,7 @@ message AlbumOpenReply {
  */
 service ImageManagement {
     rpc Broadcast (ImageBroadcastRequest) returns (ImageBroadcastReply);
+    rpc Coalesce (ImageCoalesceRequest) returns (ImageCoalesceReply);
     rpc Fill (ImageFillRequest) returns (ImageFillReply);
     rpc List (ImageListRequest) returns (stream Image);
     rpc Store (ImageStoreRequest) returns (ImageStoreReply);
@@ -114,20 +115,37 @@ message Filter {
 
 // Broadcast Messages
 enum ImageBroadcastType {
-    FILL = 0;
-    SPLIT = 1;
+    COALESCE = 0;
+    FILL = 1;
+    SPLIT = 2;
 }
 
 message ImageBroadcastRequest {
     required ImageBroadcastType messageType = 1;    
-    optional ImageFillRequest fillRequest = 2;
-    optional ImageSplitRequest splitRequest = 3;
+    optional ImageCoalesceRequest coalesceRequest = 2;
+    optional ImageFillRequest fillRequest = 3;
+    optional ImageSplitRequest splitRequest = 4;
 }
 
 message ImageBroadcastReply {
     required ImageBroadcastType messageType = 1;    
-    map<uint32, ImageFillReply> fillReplies = 2;
-    map<uint32, ImageSplitReply> splitReplies = 3;
+    map<uint32, ImageCoalesceReply> coalesceReplies = 2;
+    map<uint32, ImageFillReply> fillReplies = 3;
+    map<uint32, ImageSplitReply> splitReplies = 4;
+}
+
+// Coalesce Messages
+message ImageCoalesceRequest {
+    required string album = 1;
+    required Filter filter = 2;
+    required string platform = 3;
+    optional uint64 taskId = 4;
+    required uint32 threadCount = 5;
+    required int64 windowSeconds = 6;
+}
+
+message ImageCoalesceReply {
+    required uint64 taskId = 1;
 }
 
 // Fill Messages

@@ -9,7 +9,8 @@ use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-pub mod fill;
+pub mod coalesce;
+//pub mod fill;
 pub mod split;
 pub mod store;
 pub mod open;

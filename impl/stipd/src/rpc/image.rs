@@ -1,11 +1,12 @@
-use protobuf::{self, ImageBroadcastReply, ImageBroadcastRequest, ImageBroadcastType, ImageFillReply, ImageFillRequest, ImageListRequest, ImageManagement, ImageManagementClient, ImageStoreReply, ImageStoreRequest, ImageSearchRequest, ImageSplitReply, ImageSplitRequest, Extent, File, Image, ImageFormat as ProtoImageFormat};
+use protobuf::{self, ImageBroadcastReply, ImageBroadcastRequest, ImageBroadcastType, ImageCoalesceReply, ImageCoalesceRequest, ImageFillReply, ImageFillRequest, ImageListRequest, ImageManagement, ImageManagementClient, ImageStoreReply, ImageStoreRequest, ImageSearchRequest, ImageSplitReply, ImageSplitRequest, Extent, File, Image, ImageFormat as ProtoImageFormat};
 use swarm::prelude::Dht;
 use tokio::sync::mpsc::Receiver;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
 use crate::task::TaskManager;
-use crate::task::fill::FillTask;
+use crate::task::coalesce::CoalesceTask;
+//use crate::task::fill::FillTask;
 use crate::task::store::{StoreEarthExplorerTask, ImageFormat};
 use crate::task::split::SplitTask;
 
@@ -52,6 +53,7 @@ impl ImageManagement for ImageManagementImpl {
         }
 
         // send broadcast message to each dht node
+        let mut coalesce_replies = HashMap::new();
         let mut fill_replies = HashMap::new();
         let mut split_replies = HashMap::new();
 
@@ -67,6 +69,26 @@ impl ImageManagement for ImageManagementImpl {
 
             // execute message at dht node
             match ImageBroadcastType::from_i32(request.message_type).unwrap() {
+                ImageBroadcastType::Coalesce => {
+                    // compile new CoalesceRequest
+                    let mut coalesce_request =
+                        request.coalesce_request.clone().unwrap();
+                    if let Some(task_id) = task_id {
+                        coalesce_request.task_id = Some(task_id);
+                    }
+
+                    // submit request
+                    let reply = match client.coalesce(coalesce_request).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("coalesce broadcast failed: {}", e))),
+                    };
+                    coalesce_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+
+                    // process reply
+                    task_id = Some(reply.get_ref().task_id);
+                },
                 ImageBroadcastType::Fill => {
                     // compile new FillRequest
                     let mut fill_request =
@@ -113,8 +135,45 @@ impl ImageManagement for ImageManagementImpl {
         // initialize reply
         let reply = ImageBroadcastReply {
             message_type: request.message_type,
+            coalesce_replies: coalesce_replies,
             fill_replies: fill_replies,
             split_replies: split_replies,
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn coalesce(&self, request: Request<ImageCoalesceRequest>)
+            -> Result<Response<ImageCoalesceReply>, Status> {
+        trace!("ImageCoalesceRequest: {:?}", request);
+        let request = request.get_ref();
+        let filter = &request.filter;
+
+        // ensure album exists
+        let album = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.album)?;
+
+        // initailize task
+        let task = CoalesceTask::new(album, self.dht.clone(),
+            filter.end_timestamp, filter.geocode.clone(),
+            filter.max_cloud_coverage, filter.min_pixel_coverage,
+            filter.platform.clone(), filter.recurse, filter.source.clone(),
+            request.platform.clone(), filter.start_timestamp,
+            request.thread_count as u8, request.window_seconds);
+
+        // execute task using task manager
+        let task_id = {
+            let mut task_manager = self.task_manager.write().unwrap();
+            match task_manager.execute(task, request.task_id) {
+                Ok(task_id) => task_id,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to start CoalesceTask: {}", e))),
+            }
+        };
+
+        // initialize reply
+        let reply = ImageCoalesceReply {
+            task_id: task_id,
         };
 
         Ok(Response::new(reply))

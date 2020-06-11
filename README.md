@@ -127,7 +127,10 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 
 ## TODO
 - **image coalesce - split or merge to match the filtered source dataset**
-- __image fill - fix v0.4__
+- __image list / search - album is optional, if not included iteratve over every album__
+- **image split - fix computation of image file path**
+- __image store - pass album not album metadata to process__
+- image fill - fix v0.4
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'

@@ -45,7 +45,7 @@ const LIST_SELECT_STMT: &str =
 FROM images JOIN files ON images.id = files.image_id";
 
 const LIST_ORDER_BY_STMT: &str =
-" ORDER BY images.tile, images.geocode, images.timestamp, files.subdataset";
+" ORDER BY images.geocode, images.timestamp, images.tile, files.subdataset";
 
 const SEARCH_SELECT_STMT: &str =
 "SELECT COUNT(*) as count, SUBSTR(geocode, 0, REPLACE_LENGTH) as geocode_search, platform, LENGTH(geocode) as precision, source
