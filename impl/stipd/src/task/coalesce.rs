@@ -1,14 +1,16 @@
 use failure::ResultExt;
 use gdal::raster::Dataset;
+use protobuf::{ImageListRequest, Filter, ImageManagementClient};
 use swarm::prelude::Dht;
+use tonic::Request;
 
 use crate::{Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::album::Album;
 use crate::task::{Task, TaskHandle, TaskStatus};
 
-use std::cmp::Ordering as CmpOrdering;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -57,15 +59,63 @@ impl CoalesceTask {
 
 impl Task for CoalesceTask {
     fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
-        // search for images using Album
+        // retrieve album metadata
+        let album_id = {
+            let album = self.album.read().unwrap();
+            album.get_id().to_string()
+        };
+
+        // search for source images using Album
         let src_records: Vec<(Image, Vec<StFile>)> = {
             let album = self.album.read().unwrap();
             album.list(&self.end_timestamp, &self.geocode, &None, &None,
                 &Some(self.src_platform.clone()), self.recurse,  
                 &Some(RAW_SOURCE.to_string()), &self.start_timestamp)?
         };
+ 
+        let mut split_records = HashMap::new();
 
-        let dst_records: Vec<(Image, Vec<StFile>)> = {
+        // initialize Filter
+        let filter = Filter {
+            end_timestamp: self.end_timestamp,
+            geocode: self.geocode.clone(),
+            max_cloud_coverage: self.max_cloud_coverage,
+            min_pixel_coverage: self.min_pixel_coverage,
+            platform: self.platform.clone(),
+            recurse: self.recurse,
+            source: self.source.clone(),
+            start_timestamp: self.start_timestamp,
+        };
+
+        // initialize ImageListRequest
+        let request = ImageListRequest {
+            album: album_id,
+            filter: filter,
+        };
+
+        // copy valid dht nodes
+        let mut dht_nodes = Vec::new();
+        {
+            let dht = self.dht.read().unwrap();
+            for (node_id, addrs) in dht.iter() {
+                // check if rpc address is populated
+                if let None = addrs.1 {
+                    continue;
+                }
+
+                dht_nodes.push((*node_id, addrs.1.unwrap()));
+            }
+        }
+
+        // iterate over dht nodes
+        for (_, addr) in dht_nodes {
+            println!("trying to query node {}", addr);
+            let future = query_node(&addr, &request, &mut split_records,
+                &src_records, self.window_seconds);
+            //future.poll()
+        }
+
+        /*let dst_records: Vec<(Image, Vec<StFile>)> = {
             let album = self.album.read().unwrap();
             album.list(&self.end_timestamp, &self.geocode,
                 &self.max_cloud_coverage, &self.min_pixel_coverage,
@@ -77,7 +127,6 @@ impl Task for CoalesceTask {
         let mut src_index = 0;
         let mut dst_index = 0;
 
-        let mut split_records = HashMap::new();
         loop {
             // if we have exhausted one list -> break
             if src_index >= src_records.len()
@@ -132,7 +181,7 @@ impl Task for CoalesceTask {
                     dst_index += 1;
                 }
             }
-        }
+        }*/
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -225,6 +274,86 @@ impl Task for CoalesceTask {
         // return task handle
         Ok(task_handle)
     }
+}
+
+async fn query_node(addr: &SocketAddr, request: &ImageListRequest,
+        split_records: &mut HashMap<usize, HashSet<String>>,
+        src_records: &Vec<(Image, Vec<StFile>)>,
+        window_seconds: i64) -> Result<(), Box<dyn Error>> {
+    println!("coalesce querying node {}", addr);
+    // initialize grpc client
+    let mut client = match ImageManagementClient::connect(
+            format!("http://{}", addr)).await {
+        Ok(client) => client,
+        Err(e) => return Err(format!(
+            "connection to {} failed: {}", addr, e).into()),
+    };
+
+    println!("retrieving image list");
+    // send ListImagesRequest
+    let mut stream = client.list(Request::new(request.clone())).await?.into_inner();
+
+    println!("iterating over images");
+    // iterate over image stream
+    let mut src_index = 0;
+    let mut message = stream.message().await?;
+
+    loop {
+        // if we have exhausted one list -> break
+        if src_index >= src_records.len() || message.is_none() {
+            break;
+        }
+
+        // compare the current record pair
+        let src_record = &src_records[src_index].0;
+        let dst_record = message.as_ref().unwrap();
+
+        println!("comparing {} {} {}", src_record.1,
+            dst_record.geocode, (src_record.5 - dst_record.timestamp).abs());
+
+        if src_record.1 == dst_record.geocode {
+            // geocodes are equal -> increment lowest timestamp
+            if src_record.5 < dst_record.timestamp {
+                src_index += 1;
+                println!("  equal geocodes - inc src");
+            } else {
+                message = stream.message().await?;
+                println!("  equal geocodes - inc dst");
+            }
+        } else if dst_record.geocode.starts_with(&src_record.1) {
+            // validate record timestamps
+            if (src_record.5 - dst_record.timestamp).abs()
+                    <= window_seconds {
+                println!("  append to split");
+                // append pair to split_records
+                let geocodes = split_records.entry(src_index)
+                    .or_insert(HashSet::new());
+                geocodes.insert(dst_record.geocode.clone());
+
+                message = stream.message().await?;
+            } else if src_record.5 < dst_record.timestamp {
+                println!("  timestamp out of range - inc src");
+                src_index += 1;
+            } else {
+                println!("  timestamp out of range - inc dst");
+                message = stream.message().await?;
+            }
+        } else if src_record.1.starts_with(&dst_record.geocode) {
+            // TODO - merge
+            unimplemented!();
+        } else {
+            // increment lowest geohash
+            if src_record.1 < dst_record.geocode {
+                println!("  unmatched geocodes - inc src");
+                src_index += 1;
+            } else {
+                println!("  unmatched geocodes - inc dst");
+                message = stream.message().await?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
