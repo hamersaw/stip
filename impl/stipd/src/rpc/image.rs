@@ -4,7 +4,7 @@ use tokio::sync::mpsc::Receiver;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
-use crate::task::TaskManager;
+use crate::task::{Task, TaskManager};
 use crate::task::coalesce::CoalesceTask;
 //use crate::task::fill::FillTask;
 use crate::task::store::{StoreEarthExplorerTask, ImageFormat};
@@ -161,13 +161,20 @@ impl ImageManagement for ImageManagementImpl {
             request.platform.clone(), filter.start_timestamp,
             request.thread_count as u8, request.window_seconds);
 
-        // execute task using task manager
+        // start task
+        let task_handle = match task.start().await {
+            Ok(task_handle) => task_handle,
+            Err(e) => return Err(Status::new(Code::Unknown,
+                format!("failed to start CoalesceTask: {}", e))),
+        };
+
+        // register task with TaskHandler
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            match task_manager.execute(task, request.task_id) {
+            match task_manager.register(task_handle, request.task_id) {
                 Ok(task_id) => task_id,
                 Err(e) => return Err(Status::new(Code::Unknown,
-                    format!("failed to start CoalesceTask: {}", e))),
+                    format!("failed to register CoalesceTask: {}", e))),
             }
         };
 
@@ -331,13 +338,20 @@ impl ImageManagement for ImageManagementImpl {
             request.precision as usize, filter.recurse,
             filter.start_timestamp.clone(), request.thread_count as u8);
 
-        // execute task using task manager
+        // start task
+        let task_handle = match task.start().await {
+            Ok(task_handle) => task_handle,
+            Err(e) => return Err(Status::new(Code::Unknown,
+                format!("failed to start SplitTask: {}", e))),
+        };
+
+        // register task with TaskHandler
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            match task_manager.execute(task, request.task_id) {
+            match task_manager.register(task_handle, request.task_id) {
                 Ok(task_id) => task_id,
                 Err(e) => return Err(Status::new(Code::Unknown,
-                    format!("failed to start OpenTask: {}", e))),
+                    format!("failed to register SplitTask: {}", e))),
             }
         };
  
@@ -370,13 +384,20 @@ impl ImageManagement for ImageManagementImpl {
             format, request.glob.clone(), request.precision as usize,
             request.thread_count as u8);
 
-        // execute task using task manager
+        // start task
+        let task_handle = match task.start().await {
+            Ok(task_handle) => task_handle,
+            Err(e) => return Err(Status::new(Code::Unknown,
+                format!("failed to start StoreTask: {}", e))),
+        };
+
+        // register task with TaskHandler
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            match task_manager.execute(task, request.task_id) {
+            match task_manager.register(task_handle, request.task_id) {
                 Ok(task_id) => task_id,
-                Err(e) => return Err(Status::new(Code::Unknown, format!(
-                    "failed to start StoreEarthExplorerTask: {}", e))),
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to register StoreTask: {}", e))),
             }
         };
 

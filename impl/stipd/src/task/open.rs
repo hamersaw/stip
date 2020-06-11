@@ -24,8 +24,9 @@ impl OpenTask {
     }
 }
 
+#[tonic::async_trait]
 impl Task for OpenTask {
-    fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let records: Vec<PathBuf> = {
             let album = self.album.read().unwrap();

@@ -15,8 +15,9 @@ pub mod split;
 pub mod store;
 pub mod open;
 
+#[tonic::async_trait]
 pub trait Task {
-    fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>>;
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>>;
 }
 
 pub struct TaskHandle {
@@ -86,24 +87,23 @@ impl TaskManager {
         Ok(())
     }
 
-    pub fn execute(&mut self, t: impl Task, task_id: Option<u64>)
-            -> Result<u64, Box<dyn Error>> {
+    pub fn iter(&self) -> Iter<u64, Arc<RwLock<TaskHandle>>> {
+        self.tasks.iter()
+    }
+
+    pub fn register(&mut self, task_handle: Arc<RwLock<TaskHandle>>,
+            task_id: Option<u64>) -> Result<u64, Box<dyn Error>> {
         // initialize task id
         let task_id = match task_id {
             Some(task_id) => task_id,
             None => rand::random::<u64>(),
         };
 
-        // start task and add to map
-        let task_handle = t.start()?;
+        // add TaskHandle to map
         self.tasks.insert(task_id, task_handle);
 
         // return task id
         Ok(task_id)
-    }
-
-    pub fn iter(&self) -> Iter<u64, Arc<RwLock<TaskHandle>>> {
-        self.tasks.iter()
     }
 }
 

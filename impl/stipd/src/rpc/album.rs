@@ -4,7 +4,7 @@ use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
-use crate::task::TaskManager;
+use crate::task::{Task, TaskManager};
 use crate::task::open::OpenTask;
 
 use std::collections::HashMap;
@@ -234,13 +234,20 @@ impl AlbumManagement for AlbumManagementImpl {
         // initialize task
         let task = OpenTask::new(album, request.thread_count as u8);
 
-        // execute task using task manager
+        // start task
+        let task_handle = match task.start().await {
+            Ok(task_handle) => task_handle,
+            Err(e) => return Err(Status::new(Code::Unknown,
+                format!("failed to start OpenTask: {}", e))),
+        };
+
+        // register task with TaskHandler
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            match task_manager.execute(task, request.task_id) {
+            match task_manager.register(task_handle, request.task_id) {
                 Ok(task_id) => task_id,
                 Err(e) => return Err(Status::new(Code::Unknown,
-                    format!("failed to start OpenTask: {}", e))),
+                    format!("failed to register OpenTask: {}", e))),
             }
         };
 

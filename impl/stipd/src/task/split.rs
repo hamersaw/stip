@@ -46,8 +46,9 @@ impl SplitTask {
     }
 }
 
+#[tonic::async_trait]
 impl Task for SplitTask {
-    fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using Album
         let mut records: Vec<(Image, Vec<StFile>)> = {
             let album = self.album.read().unwrap();

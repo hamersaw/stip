@@ -10,7 +10,6 @@ use crate::task::{Task, TaskHandle, TaskStatus};
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -57,8 +56,9 @@ impl CoalesceTask {
     }
 }
 
+#[tonic::async_trait]
 impl Task for CoalesceTask {
-    fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // retrieve album metadata
         let album_id = {
             let album = self.album.read().unwrap();
@@ -109,79 +109,68 @@ impl Task for CoalesceTask {
 
         // iterate over dht nodes
         for (_, addr) in dht_nodes {
-            println!("trying to query node {}", addr);
-            let future = query_node(&addr, &request, &mut split_records,
-                &src_records, self.window_seconds);
-            //future.poll()
+            //query_node(&addr, &request, &mut split_records,
+            //    &src_records, self.window_seconds).await?;
+            let mut client = match ImageManagementClient::connect(
+                    format!("http://{}", addr)).await {
+                Ok(client) => client,
+                Err(e) => return Err(format!(
+                    "connection to {} failed: {}", addr, e).into()),
+            };
+
+            // send ListImagesRequest
+            let mut stream = client.list(Request::new(request.clone()))
+                .await?.into_inner();
+
+            // iterate over image stream
+            let mut src_index = 0;
+            let mut message = stream.message().await?;
+
+            loop {
+                // if we have exhausted one list -> break
+                if src_index >= src_records.len() || message.is_none() {
+                    break;
+                }
+
+                // compare the current record pair
+                let src_record = &src_records[src_index].0;
+                let dst_record = message.as_ref().unwrap();
+
+                if src_record.1 == dst_record.geocode {
+                    // geocodes are equal -> increment lowest timestamp
+                    if src_record.5 < dst_record.timestamp {
+                        src_index += 1;
+                    } else {
+                        message = stream.message().await?;
+                    }
+                } else if dst_record.geocode.starts_with(&src_record.1) {
+                    // validate record timestamps
+                    if (src_record.5 - dst_record.timestamp).abs()
+                            <= self.window_seconds {
+                        // append pair to split_records
+                        let geocodes = split_records.entry(src_index)
+                            .or_insert(HashSet::new());
+                        geocodes.insert(dst_record.geocode.clone());
+
+                        message = stream.message().await?;
+                    } else if src_record.5 < dst_record.timestamp {
+                        src_index += 1;
+                    } else {
+                        message = stream.message().await?;
+                    }
+                } else if src_record.1.starts_with(&dst_record.geocode) {
+                    // TODO - merge
+                    unimplemented!();
+                } else {
+                    // increment lowest geohash
+                    if src_record.1 < dst_record.geocode {
+                        src_index += 1;
+                    } else {
+                        message = stream.message().await?;
+                    }
+                }
+            }
         }
-
-        /*let dst_records: Vec<(Image, Vec<StFile>)> = {
-            let album = self.album.read().unwrap();
-            album.list(&self.end_timestamp, &self.geocode,
-                &self.max_cloud_coverage, &self.min_pixel_coverage,
-                &self.platform, self.recurse, 
-                &self.source, &self.start_timestamp)?
-        };
-
-        // merge sort records
-        let mut src_index = 0;
-        let mut dst_index = 0;
-
-        loop {
-            // if we have exhausted one list -> break
-            if src_index >= src_records.len()
-                    || dst_index >= dst_records.len() {
-                break;
-            }
-
-            // compare the current record pair
-            let src_record = &src_records[src_index].0;
-            let dst_record = &dst_records[dst_index].0;
-
-            println!("comparing {} {} {}", src_record.1,
-                dst_record.1, (src_record.5 - dst_record.5).abs());
-
-            if src_record.1 == dst_record.1 {
-                // geocodes are equal -> increment lowest timestamp
-                if src_record.5 < dst_record.5 {
-                    src_index += 1;
-                    println!("  equal geocodes - inc src");
-                } else {
-                    dst_index += 1;
-                    println!("  equal geocodes - inc dst");
-                }
-            } else if dst_record.1.starts_with(&src_record.1) {
-                // validate record timestamps
-                if (src_record.5 - dst_record.5).abs()
-                        <= self.window_seconds {
-                    println!("  append to split");
-                    // append pair to split_records
-                    let geocodes = split_records.entry(src_index)
-                        .or_insert(HashSet::new());
-                    geocodes.insert(dst_record.1.clone());
-
-                    dst_index += 1;
-                } else if src_record.5 < dst_record.5 {
-                    println!("  timestamp out of range - inc src");
-                    src_index += 1;
-                } else {
-                    println!("  timestamp out of range - inc dst");
-                    dst_index += 1;
-                }
-            } else if src_record.1.starts_with(&dst_record.1) {
-                // TODO - merge
-                unimplemented!();
-            } else {
-                // increment lowest geohash
-                if src_record.1 < dst_record.1 {
-                    println!("  unmatched geocodes - inc src");
-                    src_index += 1;
-                } else {
-                    println!("  unmatched geocodes - inc dst");
-                    dst_index += 1;
-                }
-            }
-        }*/
 
         // initialize record channel
         let (sender, receiver) = crossbeam_channel::bounded(256);
@@ -274,86 +263,6 @@ impl Task for CoalesceTask {
         // return task handle
         Ok(task_handle)
     }
-}
-
-async fn query_node(addr: &SocketAddr, request: &ImageListRequest,
-        split_records: &mut HashMap<usize, HashSet<String>>,
-        src_records: &Vec<(Image, Vec<StFile>)>,
-        window_seconds: i64) -> Result<(), Box<dyn Error>> {
-    println!("coalesce querying node {}", addr);
-    // initialize grpc client
-    let mut client = match ImageManagementClient::connect(
-            format!("http://{}", addr)).await {
-        Ok(client) => client,
-        Err(e) => return Err(format!(
-            "connection to {} failed: {}", addr, e).into()),
-    };
-
-    println!("retrieving image list");
-    // send ListImagesRequest
-    let mut stream = client.list(Request::new(request.clone())).await?.into_inner();
-
-    println!("iterating over images");
-    // iterate over image stream
-    let mut src_index = 0;
-    let mut message = stream.message().await?;
-
-    loop {
-        // if we have exhausted one list -> break
-        if src_index >= src_records.len() || message.is_none() {
-            break;
-        }
-
-        // compare the current record pair
-        let src_record = &src_records[src_index].0;
-        let dst_record = message.as_ref().unwrap();
-
-        println!("comparing {} {} {}", src_record.1,
-            dst_record.geocode, (src_record.5 - dst_record.timestamp).abs());
-
-        if src_record.1 == dst_record.geocode {
-            // geocodes are equal -> increment lowest timestamp
-            if src_record.5 < dst_record.timestamp {
-                src_index += 1;
-                println!("  equal geocodes - inc src");
-            } else {
-                message = stream.message().await?;
-                println!("  equal geocodes - inc dst");
-            }
-        } else if dst_record.geocode.starts_with(&src_record.1) {
-            // validate record timestamps
-            if (src_record.5 - dst_record.timestamp).abs()
-                    <= window_seconds {
-                println!("  append to split");
-                // append pair to split_records
-                let geocodes = split_records.entry(src_index)
-                    .or_insert(HashSet::new());
-                geocodes.insert(dst_record.geocode.clone());
-
-                message = stream.message().await?;
-            } else if src_record.5 < dst_record.timestamp {
-                println!("  timestamp out of range - inc src");
-                src_index += 1;
-            } else {
-                println!("  timestamp out of range - inc dst");
-                message = stream.message().await?;
-            }
-        } else if src_record.1.starts_with(&dst_record.geocode) {
-            // TODO - merge
-            unimplemented!();
-        } else {
-            // increment lowest geohash
-            if src_record.1 < dst_record.geocode {
-                println!("  unmatched geocodes - inc src");
-                src_index += 1;
-            } else {
-                println!("  unmatched geocodes - inc dst");
-                message = stream.message().await?;
-            }
-        }
-    }
-
-    Ok(())
 }
 
 fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,

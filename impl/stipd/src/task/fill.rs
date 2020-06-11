@@ -37,8 +37,9 @@ impl FillTask {
     }
 }
 
+#[tonic::async_trait]
 impl Task for FillTask {
-    fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         unimplemented!();
         /*// search for images using ImageManager
         let mut images: Vec<ImageMetadata> = {

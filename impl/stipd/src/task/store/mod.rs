@@ -43,8 +43,9 @@ impl StoreEarthExplorerTask {
     }
 }
 
+#[tonic::async_trait]
 impl Task for StoreEarthExplorerTask {
-    fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for image files
         let mut records = Vec::new();
         for entry in glob::glob(&self.glob)? {

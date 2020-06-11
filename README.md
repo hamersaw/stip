@@ -126,7 +126,6 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip image fill test2 -p NAIP
 
 ## TODO
-- **image coalesce - split or merge to match the filtered source dataset**
 - __image list / search - album is optional, if not included iteratve over every album__
 - **image split - fix computation of image file path**
 - __image store - pass album not album metadata to process__
