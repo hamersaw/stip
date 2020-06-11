@@ -1,6 +1,5 @@
 use failure::ResultExt;
 use gdal::raster::Dataset;
-use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
 use crate::{Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
@@ -78,12 +77,7 @@ impl Task for SplitTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
-            let (album, dht_key_length, geocode) = {
-                let album = self.album.read().unwrap();
-                (album.get_id().to_string(), album.get_dht_key_length(),
-                    album.get_geocode().clone())
-            };
-
+            let album = self.album.clone();
             let dht_clone = self.dht.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
@@ -100,8 +94,8 @@ impl Task for SplitTask {
                     };
 
                     // process record
-                    match process(&album, &dht_clone, dht_key_length,
-                            geocode, precision_clone, &record) {
+                    match process(&album, &dht_clone,
+                            precision_clone, &record) {
                         Ok(_) => items_completed.fetch_add(1, Ordering::SeqCst),
                         Err(e) => {
                             warn!("skipping record '{:?}': {}",
@@ -166,13 +160,27 @@ impl Task for SplitTask {
     }
 }
 
-fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
-        geocode: Geocode, precision: usize,
-        record: &(Image, Vec<StFile>)) -> Result<(), Box<dyn Error>> {
+fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
+        precision: usize, record: &(Image, Vec<StFile>))
+        -> Result<(), Box<dyn Error>> {
     let image = &record.0;
+
+    // retrieve album metadata
+    let (album_id, dht_key_length, geocode) = {
+        let album = album.read().unwrap();
+        (album.get_id().to_string(), album.get_dht_key_length(),
+            album.get_geocode().clone())
+    };
+
     for file in record.1.iter() {
         // check if path exists
-        let path = Path::new(&file.0);
+        let path = {
+            let album = album.read().unwrap();
+            Path::new(&file.0);
+            album.get_image_path(false, &image.1,
+                &image.2, &image.3, file.2, &image.4)?
+        };
+
         if !path.exists() {
             return Err(format!("image path '{}' does not exist",
                 path.to_string_lossy()).into());
@@ -216,7 +224,7 @@ fn process(album: &str, dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
             };
 
             // send image to new host
-            if let Err(e) = crate::transfer::send_image(&addr, album,
+            if let Err(e) = crate::transfer::send_image(&addr, &album_id,
                     &dataset, &split_geocode, file.1, &image.2,
                     SPLIT_SOURCE, file.2, &image.4, image.5) {
                 warn!("failed to write image to node {}: {}", addr, e);
