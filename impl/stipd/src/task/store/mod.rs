@@ -60,12 +60,7 @@ impl Task for StoreEarthExplorerTask {
         let items_skipped = Arc::new(AtomicU32::new(0));
         let mut join_handles = Vec::new();
         for _ in 0..self.thread_count {
-            let (album, dht_key_length, geocode) = {
-                let album = self.album.read().unwrap();
-                (album.get_id().to_string(), album.get_dht_key_length(),
-                    album.get_geocode().clone())
-            };
-
+            let album = self.album.clone();
             let dht_clone = self.dht.clone();
             let items_completed = items_completed.clone();
             let items_skipped = items_skipped.clone();
@@ -85,14 +80,11 @@ impl Task for StoreEarthExplorerTask {
                     // process record
                     let result = match format {
                         ImageFormat::MODIS => modis::process(
-                            &album, &dht_clone, dht_key_length,
-                            geocode, precision, &record),
+                            &album, &dht_clone, precision, &record),
                         ImageFormat::NAIP => naip::process(
-                            &album, &dht_clone, dht_key_length,
-                            geocode, precision, &record),
+                            &album, &dht_clone, precision, &record),
                         ImageFormat::Sentinel => sentinel_2::process(
-                            &album, &dht_clone, dht_key_length,
-                            geocode, precision, &record),
+                            &album, &dht_clone, precision, &record),
                     };
 
                     // process result

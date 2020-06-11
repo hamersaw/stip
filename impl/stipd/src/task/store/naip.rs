@@ -1,19 +1,25 @@
 use chrono::prelude::{TimeZone, Utc};
 use failure::ResultExt;
 use gdal::raster::Dataset;
-use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
 use crate::RAW_SOURCE;
+use crate::album::Album;
 
 use std::error::Error;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
-        dht_key_length: i8, geocode: Geocode, precision: usize,
-        record: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
+        precision: usize, record: &PathBuf) -> Result<(), Box<dyn Error>> {
+    // retrieve album metadata
+    let (album_id, dht_key_length, geocode) = {
+        let album = album.read().unwrap();
+        (album.get_id().to_string(), album.get_dht_key_length(),
+            album.get_geocode().clone())
+    };
+
     // open geotiff file
     let tif_path = record.with_extension("tif");
     let filename = tif_path.file_name().unwrap()
@@ -67,7 +73,7 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image(&addr, album,
+        if let Err(e) = crate::transfer::send_image(&addr, &album_id,
                 &dataset, &split_geocode, pixel_coverage, "NAIP",
                 &RAW_SOURCE, 0, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);

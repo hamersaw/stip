@@ -7,6 +7,7 @@ use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 
 use crate::RAW_SOURCE;
+use crate::album::Album;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -14,9 +15,15 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
-        dht_key_length: i8, geocode: Geocode, precision: usize,
-        record: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
+        precision: usize, record: &PathBuf) -> Result<(), Box<dyn Error>> {
+    // retrieve album metadata
+    let (album_id, dht_key_length, geocode) = {
+        let album = album.read().unwrap();
+        (album.get_id().to_string(), album.get_dht_key_length(),
+            album.get_geocode().clone())
+    };
+
     let dataset = Dataset::open(&record).compat()?;
  
     // parse metadata
@@ -56,19 +63,19 @@ pub fn process(album: &str, dht: &Arc<RwLock<Dht>>,
     // process quality subdatasets
     let quality_datasets = split_subdatasets::<u8>(geocode,
         precision, quality_subdatasets)?;
-    process_splits(album, &quality_datasets,
+    process_splits(&album_id, &quality_datasets,
         &dht, dht_key_length, 0, &tile, timestamp)?;
 
     // process reflectance subdatasets
     let reflectance_datasets = split_subdatasets::<i16>(geocode,
         precision, reflectance_subdatasets)?;
-    process_splits(album, &reflectance_datasets,
+    process_splits(&album_id, &reflectance_datasets,
         &dht, dht_key_length, 1, &tile, timestamp)?;
 
     Ok(())
 }
 
-fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
+fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
         dht: &Arc<RwLock<Dht>>, dht_key_length: i8, subdataset: u8, 
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geocode, dataset) in datasets.iter() {
@@ -89,7 +96,7 @@ fn process_splits(album: &str, datasets: &HashMap<String, Dataset>,
         };
 
         // send image to new host
-        if let Err(e) = crate::transfer::send_image(&addr, album,
+        if let Err(e) = crate::transfer::send_image(&addr, album_id,
                 &dataset, &geocode, pixel_coverage, "MODIS",
                 &RAW_SOURCE, subdataset, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
