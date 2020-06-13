@@ -45,7 +45,7 @@ const LIST_SELECT_STMT: &str =
 FROM images JOIN files ON images.id = files.image_id";
 
 const LIST_ORDER_BY_STMT: &str =
-" ORDER BY images.geocode, images.timestamp, images.tile, files.subdataset";
+" ORDER BY images.timestamp, images.geocode, images.tile, files.subdataset";
 
 const SEARCH_SELECT_STMT: &str =
 "SELECT COUNT(*) as count, SUBSTR(geocode, 0, REPLACE_LENGTH) as geocode_search, platform, LENGTH(geocode) as precision, source
@@ -143,7 +143,7 @@ impl AlbumIndex {
                 Some((i, f)) => {
                     // if geocode and tile match -> append file to files
                     //   else -> add new image
-                    match i.1 == image.1 && i.5 == image.5 {
+                    match i.1 == image.1 && i.4 == image.4 {
                         true => f.push(file),
                         false => images.push((image, vec!(file))),
                     }

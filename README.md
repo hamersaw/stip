@@ -131,3 +131,4 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - improve node logging
 - refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
+- **task - set INITIALIZE stage**
