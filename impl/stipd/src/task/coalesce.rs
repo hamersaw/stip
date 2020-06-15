@@ -108,7 +108,7 @@ impl Task for CoalesceTask {
         }
 
         // iterate over dht nodes
-        for (node_id, addr) in dht_nodes {
+        for (_, addr) in dht_nodes {
             // open ImageManagementClient
             let mut client = match ImageManagementClient::connect(
                     format!("http://{}", addr)).await {

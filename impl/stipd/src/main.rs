@@ -45,21 +45,6 @@ fn main() {
     // parse arguments
     let opt = Opt::from_args();
 
-    // create storage directory
-    if let Err(e) = std::fs::create_dir_all(&opt.directory) {
-        panic!("failed to create storage directory '{:?}': {}",
-            opt.directory, e);
-    }
-
-    // initialize AlbumManager and TaskManager
-    let album_manager = match AlbumManager::new(opt.directory.clone()) {
-        Ok(album_manager) => album_manager,
-        Err(e) => panic!("initialize AlbumManager failed: {}", e),
-    };
-
-    let album_manager = Arc::new(RwLock::new(album_manager));
-    let task_manager = Arc::new(RwLock::new(TaskManager::new()));
-
     // build swarm config
     let swarm_config = SwarmConfigBuilder::new()
         .addr(SocketAddr::new(opt.ip_addr, opt.gossip_port))
@@ -84,6 +69,22 @@ fn main() {
 
     // start swarm
     swarm.start().expect("swarm start");
+
+    // create storage directory
+    if let Err(e) = std::fs::create_dir_all(&opt.directory) {
+        panic!("failed to create storage directory '{:?}': {}",
+            opt.directory, e);
+    }
+
+    // initialize AlbumManager and TaskManager
+    let album_manager = match AlbumManager::new(opt.directory.clone()) {
+        Ok(album_manager) => album_manager,
+        Err(e) => panic!("initialize AlbumManager failed: {}", e),
+    };
+
+    let album_manager = Arc::new(RwLock::new(album_manager));
+    let task_manager = Arc::new(RwLock::new(TaskManager::new()));
+
 
     // start transfer server
     let listener = TcpListener::bind(format!("{}:{}",
