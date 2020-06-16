@@ -3,7 +3,7 @@ use gdal::metadata::Metadata;
 use gdal::raster::Dataset;
 
 use crate::album::Album;
-use crate::task::{Task, TaskHandle, TaskStatus};
+use crate::task::{TaskOg, TaskHandle, TaskStatus};
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -25,7 +25,7 @@ impl OpenTask {
 }
 
 #[tonic::async_trait]
-impl Task for OpenTask {
+impl TaskOg for OpenTask {
     async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using ImageManager
         let records: Vec<PathBuf> = {

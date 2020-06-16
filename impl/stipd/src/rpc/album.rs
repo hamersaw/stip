@@ -4,7 +4,7 @@ use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
-use crate::task::{Task, TaskManager};
+use crate::task::{TaskOg, TaskManager};
 use crate::task::open::OpenTask;
 
 use std::collections::HashMap;

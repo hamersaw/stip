@@ -4,7 +4,7 @@ use swarm::prelude::Dht;
 
 use crate::{Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::album::Album;
-use crate::task::{Task, TaskHandle, TaskStatus};
+use crate::task::{TaskOg, TaskHandle, TaskStatus};
 
 use std::error::Error;
 use std::path::Path;
@@ -46,7 +46,7 @@ impl SplitTask {
 }
 
 #[tonic::async_trait]
-impl Task for SplitTask {
+impl TaskOg for SplitTask {
     async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for images using Album
         let mut records: Vec<(Image, Vec<StFile>)> = {

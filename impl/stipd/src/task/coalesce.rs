@@ -6,7 +6,7 @@ use tonic::Request;
 
 use crate::{Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::album::Album;
-use crate::task::{Task, TaskHandle, TaskStatus};
+use crate::task::{TaskOg, TaskHandle, TaskStatus};
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -57,7 +57,7 @@ impl CoalesceTask {
 }
 
 #[tonic::async_trait]
-impl Task for CoalesceTask {
+impl TaskOg for CoalesceTask {
     async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // retrieve album metadata
         let album_id = {

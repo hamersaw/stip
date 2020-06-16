@@ -5,7 +5,7 @@ mod naip;
 mod sentinel_2;
 
 use crate::album::Album;
-use crate::task::{Task, TaskHandle, TaskStatus};
+use crate::task::{TaskOg, TaskHandle, TaskStatus};
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -44,7 +44,7 @@ impl StoreEarthExplorerTask {
 }
 
 #[tonic::async_trait]
-impl Task for StoreEarthExplorerTask {
+impl TaskOg for StoreEarthExplorerTask {
     async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         // search for image files
         let mut records = Vec::new();

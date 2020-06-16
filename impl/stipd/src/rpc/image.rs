@@ -4,7 +4,7 @@ use tokio::sync::mpsc::Receiver;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
-use crate::task::{Task, TaskManager};
+use crate::task::{TaskOg, TaskManager};
 use crate::task::coalesce::CoalesceTask;
 //use crate::task::fill::FillTask;
 use crate::task::store::{StoreEarthExplorerTask, ImageFormat};

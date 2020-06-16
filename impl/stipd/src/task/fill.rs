@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 
 use crate::FILLED_SOURCE;
 use crate::album::AlbumManager;
-use crate::task::{Task, TaskHandle, TaskStatus};
+use crate::task::{TaskOg, TaskHandle, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;
 use std::error::Error;
@@ -38,7 +38,7 @@ impl FillTask {
 }
 
 #[tonic::async_trait]
-impl Task for FillTask {
+impl TaskOg for FillTask {
     async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
         unimplemented!();
         /*// search for images using ImageManager

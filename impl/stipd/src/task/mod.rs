@@ -16,7 +16,7 @@ pub mod store;
 pub mod open;
 
 #[tonic::async_trait]
-pub trait Task {
+pub trait TaskOg {
     async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>>;
 }
 
