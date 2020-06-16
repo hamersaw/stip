@@ -279,17 +279,11 @@ message TaskBroadcastReply {
 
 // Task Messages
 message Task {
-    required uint64 id = 1;    
-    required uint32 itemsCompleted = 2;
-    required uint32 itemsSkipped = 3;
-    required uint32 itemsTotal = 4;
-    required TaskStatus status = 5;
-}
-
-enum TaskStatus {
-    COMPLETE = 0;
-    FAILURE = 1;
-    RUNNING = 2;
+    required uint32 completedCount = 1;
+    required uint64 id = 2;
+    required bool running = 3;
+    required uint32 skippedCount = 4;
+    required uint32 totalCount = 5;
 }
 
 // Clear Messages

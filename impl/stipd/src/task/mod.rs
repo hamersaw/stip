@@ -16,52 +16,8 @@ pub mod split;
 pub mod store;
 pub mod open;
 
-#[tonic::async_trait]
-pub trait TaskOg {
-    async fn start(&self) -> Result<Arc<RwLock<TaskHandleOg>>, Box<dyn Error>>;
-}
-
-pub struct TaskHandleOg {
-    items_completed: Arc<AtomicU32>,
-    items_skipped: Arc<AtomicU32>,
-    items_total: u32,
-    status: TaskStatus,
-}
-
-impl TaskHandleOg {
-    pub fn new(items_completed: Arc<AtomicU32>, items_skipped: Arc<AtomicU32>,
-            items_total: u32, status: TaskStatus) -> TaskHandleOg {
-        TaskHandleOg {
-            items_completed: items_completed,
-            items_skipped: items_skipped,
-            items_total: items_total,
-            status: status,
-        }
-    }
-
-    pub fn get_items_completed(&self) -> u32 {
-        self.items_completed.load(Ordering::SeqCst)
-    }
-
-    pub fn get_items_skipped(&self) -> u32 {
-        self.items_skipped.load(Ordering::SeqCst)
-    }
-
-    pub fn get_items_total(&self) -> u32 {
-        self.items_total
-    }
-
-    pub fn get_status(&self) -> &TaskStatus {
-        &self.status
-    }
-
-    pub fn set_status(&mut self, status: TaskStatus) {
-        self.status = status;
-    }
-}
-
 pub struct TaskManager {
-    tasks: HashMap<u64, Arc<RwLock<TaskHandleOg>>>,
+    tasks: HashMap<u64, TaskHandle>,
 }
 
 impl TaskManager {
@@ -72,11 +28,9 @@ impl TaskManager {
     }
 
     pub fn clear(&mut self) -> Result<(), Box<dyn Error>> {
-        // retrieve list of 'complete' ids    
+        // retrieve list of complete ds    
         let complete_ids: Vec<u64> = self.tasks.iter()
-            .filter(|(_, task_handle)|
-                task_handle.read().unwrap().get_status()
-                    == &TaskStatus::Complete)
+            .filter(|(_, task_handle)| !task_handle.running())
             .map(|(id, _)| id.clone())
             .collect();
 
@@ -88,11 +42,11 @@ impl TaskManager {
         Ok(())
     }
 
-    pub fn iter(&self) -> Iter<u64, Arc<RwLock<TaskHandleOg>>> {
+    pub fn iter(&self) -> Iter<u64, TaskHandle> {
         self.tasks.iter()
     }
 
-    pub fn register(&mut self, task_handle: Arc<RwLock<TaskHandleOg>>,
+    pub fn register(&mut self, task_handle: TaskHandle,
             task_id: Option<u64>) -> Result<u64, Box<dyn Error>> {
         // initialize task id
         let task_id = match task_id {
@@ -100,7 +54,7 @@ impl TaskManager {
             None => rand::random::<u64>(),
         };
 
-        // add TaskHandleOg to map
+        // add TaskHandle to map
         self.tasks.insert(task_id, task_handle);
 
         // return task id
@@ -108,12 +62,12 @@ impl TaskManager {
     }
 }
 
-#[derive(PartialEq)]
+/*#[derive(PartialEq)]
 pub enum TaskStatus {
     Complete,
     Failure(String),
     Running,
-}
+}*/
 
 pub struct TaskHandle {
     completed_count: Arc<AtomicU32>,
@@ -146,7 +100,7 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
     async fn records(&self) -> Result<Vec<T>, Box<dyn Error>>;
 
     fn start(self: Arc<Self>, thread_count: u8) 
-            -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>>
+            -> Result<TaskHandle, Box<dyn Error>>
             where Self: 'static + Send + Sync {
         // initialize instance variables
         let completed_count = Arc::new(AtomicU32::new(0));
@@ -192,13 +146,12 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
         }
 
         // initialize TaskHandle
-        let task_handle = Arc::new( RwLock::new(
-            TaskHandle {
-                completed_count: completed_count,
-                skipped_count: skipped_count,
-                running: running.clone(),
-                total_count: total_count.clone(),
-            }));
+        let task_handle = TaskHandle {
+            completed_count: completed_count,
+            skipped_count: skipped_count,
+            running: running.clone(),
+            total_count: total_count.clone(),
+        };
 
         // start management thread
         let _ = std::thread::spawn(move || {

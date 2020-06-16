@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 
 use crate::FILLED_SOURCE;
 use crate::album::AlbumManager;
-use crate::task::{TaskOg, TaskHandleOg, TaskStatus};
+use crate::task::{TaskOg, TaskHandleOg};
 
 use std::cmp::Ordering as CmpOrdering;
 use std::error::Error;

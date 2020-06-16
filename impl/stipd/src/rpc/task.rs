@@ -1,8 +1,8 @@
-use protobuf::{self, Task, TaskClearReply, TaskClearRequest, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient};
+use protobuf::{Task, TaskClearReply, TaskClearRequest, TaskBroadcastReply, TaskBroadcastRequest, TaskBroadcastType, TaskListReply, TaskListRequest, TaskManagement, TaskManagementClient};
 use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
 
-use crate::task::{TaskManager, TaskStatus};
+use crate::task::TaskManager;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -120,25 +120,33 @@ impl TaskManagement for TaskManagementImpl {
         {
             let task_manager = self.task_manager.read().unwrap();
             for (task_id, task_handle) in task_manager.iter() {
-                let task_handle = task_handle.read().unwrap();
+                //let task_handle = task_handle.read().unwrap();
                 
                 // compile task status
-                let status = match task_handle.get_status() {
+                /*let status = match (task_handle.running(),
+                        task_handle.completed_count()) {
+                    (true, 0) => TaskStatus::Initializing,
+                    (true, _) => TaskStatus::Running,
+                    (false, x) if x < task_handle.total_count()
+                        => TaskStatus::Failed,
+                    (false, _) => TaskStatus::Completed,
+                };*/
+                /*let status = match task_handle.get_status() {
                     TaskStatus::Complete =>
                         protobuf::TaskStatus::Complete,
                     TaskStatus::Failure(_) =>
                         protobuf::TaskStatus::Failure,
                     TaskStatus::Running =>
                         protobuf::TaskStatus::Running,
-                };
+                };*/
 
                 // initialize task protobuf
                 tasks.push(Task {
+                    completed_count: task_handle.completed_count(),
                     id: *task_id,
-                    items_completed: task_handle.get_items_completed(),
-                    items_skipped: task_handle.get_items_skipped(),
-                    items_total: task_handle.get_items_total(),
-                    status: status as i32,
+                    running: task_handle.running(),
+                    skipped_count: task_handle.skipped_count(),
+                    total_count: task_handle.total_count(),
                 });
             }
         }
