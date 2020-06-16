@@ -120,26 +120,6 @@ impl TaskManagement for TaskManagementImpl {
         {
             let task_manager = self.task_manager.read().unwrap();
             for (task_id, task_handle) in task_manager.iter() {
-                //let task_handle = task_handle.read().unwrap();
-                
-                // compile task status
-                /*let status = match (task_handle.running(),
-                        task_handle.completed_count()) {
-                    (true, 0) => TaskStatus::Initializing,
-                    (true, _) => TaskStatus::Running,
-                    (false, x) if x < task_handle.total_count()
-                        => TaskStatus::Failed,
-                    (false, _) => TaskStatus::Completed,
-                };*/
-                /*let status = match task_handle.get_status() {
-                    TaskStatus::Complete =>
-                        protobuf::TaskStatus::Complete,
-                    TaskStatus::Failure(_) =>
-                        protobuf::TaskStatus::Failure,
-                    TaskStatus::Running =>
-                        protobuf::TaskStatus::Running,
-                };*/
-
                 // initialize task protobuf
                 tasks.push(Task {
                     completed_count: task_handle.completed_count(),

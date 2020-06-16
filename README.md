@@ -129,6 +129,4 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 - image fill - fix v0.4
 - __image list / search - optional album, iteratve over all albums__
 - improve node logging
-- refactor task implementations - facilitate code reuse
 - st-image - on split, fill vectors with 'no_data_value'
-- **task - set INITIALIZE stage**

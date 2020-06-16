@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskClearRequest, TaskManagementClient, TaskListRequest, TaskStatus};
+use protobuf::{TaskBroadcastRequest, TaskBroadcastType, TaskClearRequest, TaskManagementClient, TaskListRequest};
 use tonic::Request;
 
 use std::{error, io};
@@ -23,7 +23,7 @@ pub fn process(matches: &ArgMatches, task_matches: &ArgMatches) {
 
 #[tokio::main]
 async fn clear(matches: &ArgMatches, _: &ArgMatches,
-        clear_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+        _clear_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
     // initialize grpc client
     let ip_address = matches.value_of("ip_address").unwrap();
     let port = matches.value_of("port").unwrap().parse::<u16>()?;
@@ -68,37 +68,39 @@ async fn list(matches: &ArgMatches, _: &ArgMatches,
     for (_node_id, task_list_reply) in reply.list_replies.iter() {
         for task in task_list_reply.tasks.iter() {
             let mut task_tuple = tasks.entry(task.id).or_insert(
-                (0u16, 0u16, 0u16, 0u32, 0u32, 0u32));
+                (0u16, 0u16, 0u16, 0u16, 0u32, 0u32, 0u32));
 
-            match TaskStatus::from_i32(task.status).unwrap() {
-                TaskStatus::Complete => task_tuple.0 += 1,
-                TaskStatus::Failure => task_tuple.1 += 1,
-                TaskStatus::Running => task_tuple.2 += 1,
-            }
+            // compile task status
+            match (task.running, task.completed_count, task.total_count) {
+                (true, _, 0) => task_tuple.0 += 1,
+                (true, _, _) => task_tuple.1 += 1,
+                (false, x, y) if x < y => task_tuple.2 += 1,
+                (false, _, _) => task_tuple.3 += 1,
+            };
 
-            task_tuple.3 += task.items_completed;
-            task_tuple.4 += task.items_skipped;
-            task_tuple.5 += task.items_total;
+            task_tuple.4 += task.completed_count;
+            task_tuple.5 += task.skipped_count;
+            task_tuple.6 += task.total_count;
         }
     }
 
     // print information
-    println!("{:<24}{:<12}{:<12}{:<12}{:<24}", "task_id",
-        "completed", "failure", "running", "progress");
-    println!("------------------------------------------------------------------------------------");
+    println!("{:<24}{:<16}{:<12}{:<12}{:<12}{:<24}", "task_id",
+        "initializing", "running", "failed", "completed", "progress");
+    println!("----------------------------------------------------------------------------------------------------");
     for (task_id, task_tuple) in tasks.iter() {
-        println!("{:<24}{:<12}{:<12}{:<12}{:<24}", task_id,
-            task_tuple.0, task_tuple.1, task_tuple.2,
-            compute_progress(task_tuple.3, task_tuple.4, task_tuple.5));
+        println!("{:<24}{:<16}{:<12}{:<12}{:<12}{:<24}", task_id,
+            task_tuple.0, task_tuple.1, task_tuple.2, task_tuple.3,
+            compute_progress(task_tuple.4, task_tuple.5, task_tuple.6));
     }
 
     Ok(())
 }
 
-fn compute_progress(items_completed: u32,
-        items_skipped: u32, items_total: u32) -> f32 {
-    match items_total {
+fn compute_progress(completed_count: u32,
+        skipped_count: u32, total_count: u32) -> f32 {
+    match total_count {
         0 => 1f32,
-        _ => (items_completed + items_skipped) as f32 / items_total as f32,
+        _ => (completed_count + skipped_count) as f32 / total_count as f32,
     }
 }

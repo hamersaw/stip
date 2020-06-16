@@ -16,6 +16,31 @@ pub mod split;
 pub mod store;
 pub mod open;
 
+pub struct TaskHandle {
+    completed_count: Arc<AtomicU32>,
+    running: Arc<AtomicBool>,
+    skipped_count: Arc<AtomicU32>,
+    total_count: Arc<AtomicU32>,
+}
+
+impl TaskHandle {
+    pub fn completed_count(&self) -> u32 {
+        self.completed_count.load(Ordering::SeqCst)
+    }
+
+    pub fn running(&self) -> bool {
+        self.running.load(Ordering::SeqCst)
+    }
+
+    pub fn skipped_count(&self) -> u32 {
+        self.skipped_count.load(Ordering::SeqCst)
+    }
+
+    pub fn total_count(&self) -> u32 {
+        self.total_count.load(Ordering::SeqCst)
+    }
+}
+
 pub struct TaskManager {
     tasks: HashMap<u64, TaskHandle>,
 }
@@ -62,38 +87,6 @@ impl TaskManager {
     }
 }
 
-/*#[derive(PartialEq)]
-pub enum TaskStatus {
-    Complete,
-    Failure(String),
-    Running,
-}*/
-
-pub struct TaskHandle {
-    completed_count: Arc<AtomicU32>,
-    running: Arc<AtomicBool>,
-    skipped_count: Arc<AtomicU32>,
-    total_count: Arc<AtomicU32>,
-}
-
-impl TaskHandle {
-    pub fn completed_count(&self) -> u32 {
-        self.completed_count.load(Ordering::SeqCst)
-    }
-
-    pub fn running(&self) -> bool {
-        self.running.load(Ordering::SeqCst)
-    }
-
-    pub fn skipped_count(&self) -> u32 {
-        self.skipped_count.load(Ordering::SeqCst)
-    }
-
-    pub fn total_count(&self) -> u32 {
-        self.total_count.load(Ordering::SeqCst)
-    }
-}
-
 #[tonic::async_trait]
 pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
     fn process(&self, record: &T) -> Result<(), Box<dyn Error>>;
@@ -133,9 +126,11 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
 
                     // process result
                     match result {
-                        Ok(_) => completed_count.fetch_add(1, Ordering::SeqCst),
+                        Ok(_) => completed_count.fetch_add(1,
+                            Ordering::SeqCst),
                         Err(e) => {
-                            println!("skipping record '{:?}': {}", record, e);
+                            warn!("skipping record '{:?}': {}",
+                                record, e);
                             skipped_count.fetch_add(1, Ordering::SeqCst)
                         },
                     };
