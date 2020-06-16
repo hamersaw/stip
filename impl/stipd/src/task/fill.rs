@@ -2,7 +2,7 @@ use gdal::raster::Dataset;
 
 use crate::FILLED_SOURCE;
 use crate::album::AlbumManager;
-use crate::task::{TaskOg, TaskHandle, TaskStatus};
+use crate::task::{TaskOg, TaskHandleOg, TaskStatus};
 
 use std::cmp::Ordering as CmpOrdering;
 use std::error::Error;
@@ -39,7 +39,7 @@ impl FillTask {
 
 #[tonic::async_trait]
 impl TaskOg for FillTask {
-    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandleOg>>, Box<dyn Error>> {
         unimplemented!();
         /*// search for images using ImageManager
         let mut images: Vec<ImageMetadata> = {
@@ -144,9 +144,9 @@ impl TaskOg for FillTask {
             join_handles.push(join_handle);
         }
 
-        // initialize TaskHandle
+        // initialize TaskHandleOg
         let task_handle = Arc::new( RwLock::new(
-            TaskHandle::new(
+            TaskHandleOg::new(
                 items_completed,
                 items_skipped,
                 records.len() as u32,
@@ -159,7 +159,7 @@ impl TaskOg for FillTask {
             // add items to pipeline
             for record in records {
                 if let Err(e) = sender.send(record) {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -175,7 +175,7 @@ impl TaskOg for FillTask {
             // join worker threads
             for join_handle in join_handles {
                 if let Err(e) = join_handle.join() {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -185,7 +185,7 @@ impl TaskOg for FillTask {
                 }
             }
 
-            // set TaskHandle status to 'completed'
+            // set TaskHandleOg status to 'completed'
             let mut task_handle = task_handle_clone.write().unwrap();
             task_handle.set_status(TaskStatus::Complete);
         });

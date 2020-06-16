@@ -5,7 +5,7 @@ mod naip;
 mod sentinel_2;
 
 use crate::album::Album;
-use crate::task::{TaskOg, TaskHandle, TaskStatus};
+use crate::task::{Task, TaskOg, TaskHandleOg, TaskStatus};
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -44,8 +44,32 @@ impl StoreEarthExplorerTask {
 }
 
 #[tonic::async_trait]
+impl Task<PathBuf> for StoreEarthExplorerTask {
+    fn process(&self, record: &PathBuf) -> Result<(), Box<dyn Error>> {
+        match self.format {
+            ImageFormat::MODIS => modis::process(
+                &self.album, &self.dht, self.precision, &record),
+            ImageFormat::NAIP => naip::process(
+                &self.album, &self.dht, self.precision, &record),
+            ImageFormat::Sentinel => sentinel_2::process(
+                &self.album, &self.dht, self.precision, &record),
+        }
+    }
+
+    async fn records(&self) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+        // search for image files
+        let mut records = Vec::new();
+        for entry in glob::glob(&self.glob)? {
+            records.push(entry?);
+        }
+
+        Ok(records)
+    }
+}
+
+/*#[tonic::async_trait]
 impl TaskOg for StoreEarthExplorerTask {
-    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandleOg>>, Box<dyn Error>> {
         // search for image files
         let mut records = Vec::new();
         for entry in glob::glob(&self.glob)? {
@@ -102,9 +126,9 @@ impl TaskOg for StoreEarthExplorerTask {
             join_handles.push(join_handle);
         }
 
-        // initialize TaskHandle
+        // initialize TaskHandleOg
         let task_handle = Arc::new( RwLock::new(
-            TaskHandle::new(
+            TaskHandleOg::new(
                 items_completed,
                 items_skipped,
                 records.len() as u32,
@@ -117,7 +141,7 @@ impl TaskOg for StoreEarthExplorerTask {
             // add items to pipeline
             for record in records {
                 if let Err(e) = sender.send(record) {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -133,7 +157,7 @@ impl TaskOg for StoreEarthExplorerTask {
             // join worker threads
             for join_handle in join_handles {
                 if let Err(e) = join_handle.join() {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -143,7 +167,7 @@ impl TaskOg for StoreEarthExplorerTask {
                 }
             }
 
-            // set TaskHandle status to 'completed'
+            // set TaskHandleOg status to 'completed'
             let mut task_handle = task_handle_clone.write().unwrap();
             task_handle.set_status(TaskStatus::Complete);
         });
@@ -151,4 +175,4 @@ impl TaskOg for StoreEarthExplorerTask {
         // return task handle
         Ok(task_handle)
     }
-}
+}*/

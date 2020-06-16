@@ -3,7 +3,7 @@ use gdal::metadata::Metadata;
 use gdal::raster::Dataset;
 
 use crate::album::Album;
-use crate::task::{TaskOg, TaskHandle, TaskStatus};
+use crate::task::{Task, TaskOg, TaskHandleOg, TaskStatus};
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -25,8 +25,47 @@ impl OpenTask {
 }
 
 #[tonic::async_trait]
+impl Task<PathBuf> for OpenTask {
+    fn process(&self, record: &PathBuf) -> Result<(), Box<dyn Error>> {
+        let dataset = Dataset::open(&record).compat()?;
+
+        let cloud_coverage =
+                match dataset.metadata_item("CLOUD_COVERAGE", "STIP") {
+            Some(cloud_coverage) => Some(cloud_coverage.parse::<f64>()?),
+            None => None,
+        };
+        let geocode = dataset.metadata_item("GEOCODE", "STIP")
+            .ok_or("image geocode metadata not found")?;
+        let pixel_coverage = dataset.metadata_item("PIXEL_COVERAGE", "STIP")
+            .ok_or("image pixel coverage metadata not found")?.parse::<f64>()?;
+        let platform = dataset.metadata_item("PLATFORM", "STIP")
+            .ok_or("image platform metadata not found")?;
+        let source = dataset.metadata_item("SOURCE", "STIP")
+            .ok_or("image source metadata not found")?;
+        let subdataset = dataset.metadata_item("SUBDATASET", "STIP")
+            .ok_or("image subdataset metadata not found")?.parse::<u8>()?;
+        let tile = dataset.metadata_item("TILE", "STIP")
+            .ok_or("image tile metadata not found")?;
+        let timestamp = dataset.metadata_item("TIMESTAMP", "STIP")
+            .ok_or("image timestamp metadata not found")?.parse::<i64>()?;
+
+        let mut album = self.album.write().unwrap();
+        album.load(cloud_coverage, &geocode, pixel_coverage,
+            &platform, &source, subdataset, &tile, timestamp)?;
+
+        Ok(())
+    }
+
+    async fn records(&self) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+        // search for paths using Album
+        let album = self.album.read().unwrap();
+        album.get_paths()
+    }
+}
+
+/*#[tonic::async_trait]
 impl TaskOg for OpenTask {
-    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandleOg>>, Box<dyn Error>> {
         // search for images using ImageManager
         let records: Vec<PathBuf> = {
             let album = self.album.read().unwrap();
@@ -70,9 +109,9 @@ impl TaskOg for OpenTask {
             join_handles.push(join_handle);
         }
 
-        // initialize TaskHandle
+        // initialize TaskHandleOg
         let task_handle = Arc::new( RwLock::new(
-            TaskHandle::new(
+            TaskHandleOg::new(
                 items_completed,
                 items_skipped,
                 records.len() as u32,
@@ -85,7 +124,7 @@ impl TaskOg for OpenTask {
             // add items to pipeline
             for record in records {
                 if let Err(e) = sender.send(record) {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -101,7 +140,7 @@ impl TaskOg for OpenTask {
             // join worker threads
             for join_handle in join_handles {
                 if let Err(e) = join_handle.join() {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -111,7 +150,7 @@ impl TaskOg for OpenTask {
                 }
             }
 
-            // set TaskHandle status to 'completed'
+            // set TaskHandleOg status to 'completed'
             let mut task_handle = task_handle_clone.write().unwrap();
             task_handle.set_status(TaskStatus::Complete);
         });
@@ -150,4 +189,4 @@ fn process(album: &Arc<RwLock<Album>>, record: &PathBuf)
         &platform, &source, subdataset, &tile, timestamp)?;
 
     Ok(())
-}
+}*/

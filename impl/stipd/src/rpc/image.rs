@@ -4,7 +4,7 @@ use tokio::sync::mpsc::Receiver;
 use tonic::{Code, Request, Response, Status};
 
 use crate::album::AlbumManager;
-use crate::task::{TaskOg, TaskManager};
+use crate::task::{Task, TaskOg, TaskManager};
 use crate::task::coalesce::CoalesceTask;
 //use crate::task::fill::FillTask;
 use crate::task::store::{StoreEarthExplorerTask, ImageFormat};
@@ -162,7 +162,7 @@ impl ImageManagement for ImageManagementImpl {
             request.thread_count as u8, request.window_seconds);
 
         // start task
-        let task_handle = match task.start().await {
+        /*let task_handle = match task.start().await {
             Ok(task_handle) => task_handle,
             Err(e) => return Err(Status::new(Code::Unknown,
                 format!("failed to start CoalesceTask: {}", e))),
@@ -176,7 +176,17 @@ impl ImageManagement for ImageManagementImpl {
                 Err(e) => return Err(Status::new(Code::Unknown,
                     format!("failed to register CoalesceTask: {}", e))),
             }
+        };*/
+        // TODO - test this functionality
+        let task_handle = {
+            let task = Arc::new(task);
+            match task.start(request.thread_count as u8) {
+                Ok(task_handle) => task_handle,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to start CoalesceTask: {}", e))),
+            }
         };
+        let task_id = 0;
 
         // initialize reply
         let reply = ImageCoalesceReply {
@@ -339,7 +349,7 @@ impl ImageManagement for ImageManagementImpl {
             filter.start_timestamp.clone(), request.thread_count as u8);
 
         // start task
-        let task_handle = match task.start().await {
+        /*let task_handle = match task.start().await {
             Ok(task_handle) => task_handle,
             Err(e) => return Err(Status::new(Code::Unknown,
                 format!("failed to start SplitTask: {}", e))),
@@ -353,7 +363,17 @@ impl ImageManagement for ImageManagementImpl {
                 Err(e) => return Err(Status::new(Code::Unknown,
                     format!("failed to register SplitTask: {}", e))),
             }
+        };*/
+        // TODO - test this functionality
+        let task_handle = {
+            let task = Arc::new(task);
+            match task.start(request.thread_count as u8) {
+                Ok(task_handle) => task_handle,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to start SplitTask: {}", e))),
+            }
         };
+        let task_id = 0;
  
         // initialize reply
         let reply = ImageSplitReply {
@@ -385,21 +405,32 @@ impl ImageManagement for ImageManagementImpl {
             request.thread_count as u8);
 
         // start task
-        let task_handle = match task.start().await {
+        /*let task_handle = match task.start().await {
             Ok(task_handle) => task_handle,
             Err(e) => return Err(Status::new(Code::Unknown,
                 format!("failed to start StoreTask: {}", e))),
+        };*/
+ 
+        // TODO - test this functionality
+        let task_handle = {
+            let task = Arc::new(task);
+            match task.start(request.thread_count as u8) {
+                Ok(task_handle) => task_handle,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to start OpenTask: {}", e))),
+            }
         };
 
         // register task with TaskHandler
-        let task_id = {
+        /*let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
             match task_manager.register(task_handle, request.task_id) {
                 Ok(task_id) => task_id,
                 Err(e) => return Err(Status::new(Code::Unknown,
                     format!("failed to register StoreTask: {}", e))),
             }
-        };
+        };*/
+        let task_id = 0;
 
         // initialize reply
         let reply = ImageStoreReply {

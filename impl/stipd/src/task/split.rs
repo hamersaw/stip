@@ -4,7 +4,7 @@ use swarm::prelude::Dht;
 
 use crate::{Image, StFile, RAW_SOURCE, SPLIT_SOURCE};
 use crate::album::Album;
-use crate::task::{TaskOg, TaskHandle, TaskStatus};
+use crate::task::{Task, TaskOg, TaskHandleOg, TaskStatus};
 
 use std::error::Error;
 use std::path::Path;
@@ -46,8 +46,111 @@ impl SplitTask {
 }
 
 #[tonic::async_trait]
+impl Task<(Image, Vec<StFile>)> for SplitTask {
+    fn process(&self, record: &(Image, Vec<StFile>))
+            -> Result<(), Box<dyn Error>> {
+        let image = &record.0;
+
+        // retrieve album metadata
+        let (album_id, dht_key_length, geocode) = {
+            let album = self.album.read().unwrap();
+            (album.get_id().to_string(), album.get_dht_key_length(),
+                album.get_geocode().clone())
+        };
+
+        for file in record.1.iter() {
+            // check if path exists
+            let path = {
+                let album = self.album.read().unwrap();
+                Path::new(&file.0);
+                album.get_image_path(false, &image.1,
+                    &image.2, &image.3, file.2, &image.4)?
+            };
+
+            if !path.exists() {
+                return Err(format!("image path '{}' does not exist",
+                    path.to_string_lossy()).into());
+            }
+
+            // open image
+            let dataset = Dataset::open(&path).compat()?;
+
+            // split image with geocode precision
+            for dataset_split in st_image::prelude::split(&dataset,
+                    geocode, self.precision).compat()? {
+                // calculate split dataset geocode
+                let (win_min_x, win_max_x, win_min_y, win_max_y) =
+                    dataset_split.coordinates();
+                let split_geocode = geocode.get_code(
+                    (win_min_x + win_max_x) / 2.0,
+                    (win_min_y + win_max_y) / 2.0, self.precision)?;
+
+                //  skip if geocode doesn't 'start_with' base image geocode
+                if !split_geocode.starts_with(&image.1) {
+                    continue;
+                }
+
+                // perform dataset split
+                let dataset = dataset_split.dataset().compat()?;
+
+                // if image has 0.0 coverage -> don't process
+                let pixel_coverage = st_image::coverage(&dataset).compat()?;
+                if pixel_coverage == 0f64 {
+                    continue;
+                }
+
+                // lookup geocode in dht
+                let addr = match crate::task::dht_lookup(
+                        &self.dht, dht_key_length, &split_geocode) {
+                    Ok(addr) => addr,
+                    Err(e) => {
+                        warn!("{}", e);
+                        continue;
+                    },
+                };
+
+                // send image to new host
+                if let Err(e) = crate::transfer::send_image(&addr, &album_id,
+                        &dataset, &split_geocode, file.1, &image.2,
+                        SPLIT_SOURCE, file.2, &image.4, image.5) {
+                    warn!("failed to write image to node {}: {}", addr, e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn records(&self)
+            -> Result<Vec<(Image, Vec<StFile>)>, Box<dyn Error>> {
+        // search for images using Album
+        let mut records: Vec<(Image, Vec<StFile>)> = {
+            let album = self.album.read().unwrap();
+            album.list(&self.end_timestamp, &self.geocode, &None, &None,
+                &self.platform, self.recurse, 
+                &Some(RAW_SOURCE.to_string()), &self.start_timestamp)?
+        };
+
+        // filter by geocode precision length
+        records = records.into_iter().filter(|x| {
+                (x.0).1.len() < self.precision as usize
+            }).collect();
+
+        // filter by result bounding geocode if necessary
+        if let Some(geocode) = &self.geocode_bound {
+            records = records.into_iter().filter(|(image, _)| {
+                    image.1.starts_with(geocode)
+                        || geocode.starts_with(&image.1)
+                }).collect();
+        }
+
+        Ok(records)
+    }
+}
+
+/*#[tonic::async_trait]
 impl TaskOg for SplitTask {
-    async fn start(&self) -> Result<Arc<RwLock<TaskHandle>>, Box<dyn Error>> {
+    async fn start(&self) -> Result<Arc<RwLock<TaskHandleOg>>, Box<dyn Error>> {
         // search for images using Album
         let mut records: Vec<(Image, Vec<StFile>)> = {
             let album = self.album.read().unwrap();
@@ -109,9 +212,9 @@ impl TaskOg for SplitTask {
             join_handles.push(join_handle);
         }
 
-        // initialize TaskHandle
+        // initialize TaskHandleOg
         let task_handle = Arc::new( RwLock::new(
-            TaskHandle::new(
+            TaskHandleOg::new(
                 items_completed,
                 items_skipped,
                 records.len() as u32,
@@ -124,7 +227,7 @@ impl TaskOg for SplitTask {
             // add items to pipeline
             for record in records {
                 if let Err(e) = sender.send(record) {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -140,7 +243,7 @@ impl TaskOg for SplitTask {
             // join worker threads
             for join_handle in join_handles {
                 if let Err(e) = join_handle.join() {
-                    // set TaskHandle status to 'failed'
+                    // set TaskHandleOg status to 'failed'
                     let mut task_handle =
                         task_handle_clone.write().unwrap();
                     task_handle.set_status(
@@ -150,7 +253,7 @@ impl TaskOg for SplitTask {
                 }
             }
 
-            // set TaskHandle status to 'completed'
+            // set TaskHandleOg status to 'completed'
             let mut task_handle = task_handle_clone.write().unwrap();
             task_handle.set_status(TaskStatus::Complete);
         });
@@ -233,4 +336,4 @@ fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
     }
 
     Ok(())
-}
+}*/
