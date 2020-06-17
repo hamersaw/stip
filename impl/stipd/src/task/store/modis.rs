@@ -80,7 +80,7 @@ fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geocode, dataset) in datasets.iter() {
         // if image has 0.0 coverage -> don't process
-        let pixel_coverage = st_image::coverage(&dataset).compat()?;
+        let pixel_coverage = st_image::coverage(&dataset)?;
         if pixel_coverage == 0f64 {
             continue;
         }
@@ -116,8 +116,8 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
         let dataset = Dataset::open(&path).expect("subdataset open");
 
         // split dataset
-        for dataset_split in st_image::prelude::split(&dataset,
-                geocode, precision).compat()? {
+        for dataset_split in st_image::prelude::split(
+                &dataset, geocode, precision)? {
             // calculate split dataset geocode
             let (win_min_x, win_max_x, win_min_y, win_max_y) =
                 dataset_split.coordinates();
@@ -126,7 +126,7 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
                 (win_min_y + win_max_y) / 2.0, precision)?;
 
             // perform dataset split
-            let dataset = dataset_split.dataset().compat()?;
+            let dataset = dataset_split.dataset()?;
             let (x, y) = dataset.size();
 
             // if geocode dataset does not exist -> create it
@@ -148,7 +148,7 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
             // copy image raster
             //println!("  COPYING RASTER: {:?}", dataset.band_type(1)); 
             st_image::prelude::copy_raster(&dataset, 1, (0, 0), (x, y),
-                dst_dataset, (i + 1) as isize, (0, 0), (x, y)).compat()?;
+                dst_dataset, (i + 1) as isize, (0, 0), (x, y))?;
         }
     }
 

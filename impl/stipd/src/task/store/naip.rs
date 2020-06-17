@@ -27,8 +27,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
 
     let image_path = PathBuf::from(format!("/vsizip/{}/{}",
         record.to_string_lossy(), filename));
-    let dataset = Dataset::open(&image_path)
-        .expect("metadata dataset open");
+    let dataset = Dataset::open(&image_path).compat()?;
 
     // parse metadata
     let date_string = &filename[filename.len()-12..filename.len()-4];
@@ -44,8 +43,8 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
     // split image with geocode precision
-    for dataset_split in st_image::prelude::split(&dataset,
-            geocode, precision).compat()? {
+    for dataset_split in st_image::prelude::split(
+            &dataset, geocode, precision)? {
         // calculate split dataset geocode
         let (win_min_x, win_max_x, win_min_y, win_max_y) =
             dataset_split.coordinates();
@@ -54,10 +53,10 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
             (win_min_y + win_max_y) / 2.0, precision)?;
 
         // perform dataset split
-        let dataset = dataset_split.dataset().compat()?;
+        let dataset = dataset_split.dataset()?;
 
         // if image has 0.0 coverage -> don't process
-        let pixel_coverage = st_image::coverage(&dataset).compat()?;
+        let pixel_coverage = st_image::coverage(&dataset)?;
         if pixel_coverage == 0f64 {
             continue;
         }
