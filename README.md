@@ -60,11 +60,14 @@ These commands are useful for identifying nodes within the cluster. They are typ
 
     # list all nodes in the cluser
     ./stip cluster list
-#### TASK LIST
-Behind the scenes of stip all functionality is partitioned into a variety of tasks. Said functionality includes data loading, data splitting / merging, data filling, etc. The 'task' interface is used to monitor progress of cluster tasks.
+#### TASK LIST / CLEAR
+Behind the scenes of stip all functionality is partitioned into a variety of tasks. Said functionality includes image loading, image splitting / merging, image filling, etc. The 'task' interface is used to monitor progress of cluster tasks.
     
     # list all cluster tasks
     ./stip task list
+
+    # clear complete cluster tasks
+    ./stip task clear
 #### ALBUM CREATE
 The system uses albums logically partition the dataspace. Each album is established using a unique identifier. Additionally, they define both the geocode algorithm and DHT key length for all images stored within. The geohash and quadtile geocode algorithms are currently supported. DHT key lengths which are positive use the first 'n' characters of the geocode, negative using geocode length - 'n' characters, and 0 uses the entire geocode.
 
@@ -119,6 +122,12 @@ Images are stored at the geohash length defined during 'image store's. However, 
     # split Sentinel-2 data at a geohash length of 6 
     #   for all geohashes starting with '9xj'
     ./stip image split test -p Sentinel-2 -g 9xj -r -l 6
+#### IMAGE COALESCE
+In certain situations we require correlation of two image sets. This is useful for operations which require processing of image sets from diverse platforms at a particular spatiotemporal scope. We introduce the 'image coalesce' operation to provide the aforementioned functionality. Precisely, it splits a source image set so images exist at the same spatiotemporal scopes as a query image set.
+
+    # split MODIS data to correlate with Sentinel-2 data with pixel
+    #   coverage greater than 95% and cloud coverage less than 20%
+    ./stip image coalesce test MODIS -p Sentinel-2 -x 0.95 -c 0.1
 #### IMAGE FILL
 Typically image datasets partition data into many tiles. The inherit tile bounds mean that often a single geohash spans multiple tiles. Therefore, when loading data, one image contains partial data whereas another contains the remaining data. The 'image fill' command attempts to identify image sets where 'complete' images may be built by combining multiple source images. This command launches a task on each cluster node to process data local to that machine. This command employs many of the same filtering criteria as 'image search' and 'image list' commands, enabling fine image processing filtering criteria.
 
