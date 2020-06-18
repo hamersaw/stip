@@ -11,7 +11,7 @@ use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 pub mod coalesce;
-//pub mod fill;
+pub mod fill;
 pub mod split;
 pub mod store;
 pub mod open;

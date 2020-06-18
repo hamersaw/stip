@@ -150,10 +150,11 @@ message ImageCoalesceReply {
 
 // Fill Messages
 message ImageFillRequest {
-    required Filter filter = 1;
-    optional uint64 taskId = 2;
-    required uint32 threadCount = 3;
-    required int64 windowSeconds = 4;
+    required string album = 1;
+    required Filter filter = 2;
+    optional uint64 taskId = 3;
+    required uint32 threadCount = 4;
+    required int64 windowSeconds = 5;
 }
 
 message ImageFillReply {

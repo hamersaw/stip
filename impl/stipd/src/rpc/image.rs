@@ -6,7 +6,7 @@ use tonic::{Code, Request, Response, Status};
 use crate::album::AlbumManager;
 use crate::task::{Task, TaskManager};
 use crate::task::coalesce::CoalesceTask;
-//use crate::task::fill::FillTask;
+use crate::task::fill::FillTask;
 use crate::task::store::{StoreEarthExplorerTask, ImageFormat};
 use crate::task::split::SplitTask;
 
@@ -190,20 +190,34 @@ impl ImageManagement for ImageManagementImpl {
             -> Result<Response<ImageFillReply>, Status> {
         trace!("ImageFillRequest: {:?}", request);
         let request = request.get_ref();
+        let filter = &request.filter;
+
+        // ensure album exists
+        let album = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.album)?;
 
         // initialize task
-        /*let task = FillTask::new(
-            request.end_timestamp.clone(), request.geocode.clone(),
-            self.image_manager.clone(), request.platform.clone(),
-            request.recurse, request.start_timestamp.clone(),
-            request.thread_count as u8, request.window_seconds);
+        let task = Arc::new(FillTask::new(album,
+            filter.end_timestamp.clone(), filter.geocode.clone(),
+            filter.platform.clone(), filter.recurse,
+            filter.start_timestamp.clone(), request.window_seconds));
 
-        // execute task using task manager - TODO error
+        // start task
+        let task_handle = match task.start(request.thread_count as u8) {
+            Ok(task_handle) => task_handle,
+            Err(e) => return Err(Status::new(Code::Unknown,
+                format!("failed to start CoalesceTask: {}", e))),
+        };
+
+        // register task with TaskHandler
         let task_id = {
             let mut task_manager = self.task_manager.write().unwrap();
-            task_manager.execute(task, request.task_id).unwrap()
-        };*/
-        let task_id = 0; // TODO - fix fill
+            match task_manager.register(task_handle, request.task_id) {
+                Ok(task_id) => task_id,
+                Err(e) => return Err(Status::new(Code::Unknown,
+                    format!("failed to register CoalesceTask: {}", e))),
+            }
+        };
 
         // initialize reply
         let reply = ImageFillReply {

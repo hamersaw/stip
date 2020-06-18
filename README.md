@@ -126,7 +126,5 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip image fill test2 -p NAIP
 
 ## TODO
-- __image fill - fix v0.4__
 - improve node logging
-#### DISCUSS
-- image list / search - optional album, iterate over all albums
+- image list / search - make album optional -> iterate over all albums

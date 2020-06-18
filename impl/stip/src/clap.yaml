@@ -138,6 +138,10 @@ subcommands:
             - fill:
                 about: initialize image fill task
                 args:
+                    - ALBUM:
+                        index: 1
+                        required: true
+                        help: stip album
                     - end_timestamp:
                         help: end timestamp for temporal range
                         long: end_timestamp

@@ -98,27 +98,35 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     let mut client = ImageManagementClient::connect(
         format!("http://{}:{}", ip_address, port)).await?;
 
-    // TODO - fix fill
-    /*// initialize ImageFillRequest
-    let fill_request = ImageFillRequest {
-        band: crate::string_opt(fill_matches.value_of("band")),
+    // initialize Filter
+    let filter = Filter {
         end_timestamp: crate::i64_opt(
             fill_matches.value_of("end_timestamp"))?,
         geocode: crate::string_opt(fill_matches.value_of("geocode")),
+        max_cloud_coverage: None,
+        min_pixel_coverage: None,
         platform: crate::string_opt(fill_matches.value_of("platform")),
         recurse: fill_matches.is_present("recurse"),
+        source: None,
         start_timestamp: crate::i64_opt(
             fill_matches.value_of("start_timestamp"))?,
+    };
+
+    // initialize ImageFillRequest
+    let fill_request = ImageFillRequest {
+        album: fill_matches.value_of("ALBUM").unwrap().to_string(),
+        filter: filter,
         task_id: crate::u64_opt(fill_matches.value_of("task_id"))?,
         thread_count: fill_matches.value_of("thread_count")
             .unwrap().parse::<u32>()?,
         window_seconds: fill_matches.value_of("window_seconds")
             .unwrap().parse::<i64>()?,
     };
- 
+
     // initialize request
     let request = Request::new(ImageBroadcastRequest {
         message_type: ImageBroadcastType::Fill as i32,
+        coalesce_request: None,
         fill_request: Some(fill_request),
         split_request: None,
     });
@@ -131,7 +139,7 @@ async fn fill(matches: &ArgMatches, _: &ArgMatches,
     for (node_id, fill_reply) in reply.fill_replies.iter() {
         println!("task starting on node '{}' with id '{}'",
             node_id, fill_reply.task_id);
-    }*/
+    }
 
     Ok(())
 }

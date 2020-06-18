@@ -182,7 +182,7 @@ impl Album {
             Some(index) => Ok(index.list(&self, end_timestamp, geocode,
                 max_cloud_coverage, min_pixel_coverage, platform,
                 recurse, source, start_timestamp)?),
-            None => Err("unable to search on closed album".into()),
+            None => Err("unable to list on closed album".into()),
         }
     }
 
@@ -194,7 +194,7 @@ impl Album {
             Some(index) => Ok(index.load(cloud_coverage,
                 geocode, pixel_coverage, platform, source,
                 subdataset, tile, timestamp)?),
-            None => Err("unable to search on closed album".into()),
+            None => Err("unable to load on closed album".into()),
         }
     }
 

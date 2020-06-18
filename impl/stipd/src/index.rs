@@ -37,7 +37,7 @@ const INSERT_IMAGES_STMT: &str =
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
 
 const ID_SELECT_STMT: &str =
-"SELECT id from images WHERE geocode = ?1 AND tile = ?2";
+"SELECT id from images WHERE geocode = ?1 AND tile = ?2 AND source = ?3";
 
 const LIST_SELECT_STMT: &str =
 "SELECT cloud_coverage, geocode, pixel_coverage,
@@ -162,11 +162,10 @@ impl AlbumIndex {
         // load data into sqlite
         let conn = self.conn.lock().unwrap();
 
-        // check if tile, geocode combination is already registered
-        // execute query
+        // check if geocode, tile, source combination already exists
         let mut stmt = conn.prepare(ID_SELECT_STMT)?;
         let ids: Vec<i64> = stmt.query_map(
-            rusqlite::params![geocode, tile],
+            rusqlite::params![geocode, tile, source],
             |row| { Ok(row.get(0)?) }
         )?.map(|x| x.unwrap()).collect();
 

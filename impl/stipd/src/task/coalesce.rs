@@ -10,7 +10,6 @@ use crate::task::Task;
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 pub struct CoalesceTask {
@@ -76,7 +75,6 @@ impl Task<(Image, Vec<StFile>, HashSet<String>)> for CoalesceTask {
                 // check if path exists
                 let path = {
                     let album = self.album.read().unwrap();
-                    Path::new(&file.0);
                     album.get_image_path(false, &image.1,
                         &image.2, &image.3, file.2, &image.4)?
                 };
