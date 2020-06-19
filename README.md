@@ -55,11 +55,11 @@ Similar to starting the cluster, the ./sbin/stop-all.sh script has been provided
     # terminal command to stop stip cluster from root project
     ./sbin/stop-all.sh
 ### STIP
-#### CLUSTER LIST
-These commands are useful for identifying nodes within the cluster. They are typically used for testing or used in the background of APIs or applications when contacting each cluster node is necessary for a particular operation.
+#### NODE LIST
+This command is useful for identifying nodes within the cluster. It is typically used for testing or in the background of APIs or applications when contacting each cluster node is necessary for a particular operation.
 
     # list all nodes in the cluser
-    ./stip cluster list
+    ./stip node list
 #### TASK LIST / CLEAR
 Behind the scenes of stip all functionality is partitioned into a variety of tasks. Said functionality includes image loading, image splitting / merging, image filling, etc. The 'task' interface is used to monitor progress of cluster tasks.
     
@@ -135,5 +135,7 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip image fill test2 -p NAIP
 
 ## TODO
+- **fix 'image fill' - index out of bounds**
+    - probably on images that are missing subdatasets
 - improve node logging
 - image list / search - make album optional -> iterate over all albums

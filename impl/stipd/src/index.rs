@@ -141,9 +141,11 @@ impl AlbumIndex {
         for (image, file) in images_iter.map(|x| x.unwrap()) {
             match images.last_mut() {
                 Some((i, f)) => {
-                    // if geocode and tile match -> append file to files
-                    //   else -> add new image
-                    match i.1 == image.1 && i.4 == image.4 {
+                    // if geocode, source, and tile match 
+                    //   -> append file to files
+                    // else -> add new image
+                    match i.1 == image.1
+                            && i.3 == image.3 && i.4 == image.4 {
                         true => f.push(file),
                         false => images.push((image, vec!(file))),
                     }
