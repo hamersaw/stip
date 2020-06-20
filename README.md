@@ -99,7 +99,7 @@ Image tore tasks are initialized on a per-node basis, meaning each node ony proc
     ./stip image store test '~/Downloads/earth-explorer/modis/MCD43A4.A2020100.h08v05.006.2020109032339.hdf' modis -t 1 -l 3
 
     # store images for the given glob with 4 threads at geohash length 6
-    ./stip iamge store test2 '~/Downloads/earth-explorer/naip/test/*' naip -t 4 -l 6
+    ./stip image store test2 '~/Downloads/earth-explorer/naip/test/*' naip -t 4 -l 6
 
     # store sentinel data for files with the provided glob at geohash
     #   length 5 using 2 threads and setting the task id as 1000

@@ -151,8 +151,8 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
         // start management thread
         let _ = std::thread::spawn(move || {
             // compute processing records
-            let mut runtime = match 
-                    Builder::new().basic_scheduler().build() {
+            let mut runtime = match Builder::new()
+                    .basic_scheduler().enable_all().build() {
                 Ok(runtime) => runtime,
                 Err(e) => {
                     warn!("task failed to initialize runtime: {}", e);
