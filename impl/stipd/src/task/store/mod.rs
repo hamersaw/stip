@@ -2,6 +2,7 @@ use swarm::prelude::Dht;
 
 mod modis;
 mod naip;
+mod nlcd;
 mod sentinel_2;
 
 use crate::album::Album;
