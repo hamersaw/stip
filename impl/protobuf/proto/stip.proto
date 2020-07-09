@@ -186,7 +186,8 @@ message ImageListRequest {
 enum ImageFormat {
     MODIS = 0;
     NAIP = 1;
-    SENTINEL = 2;
+    NLCD = 2;
+    SENTINEL = 3;
 }
 
 message ImageStoreRequest {

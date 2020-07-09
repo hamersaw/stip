@@ -222,6 +222,7 @@ async fn store(matches: &ArgMatches, _: &ArgMatches,
     let format = match store_matches.value_of("FORMAT") {
         Some("modis") => ImageFormat::Modis as i32,
         Some("naip") => ImageFormat::Naip as i32,
+        Some("nlcd") => ImageFormat::Nlcd as i32,
         Some("sentinel") => ImageFormat::Sentinel as i32,
         _ => unimplemented!(),
     };

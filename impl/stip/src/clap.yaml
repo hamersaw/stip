@@ -345,6 +345,7 @@ subcommands:
                         possible_values: 
                             - modis
                             - naip
+                            - nlcd
                             - sentinel
                         help: dataset image format
                     - precision:

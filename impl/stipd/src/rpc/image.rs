@@ -391,6 +391,7 @@ impl ImageManagement for ImageManagementImpl {
                 ::from_i32(request.format).unwrap() {
             ProtoImageFormat::Modis => ImageFormat::MODIS,
             ProtoImageFormat::Naip => ImageFormat::NAIP,
+            ProtoImageFormat::Nlcd => ImageFormat::NLCD,
             ProtoImageFormat::Sentinel => ImageFormat::Sentinel,
         };
 

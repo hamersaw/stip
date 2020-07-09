@@ -16,6 +16,7 @@ use std::sync::{Arc, RwLock};
 pub enum ImageFormat {
     MODIS,
     NAIP,
+    NLCD,
     Sentinel,
 }
 
@@ -48,6 +49,8 @@ impl Task<PathBuf> for StoreEarthExplorerTask {
             ImageFormat::MODIS => modis::process(
                 &self.album, &self.dht, self.precision, &record),
             ImageFormat::NAIP => naip::process(
+                &self.album, &self.dht, self.precision, &record),
+            ImageFormat::NLCD => nlcd::process(
                 &self.album, &self.dht, self.precision, &record),
             ImageFormat::Sentinel => sentinel_2::process(
                 &self.album, &self.dht, self.precision, &record),
