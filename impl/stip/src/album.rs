@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use protobuf::{AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseRequest, AlbumCreateRequest, AlbumListRequest, AlbumManagementClient, AlbumOpenRequest, AlbumStatus, Geocode};
+use protobuf::{AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseRequest, AlbumCreateRequest, AlbumDeleteRequest, AlbumListRequest, AlbumManagementClient, AlbumOpenRequest, AlbumStatus, Geocode};
 use tonic::Request;
 
 use std::{error, io};
@@ -11,6 +11,8 @@ pub fn process(matches: &ArgMatches, album_matches: &ArgMatches) {
             close(&matches, &album_matches, &close_matches),
         ("create", Some(create_matches)) =>
             create(&matches, &album_matches, &create_matches),
+        ("delete", Some(delete_matches)) =>
+            delete(&matches, &album_matches, &delete_matches),
         ("list", Some(list_matches)) =>
             list(&matches, &album_matches, &list_matches),
         ("open", Some(open_matches)) =>
@@ -42,6 +44,7 @@ async fn close(matches: &ArgMatches, _: &ArgMatches,
         message_type: AlbumBroadcastType::AlbumClose as i32,
         create_request: None,
         close_request: Some(close_request),
+        delete_request: None,
         open_request: None,
     });
 
@@ -79,6 +82,35 @@ async fn create(matches: &ArgMatches, _: &ArgMatches,
         message_type: AlbumBroadcastType::AlbumCreate as i32,
         create_request: Some(create_request),
         close_request: None,
+        delete_request: None,
+        open_request: None,
+    });
+
+    // retrieve reply
+    let _ = client.broadcast(request).await?;
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn delete(matches: &ArgMatches, _: &ArgMatches,
+        delete_matches: &ArgMatches) -> Result<(), Box<dyn error::Error>> {
+    // initialize grpc client
+    let ip_address = matches.value_of("ip_address").unwrap();
+    let port = matches.value_of("port").unwrap().parse::<u16>()?;
+    let mut client = AlbumManagementClient::connect(
+        format!("http://{}:{}", ip_address, port)).await?;
+
+    // initialize request
+    let delete_request = AlbumDeleteRequest {
+        id: delete_matches.value_of("ID").unwrap().to_string(),
+    };
+
+    let request = Request::new(AlbumBroadcastRequest {
+        message_type: AlbumBroadcastType::AlbumDelete as i32,
+        create_request: None,
+        close_request: None,
+        delete_request: Some(delete_request),
         open_request: None,
     });
 
@@ -147,6 +179,7 @@ async fn open(matches: &ArgMatches, _: &ArgMatches,
         message_type: AlbumBroadcastType::AlbumOpen as i32,
         create_request: None,
         close_request: None,
+        delete_request: None,
         open_request: Some(open_request),
     });
 

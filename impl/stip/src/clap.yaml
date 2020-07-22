@@ -45,6 +45,13 @@ subcommands:
                         long: dht_key_length
                         short: d
                         takes_value: true
+            - delete:
+                about: delete an album
+                args:
+                    - ID:
+                        index: 1
+                        required: true
+                        help: unique album identifier
             - list:
                 about: list all cluster albums
             - open:

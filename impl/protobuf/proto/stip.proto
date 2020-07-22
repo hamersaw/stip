@@ -9,6 +9,7 @@ service AlbumManagement {
     rpc Broadcast (AlbumBroadcastRequest) returns (AlbumBroadcastReply);
     rpc Close (AlbumCloseRequest) returns (AlbumCloseReply);
     rpc Create (AlbumCreateRequest) returns (AlbumCreateReply);
+    rpc Delete (AlbumDeleteRequest) returns (AlbumDeleteReply);
     rpc List (AlbumListRequest) returns (AlbumListReply);
     rpc Open (AlbumOpenRequest) returns (AlbumOpenReply);
 }
@@ -35,21 +36,24 @@ enum Geocode {
 enum AlbumBroadcastType {
     ALBUM_CREATE = 0;
     ALBUM_CLOSE = 1;
-    ALBUM_OPEN = 2;
+    ALBUM_DELETE = 2;
+    ALBUM_OPEN = 3;
 }
 
 message AlbumBroadcastRequest {
     required AlbumBroadcastType messageType = 1;    
     optional AlbumCreateRequest createRequest = 2;
     optional AlbumCloseRequest closeRequest = 3;
-    optional AlbumOpenRequest openRequest = 4;
+    optional AlbumDeleteRequest deleteRequest = 4;
+    optional AlbumOpenRequest openRequest = 5;
 }
 
 message AlbumBroadcastReply {
     required AlbumBroadcastType messageType = 1;    
     map<uint32, AlbumCreateReply> createReplies = 2;
     map<uint32, AlbumCloseReply> closeReplies = 3;
-    map<uint32, AlbumOpenReply> openReplies = 4;
+    map<uint32, AlbumDeleteReply> deleteReplies = 4;
+    map<uint32, AlbumOpenReply> openReplies = 5;
 }
 
 // Close Messages
@@ -68,6 +72,14 @@ message AlbumCreateRequest {
 }
 
 message AlbumCreateReply {
+}
+
+// Delete Messages
+message AlbumDeleteRequest {
+    required string id = 1;
+}
+
+message AlbumDeleteReply {
 }
 
 // List Messages

@@ -64,10 +64,6 @@ impl AlbumManager {
         })
     }
 
-    pub fn get(&self, name: &str) -> Option<&Arc<RwLock<Album>>> {
-        self.albums.get(name)
-    }
-
     pub fn create(&mut self, dht_key_length: i8, geocode: Geocode,
             id: &str) -> Result<(), Box<dyn Error>> {
         // create album directory
@@ -102,6 +98,23 @@ impl AlbumManager {
             })));
 
         Ok(())
+    }
+
+    pub fn delete(&mut self, id: &str) -> Result<(), Box<dyn Error>> {
+        // delete album directory
+        let mut path = self.directory.clone();
+        path.push(id);
+
+        std::fs::remove_dir_all(&path)?;
+
+        // remove from map
+        self.albums.remove(id);
+
+        Ok(())
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Arc<RwLock<Album>>> {
+        self.albums.get(name)
     }
 
     pub fn iter(&self) -> Iter<String, Arc<RwLock<Album>>> {

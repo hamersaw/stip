@@ -1,4 +1,4 @@
-use protobuf::{Album, AlbumBroadcastReply, AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumManagementClient, AlbumOpenReply, AlbumOpenRequest};
+use protobuf::{Album, AlbumBroadcastReply, AlbumBroadcastRequest, AlbumBroadcastType, AlbumCloseReply, AlbumCloseRequest, AlbumCreateReply, AlbumCreateRequest, AlbumDeleteReply, AlbumDeleteRequest, AlbumListReply, AlbumListRequest, AlbumManagement, AlbumManagementClient, AlbumOpenReply, AlbumOpenRequest};
 use st_image::prelude::Geocode;
 use swarm::prelude::Dht;
 use tonic::{Code, Request, Response, Status};
@@ -52,6 +52,7 @@ impl AlbumManagement for AlbumManagementImpl {
         // send broadcast message to each dht node
         let mut create_replies = HashMap::new();
         let mut close_replies = HashMap::new();
+        let mut delete_replies = HashMap::new();
         let mut open_replies = HashMap::new();
 
         let mut task_id = None;
@@ -86,6 +87,16 @@ impl AlbumManagement for AlbumManagementImpl {
                     close_replies.insert(node_id as u32,
                         reply.get_ref().to_owned());
                 },
+                AlbumBroadcastType::AlbumDelete => {
+                    let reply = match client.delete(request
+                            .delete_request.clone().unwrap()).await {
+                        Ok(reply) => reply,
+                        Err(e) => return Err(Status::new(Code::Unknown,
+                            format!("delete broadcast failed: {}", e))),
+                    };
+                    delete_replies.insert(node_id as u32,
+                        reply.get_ref().to_owned());
+                },
                 AlbumBroadcastType::AlbumOpen => {
                     // compile new AlbumOpenRequest
                     let mut open_request =
@@ -114,6 +125,7 @@ impl AlbumManagement for AlbumManagementImpl {
             message_type: request.message_type,
             create_replies: create_replies,
             close_replies: close_replies,
+            delete_replies: delete_replies,
             open_replies: open_replies,
         };
 
@@ -169,6 +181,30 @@ impl AlbumManagement for AlbumManagementImpl {
 
         // initialize reply
         let reply = AlbumCreateReply {};
+
+        Ok(Response::new(reply))
+    }
+
+    async fn delete(&self, request: Request<AlbumDeleteRequest>)
+            -> Result<Response<AlbumDeleteReply>, Status> {
+        trace!("AlbumDeleteRequest: {:?}", request);
+        let request = request.get_ref();
+
+        // ensure album exists
+        let _ = crate::rpc::assert_album_exists(
+            &self.album_manager, &request.id)?;
+
+        // delete album
+        {
+            let mut album_manager = self.album_manager.write().unwrap();
+            if let Err(e) = album_manager.delete(&request.id) {
+                return Err(Status::new(Code::Unknown,
+                    format!("failed to delete album: {}", e)));
+            }
+        }
+
+        // initialize reply
+        let reply = AlbumDeleteReply {};
 
         Ok(Response::new(reply))
     }
