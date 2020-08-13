@@ -1,4 +1,4 @@
-use chrono::prelude::{DateTime, Utc};
+use chrono::prelude::NaiveDate;
 use failure::ResultExt;
 use gdal::metadata::Metadata;
 use gdal::raster::{Dataset, Driver};
@@ -31,10 +31,18 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    let timestamp = match dataset.metadata_item("PRODUCTIONDATETIME", "") {
-        Some(time) => time.parse::<DateTime<Utc>>()?.timestamp(),
-        None => return Err("start time metadata not found".into()),
+    let start_date = match dataset.metadata_item("RANGEBEGINNINGDATE", "") {
+        Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
+        None => panic!("start date metadata not found"),
     };
+
+    let end_date = match dataset.metadata_item("RANGEENDINGDATE", "") {
+        Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
+        None => panic!("end date metadata not found"),
+    };
+
+    let timestamp = (start_date.and_hms(0, 0, 0).timestamp()
+        + end_date.and_hms(23, 59, 59).timestamp()) / 2 + 1;
 
     // populate subdataset vectors
     let mut quality_subdatasets = Vec::new();
