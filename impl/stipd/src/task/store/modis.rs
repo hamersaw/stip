@@ -36,13 +36,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
         None => panic!("start date metadata not found"),
     };
 
-    let end_date = match dataset.metadata_item("RANGEENDINGDATE", "") {
-        Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
-        None => panic!("end date metadata not found"),
-    };
-
-    let timestamp = (start_date.and_hms(0, 0, 0).timestamp()
-        + end_date.and_hms(23, 59, 59).timestamp()) / 2 + 1;
+    let timestamp = start_date.and_hms(0, 0, 0).timestamp();
 
     // populate subdataset vectors
     let mut quality_subdatasets = Vec::new();
