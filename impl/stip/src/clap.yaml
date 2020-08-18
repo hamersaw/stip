@@ -377,6 +377,13 @@ subcommands:
         subcommands:
             - list:
                 about: list all cluster nodes
+            - locate:
+                about: identify node responsible for the specified geocode
+                args:
+                    - GEOCODE:
+                        index: 1
+                        required: true
+                        help: geocode string
     - task:
         about: manage cluster tasks
         subcommands:

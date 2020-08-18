@@ -248,6 +248,7 @@ message ImageSplitReply {
  */
 service NodeManagement {
     rpc List (NodeListRequest) returns (NodeListReply);
+    rpc Locate (NodeLocateRequest) returns (NodeLocateReply);
 }
 
 // Node Messages
@@ -262,6 +263,14 @@ message NodeListRequest {
 
 message NodeListReply {
     repeated Node nodes = 1;
+}
+
+message NodeLocateRequest {
+    required string geocode = 1; 
+}
+
+message NodeLocateReply {
+    optional Node node = 1;
 }
 
 /*

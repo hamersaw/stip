@@ -135,5 +135,6 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
     ./stip image fill test2 -p NAIP
 
 ## TODO
+- __is the hashing not consistent?__
 - improve node logging
 - image list / search - make album optional -> iterate over all albums

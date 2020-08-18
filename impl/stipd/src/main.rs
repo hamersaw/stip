@@ -85,7 +85,6 @@ fn main() {
     let album_manager = Arc::new(RwLock::new(album_manager));
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
-
     // start transfer server
     let listener = TcpListener::bind(format!("{}:{}",
         opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
