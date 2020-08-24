@@ -4,14 +4,14 @@ use tonic::{Request, Response, Status};
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 pub struct NodeManagementImpl {
-    dht: Arc<RwLock<Dht>>,
+    dht: Arc<Dht>,
 }
 
 impl NodeManagementImpl {
-    pub fn new(dht: Arc<RwLock<Dht>>) -> NodeManagementImpl {
+    pub fn new(dht: Arc<Dht>) -> NodeManagementImpl {
         NodeManagementImpl {
             dht: dht,
         }
@@ -26,16 +26,15 @@ impl NodeManagement for NodeManagementImpl {
 
         // populate cluster nodes from dht
         let mut nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // add to nodes
-                nodes.push(Node {
-                    id: *node_id as u32,
-                    rpc_addr: format!("{}", &addrs.1.unwrap()),
-                    xfer_addr: format!("{}", &addrs.2.unwrap()),
-                });
-            }
+        for node in self.dht.nodes() {
+            // add to nodes
+            nodes.push(Node {
+                id: node.get_id(),
+                rpc_addr: format!("{}:{}", node.get_ip_address(),
+                    node.get_metadata("rpc_port").unwrap()),
+                xfer_addr: format!("{}:{}", node.get_ip_address(),
+                    node.get_metadata("xfer_port").unwrap()),
+            });
         }
 
         // initialize reply
@@ -57,13 +56,14 @@ impl NodeManagement for NodeManagementImpl {
         let hash = hasher.finish();
 
         // discover hash location
-        let dht = self.dht.read().unwrap(); 
-        let node = match dht.locate(hash) {
-            Some((node_id, addrs)) => {
+        let node = match self.dht.locate(hash) {
+            Some(node) => {
                 Some( Node {
-                    id: *node_id as u32,
-                    rpc_addr: format!("{}", &addrs.0.unwrap()),
-                    xfer_addr: format!("{}", &addrs.1.unwrap()),
+                    id: node.get_id(),
+                    rpc_addr: format!("{}:{}", node.get_ip_address(),
+                        node.get_metadata("rpc_port").unwrap()),
+                    xfer_addr: format!("{}:{}", node.get_ip_address(),
+                    node.get_metadata("xfer_port").unwrap()),
                 })
             },
             None => None,

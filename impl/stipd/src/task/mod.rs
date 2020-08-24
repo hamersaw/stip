@@ -7,7 +7,7 @@ use std::collections::hash_map::Iter;
 use std::error::Error;
 use std::hash::Hasher;
 use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 pub mod coalesce;
@@ -198,7 +198,7 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
     }
 }
 
-fn dht_lookup(dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
+fn dht_lookup(dht: &Arc<Dht>, dht_key_length: i8,
         geocode: &str) -> Result<SocketAddr, Box<dyn Error>> {
     // compute dht geocode using dht_key_length
     let geocode = match dht_key_length {
@@ -217,15 +217,9 @@ fn dht_lookup(dht: &Arc<RwLock<Dht>>, dht_key_length: i8,
     let hash = hasher.finish();
 
     // discover hash location
-    let dht = dht.read().unwrap(); 
     match dht.locate(hash) {
-        Some((node_id, addrs)) => {
-            match addrs.1 {
-                Some(addr) => Ok(addr.clone()),
-                None => Err(format!("dht node {} has no xfer_addr",
-                    node_id).into()),
-            }
-        },
+        Some(node) => Ok(SocketAddr::new(node.get_ip_address().clone(),
+            node.get_metadata("xfer_port").unwrap().parse::<u16>()?)),
         None => Err(format!("no dht node for hash {}", hash).into()),
     }
 }

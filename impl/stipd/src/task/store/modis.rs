@@ -15,7 +15,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
+pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         precision: usize, record: &PathBuf) -> Result<(), Box<dyn Error>> {
     // retrieve album metadata
     let (album_id, dht_key_length, geocode) = {
@@ -78,7 +78,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
 }
 
 fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
-        dht: &Arc<RwLock<Dht>>, dht_key_length: i8, subdataset: u8, 
+        dht: &Arc<Dht>, dht_key_length: i8, subdataset: u8, 
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geocode, dataset) in datasets.iter() {
         // if image has 0.0 coverage -> don't process

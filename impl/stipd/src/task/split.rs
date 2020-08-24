@@ -11,7 +11,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct SplitTask {
     album: Arc<RwLock<Album>>,
-    dht: Arc<RwLock<Dht>>,
+    dht: Arc<Dht>,
     end_timestamp: Option<i64>,
     geocode: Option<String>,
     geocode_bound: Option<String>,
@@ -22,7 +22,7 @@ pub struct SplitTask {
 }
 
 impl SplitTask {
-    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<RwLock<Dht>>,
+    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<Dht>,
             end_timestamp: Option<i64>, geocode: Option<String>,
             geocode_bound: Option<String>, platform: Option<String>,
             precision: usize, recurse: bool,

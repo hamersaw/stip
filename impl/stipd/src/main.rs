@@ -4,7 +4,7 @@ extern crate log;
 use comm::Server as CommServer;
 use protobuf::{ImageManagementServer, AlbumManagementServer, NodeManagementServer, TaskManagementServer};
 use structopt::StructOpt;
-use swarm::prelude::{DhtBuilder, SwarmConfigBuilder};
+use swarm::prelude::{DhtBuilder, Swarm};
 use tonic::transport::Server;
 
 mod album;
@@ -45,7 +45,7 @@ fn main() {
     // parse arguments
     let opt = Opt::from_args();
 
-    // build swarm config
+    /*// build swarm config
     let swarm_config = SwarmConfigBuilder::new()
         .addr(SocketAddr::new(opt.ip_addr, opt.gossip_port))
         .gossip_interval_ms(2000)
@@ -68,7 +68,27 @@ fn main() {
     let (mut swarm, dht) = dht_builder.build().expect("build dht");
 
     // start swarm
-    swarm.start().expect("swarm start");
+    swarm.start().expect("swarm start");*/
+
+    // initialize topology builder
+    let dht_builder = DhtBuilder::new(opt.tokens);
+
+    // initialize swarm
+    let seed_address = match opt.seed_ip_addr {
+        Some(ip_addr) => Some(SocketAddr::new(ip_addr, opt.seed_port)),
+        None => None,
+    };
+
+    let (mut swarm, dht) = Swarm::new(opt.node_id,
+        opt.ip_addr, opt.gossip_port, seed_address, dht_builder);
+    //let dht = Arc::new(dht);
+
+    // set swarm instance metadata
+    swarm.set_metadata("rpc_port", &opt.rpc_port.to_string());
+    swarm.set_metadata("xfer_port", &opt.xfer_port.to_string());
+
+    // start swarm
+    swarm.start(2, 50, 2000).expect("swarm start");
 
     // create storage directory
     if let Err(e) = std::fs::create_dir_all(&opt.directory) {
@@ -135,7 +155,7 @@ async fn start_rpc_server(addr: SocketAddr,
 #[structopt(name = "stipd", about="Node in the STIP framework.")]
 struct Opt {
     #[structopt(name="NODE_ID", help="Integer node identifier.")]
-    node_id: u16,
+    node_id: u32,
 
     #[structopt(short="d", long="directory", help="data storage directory.")]
     directory: PathBuf,

@@ -15,7 +15,7 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<RwLock<Dht>>,
+pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         precision: usize, record: &PathBuf) -> Result<(), Box<dyn Error>> {
     // retrieve album metadata
     let (album_id, dht_key_length, geocode) = {

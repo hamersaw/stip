@@ -14,7 +14,7 @@ use std::sync::{Arc, RwLock};
 
 pub struct CoalesceTask {
     album: Arc<RwLock<Album>>,
-    dht: Arc<RwLock<Dht>>,
+    dht: Arc<Dht>,
     end_timestamp: Option<i64>,
     geocode: Option<String>,
     max_cloud_coverage: Option<f64>,
@@ -28,7 +28,7 @@ pub struct CoalesceTask {
 }
 
 impl CoalesceTask {
-    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<RwLock<Dht>>,
+    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<Dht>,
             end_timestamp: Option<i64>, geocode: Option<String>,
             max_cloud_coverage: Option<f64>,
             min_pixel_coverage: Option<f64>, platform: Option<String>,
@@ -168,26 +168,16 @@ impl Task<(Image, Vec<StFile>, HashSet<String>)> for CoalesceTask {
             filter: filter,
         };
 
-        // copy valid dht nodes
-        let mut dht_nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // check if rpc address is populated
-                if let None = addrs.1 {
-                    continue;
-                }
-
-                dht_nodes.push((*node_id, addrs.1.unwrap()));
-            }
-        }
-
         // iterate over dht nodes
         let mut split_records = HashMap::new();
-        for (_, addr) in dht_nodes {
+        for node in self.dht.nodes() {
+            // get rpc address
+            let addr = format!("http://{}:{}", node.get_ip_address(),
+                node.get_metadata("rpc_port").unwrap());
+
             // open ImageManagementClient
             let mut client = match ImageManagementClient::connect(
-                    format!("http://{}", addr)).await {
+                    addr.clone()).await {
                 Ok(client) => client,
                 Err(e) => return Err(format!(
                     "connection to {} failed: {}", addr, e).into()),

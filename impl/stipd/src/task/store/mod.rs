@@ -22,14 +22,14 @@ pub enum ImageFormat {
 
 pub struct StoreEarthExplorerTask {
     album: Arc<RwLock<Album>>,
-    dht: Arc<RwLock<Dht>>,
+    dht: Arc<Dht>,
     format: ImageFormat,
     glob: String,
     precision: usize,
 }
 
 impl StoreEarthExplorerTask {
-    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<RwLock<Dht>>,
+    pub fn new(album: Arc<RwLock<Album>>, dht: Arc<Dht>,
             format: ImageFormat, glob: String, precision: usize)
             -> StoreEarthExplorerTask {
         StoreEarthExplorerTask {

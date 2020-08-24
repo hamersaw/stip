@@ -12,13 +12,13 @@ use std::sync::{Arc, RwLock};
 
 pub struct AlbumManagementImpl {
     album_manager: Arc<RwLock<AlbumManager>>,
-    dht: Arc<RwLock<Dht>>,
+    dht: Arc<Dht>,
     task_manager: Arc<RwLock<TaskManager>>,
 }
 
 impl AlbumManagementImpl {
     pub fn new(album_manager: Arc<RwLock<AlbumManager>>,
-            dht: Arc<RwLock<Dht>>, task_manager: Arc<RwLock<TaskManager>>)
+            dht: Arc<Dht>, task_manager: Arc<RwLock<TaskManager>>)
             -> AlbumManagementImpl {
         AlbumManagementImpl {
             album_manager: album_manager,
@@ -35,20 +35,6 @@ impl AlbumManagement for AlbumManagementImpl {
         trace!("AlbumBroadcastRequest: {:?}", request);
         let request = request.get_ref();
 
-        // copy valid dht nodes
-        let mut dht_nodes = Vec::new();
-        {
-            let dht = self.dht.read().unwrap();
-            for (node_id, addrs) in dht.iter() {
-                // check if rpc address is populated
-                if let None = addrs.1 {
-                    continue;
-                }
-
-                dht_nodes.push((*node_id, addrs.1.unwrap()));
-            }
-        }
-
         // send broadcast message to each dht node
         let mut create_replies = HashMap::new();
         let mut close_replies = HashMap::new();
@@ -56,10 +42,14 @@ impl AlbumManagement for AlbumManagementImpl {
         let mut open_replies = HashMap::new();
 
         let mut task_id = None;
-        for (node_id, addr) in dht_nodes {
+        for node in self.dht.nodes() {
+            // get rpc address
+            let addr = format!("http://{}:{}", node.get_ip_address(),
+                node.get_metadata("rpc_port").unwrap());
+
             // initialize grpc client
             let mut client = match AlbumManagementClient::connect(
-                    format!("http://{}", addr)).await {
+                    addr.clone()).await {
                 Ok(client) => client,
                 Err(e) => return Err(Status::new(Code::Unavailable,
                     format!("connection to {} failed: {}", addr, e))),
@@ -74,7 +64,7 @@ impl AlbumManagement for AlbumManagementImpl {
                         Err(e) => return Err(Status::new(Code::Unknown,
                             format!("create broadcast failed: {}", e))),
                     };
-                    create_replies.insert(node_id as u32,
+                    create_replies.insert(node.get_id(),
                         reply.get_ref().to_owned());
                 },
                 AlbumBroadcastType::AlbumClose => {
@@ -84,7 +74,7 @@ impl AlbumManagement for AlbumManagementImpl {
                         Err(e) => return Err(Status::new(Code::Unknown,
                             format!("close broadcast failed: {}", e))),
                     };
-                    close_replies.insert(node_id as u32,
+                    close_replies.insert(node.get_id(),
                         reply.get_ref().to_owned());
                 },
                 AlbumBroadcastType::AlbumDelete => {
@@ -94,7 +84,7 @@ impl AlbumManagement for AlbumManagementImpl {
                         Err(e) => return Err(Status::new(Code::Unknown,
                             format!("delete broadcast failed: {}", e))),
                     };
-                    delete_replies.insert(node_id as u32,
+                    delete_replies.insert(node.get_id(),
                         reply.get_ref().to_owned());
                 },
                 AlbumBroadcastType::AlbumOpen => {
@@ -111,7 +101,7 @@ impl AlbumManagement for AlbumManagementImpl {
                         Err(e) => return Err(Status::new(Code::Unknown,
                             format!("open broadcast failed: {}", e))),
                     };
-                    open_replies.insert(node_id as u32,
+                    open_replies.insert(node.get_id(),
                         reply.get_ref().to_owned());
 
                     // process reply
