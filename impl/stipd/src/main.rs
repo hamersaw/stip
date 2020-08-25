@@ -45,31 +45,6 @@ fn main() {
     // parse arguments
     let opt = Opt::from_args();
 
-    /*// build swarm config
-    let swarm_config = SwarmConfigBuilder::new()
-        .addr(SocketAddr::new(opt.ip_addr, opt.gossip_port))
-        .gossip_interval_ms(2000)
-        .build().expect("build swarm config");
-
-    // build dht
-    let dht_builder = DhtBuilder::new()
-        .id(opt.node_id)
-        .rpc_addr(SocketAddr::new(opt.ip_addr, opt.rpc_port))
-        .swarm_config(swarm_config)
-        .tokens(opt.tokens)
-        .xfer_addr(SocketAddr::new(opt.ip_addr, opt.xfer_port));
-
-    let dht_builder = if let Some(ip_addr) = opt.seed_ip_addr {
-        dht_builder.seed_addr(SocketAddr::new(ip_addr, opt.seed_port))
-    } else {
-        dht_builder
-    };
-
-    let (mut swarm, dht) = dht_builder.build().expect("build dht");
-
-    // start swarm
-    swarm.start().expect("swarm start");*/
-
     // initialize topology builder
     let dht_builder = DhtBuilder::new(opt.tokens);
 
@@ -81,7 +56,6 @@ fn main() {
 
     let (mut swarm, dht) = Swarm::new(opt.node_id,
         opt.ip_addr, opt.gossip_port, seed_address, dht_builder);
-    //let dht = Arc::new(dht);
 
     // set swarm instance metadata
     swarm.set_metadata("rpc_port", &opt.rpc_port.to_string());
