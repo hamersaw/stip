@@ -26,7 +26,7 @@ while read line; do
         rm $pidfile
     else
         # stop node on remote host
-        ssh rammerd@$host -n "kill `cat $pidfile`; rm $pidfile"
+        ssh rammerd@$host -n "kill \$(cat $pidfile); rm $pidfile"
     fi
 
     # increment node id
