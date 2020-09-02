@@ -1,4 +1,5 @@
 #!/bin/python3
+# metric scripts - https://custom-scripts.sentinel-hub.com/#sentinel-2
 
 import argparse
 import gdal

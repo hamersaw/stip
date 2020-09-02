@@ -7,7 +7,7 @@ import sys
 
 # import relative 'stippy' python project
 script_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(script_dir + '/../../stippy/')
+sys.path.append(script_dir + '/../../../stippy/')
 import stippy
 
 def process(image):
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     host_addr = args.ip_address + ':' + str(args.port)
     images = []
     for (node, image) in stippy.list_node_images(host_addr,
-            args.album, min_pixel_coverage=0.9, platform='NLCD'):
+            args.album, platform='NLCD'):
         images.append((image.files[0].path, image.geocode))
 
     # process images
