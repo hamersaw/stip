@@ -1,5 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use comm::StreamHandler;
+use failure::ResultExt;
 use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -9,6 +10,7 @@ use crate::album::AlbumManager;
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::{TcpStream, SocketAddr};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 #[derive(FromPrimitive)]
@@ -35,7 +37,33 @@ impl StreamHandler for TransferStreamHandler {
         // read operation type
         let op_type = stream.read_u8()?;
         match FromPrimitive::from_u8(op_type) {
-            Some(TransferOp::ReadImage) => unimplemented!(),
+            Some(TransferOp::ReadImage) => {
+                // read path
+                let path_string = read_string(stream)?;
+                let path = PathBuf::from(path_string);
+
+                // open dataset
+                let dataset = match Dataset::open(&path).compat() {
+                    Ok(dataset) => {
+                        stream.write_u8(0)?;
+                        dataset
+                    },
+                    Err(e) => {
+                        stream.write_u8(1)?;
+                        write_string(&e.to_string(), stream)?;
+                        return Err(Box::new(e));
+                    },
+                };
+
+                // if exists -> split image on geocode
+                let split_indicator = stream.read_u8()?;
+                if split_indicator == 1 {
+                    // TODO - split image
+                }
+
+                // write image
+                st_image::prelude::write(&dataset, stream)?;
+            },
             Some(TransferOp::WriteImage) => {
                 // read everything
                 let album = read_string(stream)?;
