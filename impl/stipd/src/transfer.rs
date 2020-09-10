@@ -4,6 +4,7 @@ use failure::ResultExt;
 use gdal::raster::Dataset;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use st_image::prelude::Geocode;
 
 use crate::album::AlbumManager;
 
@@ -33,7 +34,8 @@ impl TransferStreamHandler {
 }
 
 impl StreamHandler for TransferStreamHandler {
-    fn process(&self, stream: &mut TcpStream) -> Result<(), Box<dyn Error>> {
+    fn process(&self, stream: &mut TcpStream)
+            -> Result<(), Box<dyn Error>> {
         // read operation type
         let op_type = stream.read_u8()?;
         match FromPrimitive::from_u8(op_type) {
@@ -44,10 +46,7 @@ impl StreamHandler for TransferStreamHandler {
 
                 // open dataset
                 let dataset = match Dataset::open(&path).compat() {
-                    Ok(dataset) => {
-                        stream.write_u8(0)?;
-                        dataset
-                    },
+                    Ok(dataset) => dataset,
                     Err(e) => {
                         stream.write_u8(1)?;
                         write_string(&e.to_string(), stream)?;
@@ -55,14 +54,61 @@ impl StreamHandler for TransferStreamHandler {
                     },
                 };
 
-                // if exists -> split image on geocode
-                let split_indicator = stream.read_u8()?;
-                if split_indicator == 1 {
-                    // TODO - split image
-                }
+                // if exists -> split dataset to subgeocode
+                let subgeocode_indicator = stream.read_u8()?;
+                if subgeocode_indicator == 0 {
+                    // no need to split image -> write image
+                    stream.write_u8(0)?;
+                    st_image::prelude::write(&dataset, stream)?;
+                } else {
+                    // read subgeocode metadata
+                    let geocode_value = stream.read_u8()?;
+                    let geocode: Geocode = match geocode_value {
+                        0 => Geocode::Geohash,
+                        1 => Geocode::QuadTile,
+                        _ => {
+                            let err_msg = format!("unknown geocode {}",
+                                geocode_value);
+                            stream.write_u8(1)?;
+                            write_string(&err_msg, stream)?;
+                            return Err(err_msg.into());
+                        },
+                    };
 
-                // write image
-                st_image::prelude::write(&dataset, stream)?;
+                    let subgeocode = read_string(stream)?;
+
+                    // split image with geocode precision
+                    let precision = subgeocode.len();
+                    for dataset_split in st_image::prelude::split(
+                            &dataset, geocode, precision)? {
+                        // calculate split dataset geocode
+                        let (win_min_x, win_max_x,
+                            win_min_y, win_max_y) =
+                                dataset_split.coordinates();
+                        let split_geocode = geocode.get_code(
+                            (win_min_x + win_max_x) / 2.0,
+                            (win_min_y + win_max_y) / 2.0, precision)?;
+
+                        // check if this is the desired geocode
+                        if split_geocode.to_lowercase()
+                                != subgeocode.to_lowercase() {
+                            continue;
+                        }
+
+                        // process valid subdataset
+                        stream.write_u8(0)?;
+                        st_image::prelude::write(
+                            &dataset_split.dataset()?, stream)?;
+                        return Ok(())
+                    }
+
+                    // failed to split image into subgeocode
+                    stream.write_u8(1)?;
+                    write_string(&format!(
+                        "failed to split image into geocode '{}'",
+                            subgeocode), stream)?;
+                    return Ok(());
+                }
             },
             Some(TransferOp::WriteImage) => {
                 // read everything
