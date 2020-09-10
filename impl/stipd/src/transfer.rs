@@ -42,7 +42,14 @@ impl StreamHandler for TransferStreamHandler {
             Some(TransferOp::ReadImage) => {
                 // read path
                 let path_string = read_string(stream)?;
-                let path = PathBuf::from(path_string);
+                let path = PathBuf::from(&path_string);
+
+                if !path.exists() {
+                    stream.write_u8(1)?;
+                    write_string(&format!("path '{}' does not exist",
+                        path_string), stream)?;
+                    return Ok(());
+                }
 
                 // open dataset
                 let dataset = match Dataset::open(&path).compat() {
@@ -50,7 +57,7 @@ impl StreamHandler for TransferStreamHandler {
                     Err(e) => {
                         stream.write_u8(1)?;
                         write_string(&e.to_string(), stream)?;
-                        return Err(Box::new(e));
+                        return Ok(());
                     },
                 };
 
