@@ -24,6 +24,13 @@ impl FillTask {
             geocode: Option<String>, platform: Option<String>,
             recurse: bool, start_timestamp: Option<i64>,
             window_seconds: i64) -> FillTask {
+        {
+            let album = album.read().unwrap();
+            info!("initailizing fill task [album={}, end_timestamp={:?}, geocode={:?}, platform={:?}, recurse={}, start_timestamp={:?}, window_seconds={}]",
+                album.get_id(), end_timestamp, geocode, platform,
+                recurse, start_timestamp, window_seconds);
+        }
+
         FillTask {
             album: album,
             end_timestamp: end_timestamp,

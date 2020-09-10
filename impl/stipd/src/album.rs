@@ -66,6 +66,9 @@ impl AlbumManager {
 
     pub fn create(&mut self, dht_key_length: i8, geocode: Geocode,
             id: &str) -> Result<(), Box<dyn Error>> {
+        info!("creating album [id:{}, geocode={:?}, dht_key_length={}]",
+            id, geocode, dht_key_length);
+            
         // create album directory
         let mut path = self.directory.clone();
         path.push(id);
@@ -101,6 +104,8 @@ impl AlbumManager {
     }
 
     pub fn delete(&mut self, id: &str) -> Result<(), Box<dyn Error>> {
+        info!("deleting album [id:{}]", id);
+
         // delete album directory
         let mut path = self.directory.clone();
         path.push(id);

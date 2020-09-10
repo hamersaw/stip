@@ -15,6 +15,11 @@ pub struct OpenTask {
 
 impl OpenTask {
     pub fn new(album: Arc<RwLock<Album>>) -> OpenTask {
+        {
+            let album = album.read().unwrap();
+            info!("initailizing open task [album={}]", album.get_id());
+        }
+
         OpenTask {
             album: album,
         }

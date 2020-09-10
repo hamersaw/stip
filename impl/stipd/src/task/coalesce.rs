@@ -35,6 +35,15 @@ impl CoalesceTask {
             recurse: bool, source: Option<String>, src_platform: String,
             start_timestamp: Option<i64>, window_seconds: i64)
             -> CoalesceTask {
+        {
+            let album = album.read().unwrap();
+            info!("initailizing coalesce task [album={}, end_timestamp={:?}, geocode={:?}, max_cloud_coverage={:?}, min_pixel_coverage={:?}, platform={:?}, recurse={}, source={:?}, src_platform={}, start_timestamp={:?}, window_seconds={}]",
+                album.get_id(), end_timestamp, geocode,
+                max_cloud_coverage, min_pixel_coverage,
+                platform, recurse, source, src_platform,
+                start_timestamp, window_seconds);
+        }
+
         CoalesceTask {
             album: album,
             dht: dht,

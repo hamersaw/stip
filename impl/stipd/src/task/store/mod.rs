@@ -12,7 +12,7 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ImageFormat {
     MODIS,
     NAIP,
@@ -32,6 +32,12 @@ impl StoreEarthExplorerTask {
     pub fn new(album: Arc<RwLock<Album>>, dht: Arc<Dht>,
             format: ImageFormat, glob: String, precision: usize)
             -> StoreEarthExplorerTask {
+        {
+            let album = album.read().unwrap();
+            info!("initailizing store task [album={}, format={:?}, glob={}, precision={}]",
+                album.get_id(), format, glob, precision)
+        }
+            
         StoreEarthExplorerTask {
             album: album,
             dht: dht,

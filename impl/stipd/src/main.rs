@@ -80,6 +80,9 @@ fn main() {
     let task_manager = Arc::new(RwLock::new(TaskManager::new()));
 
     // start transfer server
+    debug!("binding xfer server [address={}:{}]",
+        opt.ip_addr, opt.rpc_port);
+
     let listener = TcpListener::bind(format!("{}:{}",
         opt.ip_addr, opt.xfer_port)).expect("xfer service bind");
     let transfer_stream_handler =
@@ -90,6 +93,7 @@ fn main() {
     server.start().expect("transfer server start");
 
     // start GRPC server
+    info!("starting grpc server [address=0.0.0.0:{}]", opt.rpc_port);
     let addr = SocketAddr::new("0.0.0.0".parse().unwrap(), opt.rpc_port);
 
     let album_management = AlbumManagementImpl::new(

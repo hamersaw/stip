@@ -80,6 +80,7 @@ impl TaskManager {
         };
 
         // add TaskHandle to map
+        info!("registering task [id={}]", task_id);
         self.tasks.insert(task_id, task_handle);
 
         // return task id
@@ -95,6 +96,8 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
     fn start(self: Arc<Self>, thread_count: u8) 
             -> Result<TaskHandle, Box<dyn Error>>
             where Self: 'static + Send + Sync {
+        info!("starting task [thread_count={}]", thread_count);
+            
         // initialize instance variables
         let completed_count = Arc::new(AtomicU32::new(0));
         let running = Arc::new(AtomicBool::new(true));
@@ -173,6 +176,7 @@ pub trait Task<T: 'static + std::fmt::Debug + Send + Sync> {
             total_count.store(records.len() as u32, Ordering::SeqCst);
 
             // add items to pipeline
+            debug!("registering records [count={}]", records.len());
             for record in records {
                 if let Err(e) = sender.send(record) {
                     warn!("task failed to send record: {}", e);

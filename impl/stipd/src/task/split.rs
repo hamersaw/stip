@@ -27,6 +27,13 @@ impl SplitTask {
             geocode_bound: Option<String>, platform: Option<String>,
             precision: usize, recurse: bool,
             start_timestamp: Option<i64>) -> SplitTask {
+        {
+            let album = album.read().unwrap();
+            info!("initailizing split task [album={}, end_timestamp={:?}, geocode={:?}, geocode_bound={:?}, platform={:?}, precision={}, recurse={}, start_timestamp={:?}]",
+                album.get_id(), end_timestamp, geocode, geocode_bound,
+                platform, precision, recurse, start_timestamp);
+        }
+
         SplitTask {
             album: album,
             dht: dht,
