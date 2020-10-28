@@ -1,10 +1,9 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use comm::StreamHandler;
-use failure::ResultExt;
-use gdal::raster::Dataset;
+use gdal::Dataset;
+use geocode::Geocode;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use st_image::prelude::Geocode;
 
 use crate::album::AlbumManager;
 
@@ -52,7 +51,7 @@ impl StreamHandler for TransferStreamHandler {
                 }
 
                 // open dataset
-                let dataset = match Dataset::open(&path).compat() {
+                let dataset = match Dataset::open(&path) {
                     Ok(dataset) => dataset,
                     Err(e) => {
                         stream.write_u8(1)?;
@@ -66,7 +65,7 @@ impl StreamHandler for TransferStreamHandler {
                 if subgeocode_indicator == 0 {
                     // no need to split image -> write image
                     stream.write_u8(0)?;
-                    st_image::prelude::write(&dataset, stream)?;
+                    st_image::serialize::write(&dataset, stream)?;
                 } else {
                     // read subgeocode metadata
                     let geocode_value = stream.read_u8()?;
@@ -86,15 +85,40 @@ impl StreamHandler for TransferStreamHandler {
 
                     // split image with geocode precision
                     let precision = subgeocode.len();
-                    for dataset_split in st_image::prelude::split(
-                            &dataset, geocode, precision)? {
-                        // calculate split dataset geocode
-                        let (win_min_x, win_max_x,
-                            win_min_y, win_max_y) =
-                                dataset_split.coordinates();
-                        let split_geocode = geocode.get_code(
-                            (win_min_x + win_max_x) / 2.0,
-                            (win_min_y + win_max_y) / 2.0, precision)?;
+
+                    // compute geohash window boundaries for dataset
+                    let epsg_code = geocode.get_epsg_code();
+                    let (x_interval, y_interval) =
+                        geocode.get_intervals(precision);
+
+                    let (image_min_cx, image_max_cx, 
+                            image_min_cy, image_max_cy) =
+                        st_image::coordinate::get_bounds(
+                            &dataset, epsg_code)?;
+
+                    let window_bounds = 
+                        st_image::coordinate::get_windows(image_min_cx,
+                            image_max_cx, image_min_cy, image_max_cy,
+                            x_interval, y_interval);
+
+                    // iterate over window bounds
+                    for (min_cx, max_cx, min_cy, max_cy) in 
+                            window_bounds {
+                        // perform dataset split
+                        let split_dataset = match 
+                                st_image::transform::split(&dataset,
+                                    min_cx, max_cx, min_cy, max_cy, 
+                                    epsg_code) {
+                            Ok(split_dataset) => split_dataset,
+                            Err(e) => {
+                                error!("failed to split dataset: {}", e);
+                                continue
+                            },
+                        };
+
+                        let split_geocode = geocode.encode(
+                            (min_cx + max_cx) / 2.0,
+                            (min_cy + max_cy) / 2.0, precision)?;
 
                         // check if this is the desired geocode
                         if split_geocode.to_lowercase()
@@ -104,8 +128,8 @@ impl StreamHandler for TransferStreamHandler {
 
                         // process valid subdataset
                         stream.write_u8(0)?;
-                        st_image::prelude::write(
-                            &dataset_split.dataset()?, stream)?;
+                        st_image::serialize::write(
+                            &split_dataset, stream)?;
                         return Ok(())
                     }
 
@@ -120,7 +144,7 @@ impl StreamHandler for TransferStreamHandler {
             Some(TransferOp::WriteImage) => {
                 // read everything
                 let album = read_string(stream)?;
-                let mut dataset = st_image::prelude::read(stream)?;
+                let mut dataset = st_image::serialize::read(stream)?;
                 let geocode = read_string(stream)?;
                 let pixel_coverage = stream.read_f64::<BigEndian>()?;
                 let platform = read_string(stream)?;
@@ -171,7 +195,7 @@ pub fn send_image(addr: &SocketAddr, album: &str, dataset: &Dataset,
 
     // write everything
     write_string(&album, &mut stream)?;
-    st_image::prelude::write(&dataset, &mut stream)?;
+    st_image::serialize::write(&dataset, &mut stream)?;
     write_string(&geocode, &mut stream)?;
     stream.write_f64::<BigEndian>(pixel_coverage)?;
     write_string(&platform, &mut stream)?;

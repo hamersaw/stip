@@ -1,9 +1,7 @@
 use chrono::prelude::NaiveDate;
-use failure::ResultExt;
-use gdal::metadata::Metadata;
-use gdal::raster::{Dataset, Driver};
-use gdal::raster::types::GdalType;
-use st_image::prelude::Geocode;
+use gdal::{Dataset, Driver, Metadata};
+use gdal::raster::GdalType;
+use geocode::Geocode;
 use swarm::prelude::Dht;
 
 use crate::RAW_SOURCE;
@@ -24,7 +22,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
             album.get_geocode().clone())
     };
 
-    let dataset = Dataset::open(&record).compat()?;
+    let dataset = Dataset::open(&record)?;
  
     // parse metadata
     let tile_path = record.with_extension("");
@@ -39,10 +37,14 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let timestamp = start_date.and_hms(0, 0, 0).timestamp();
 
     // populate subdataset vectors
+    let metadata = match dataset.metadata_domain("SUBDATASETS") {
+        Some(metadata) => metadata,
+        None => return Err(format!(
+            "failed to find subdatasets for '{:?}'", &record).into()),
+    };
+
     let mut quality_subdatasets = Vec::new();
     let mut reflectance_subdatasets = Vec::new();
-
-    let metadata = dataset.metadata("SUBDATASETS");
     for i in (0..metadata.len()).step_by(2) {
         // parse subdataset name
         let name_fields: Vec<&str> =
@@ -82,7 +84,7 @@ fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geocode, dataset) in datasets.iter() {
         // if image has 0.0 coverage -> don't process
-        let pixel_coverage = st_image::coverage(&dataset)?;
+        let pixel_coverage = st_image::get_coverage(&dataset)?;
         if pixel_coverage == 0f64 {
             continue;
         }
@@ -117,30 +119,44 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
         let path = PathBuf::from(name);
         let dataset = Dataset::open(&path).expect("subdataset open");
 
-        // split dataset
-        for dataset_split in st_image::prelude::split(
-                &dataset, geocode, precision)? {
-            // calculate split dataset geocode
-            let (win_min_x, win_max_x, win_min_y, win_max_y) =
-                dataset_split.coordinates();
-            let split_geocode = geocode.get_code(
-                (win_min_x + win_max_x) / 2.0,
-                (win_min_y + win_max_y) / 2.0, precision)?;
+        // compute geohash window boundaries for dataset
+        let epsg_code = geocode.get_epsg_code();
+        let (x_interval, y_interval) = geocode.get_intervals(precision);
 
+        let (image_min_cx, image_max_cx, image_min_cy, image_max_cy) =
+            st_image::coordinate::get_bounds(&dataset, epsg_code)?;
+
+        let window_bounds = st_image::coordinate::get_windows(
+            image_min_cx, image_max_cx, image_min_cy, image_max_cy,
+            x_interval, y_interval);
+
+        // iterate over window bounds
+        for (min_cx, max_cx, min_cy, max_cy) in window_bounds {
             // perform dataset split
-            let dataset = dataset_split.dataset()?;
-            let (x, y) = dataset.size();
+            let split_dataset = match st_image::transform::split(&dataset,
+                    min_cx, max_cx, min_cy, max_cy, epsg_code) {
+                Ok(split_dataset) => split_dataset,
+                Err(e) => {
+                    error!("failed to split dataset: {}", e);
+                    continue
+                },
+            };
+
+            let (x, y) = split_dataset.raster_size();
 
             // if geocode dataset does not exist -> create it
+            let split_geocode = geocode.encode((min_cx + max_cx) / 2.0,
+                (min_cy + max_cy) / 2.0, precision)?;
+
             if !datasets.contains_key(&split_geocode) {
                 let dst_dataset = driver.create_with_band_type::<T>(
                     "", x as isize, y as isize,
-                    subdatasets.len() as isize).compat()?;
+                    subdatasets.len() as isize)?;
 
                 dst_dataset.set_geo_transform(
-                    &dataset.geo_transform().compat()?).compat()?;
+                    &split_dataset.geo_transform()?)?;
                 dst_dataset.set_projection(
-                    &dataset.projection()).compat()?;
+                    &split_dataset.projection())?;
 
                 datasets.insert(split_geocode.clone(), dst_dataset);
             }
@@ -148,8 +164,7 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
             let dst_dataset = datasets.get(&split_geocode).unwrap();
 
             // copy image raster
-            //println!("  COPYING RASTER: {:?}", dataset.band_type(1)); 
-            st_image::prelude::copy_raster(&dataset, 1, (0, 0), (x, y),
+            st_image::copy_raster(&split_dataset, 1, (0, 0), (x, y),
                 dst_dataset, (i + 1) as isize, (0, 0), (x, y))?;
         }
     }

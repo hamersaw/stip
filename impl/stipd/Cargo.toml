@@ -1,6 +1,6 @@
 [package]
 name = "stipd"
-version = "0.4.21"
+version = "0.4.22"
 authors = ["Daniel Rammer <hamersaw@protonmail.com>"]
 edition = "2018"
 
@@ -12,8 +12,9 @@ chrono = "0.4"
 comm = { path = "../../../comm-rs" }
 crossbeam-channel = "0.4"
 env_logger = "0.6"
-failure = "0.1"
+geocode = { path = "../../../geocode-rs" }
 gdal = { path = "../../../gdal" }
+gdal-sys = { path = "../../../gdal/gdal-sys" }
 glob = "0.3"
 log = "0.4"
 num-derive = "0.2"

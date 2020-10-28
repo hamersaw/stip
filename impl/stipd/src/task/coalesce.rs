@@ -1,5 +1,4 @@
-use failure::ResultExt;
-use gdal::raster::Dataset;
+use gdal::Dataset;
 use protobuf::{ImageListRequest, Filter, ImageManagementClient};
 use swarm::prelude::Dht;
 use tonic::Request;
@@ -94,28 +93,45 @@ impl Task<(Image, Vec<StFile>, HashSet<String>)> for CoalesceTask {
                 }
 
                 // open image
-                let dataset = Dataset::open(&path).compat()?;
+                let dataset = Dataset::open(&path)?;
 
-                // split image with geocode precision
-                for dataset_split in st_image::prelude::split(
-                        &dataset, geocode, precision)? {
-                    // calculate split dataset geocode
-                    let (win_min_x, win_max_x, win_min_y, win_max_y) =
-                        dataset_split.coordinates();
-                    let split_geocode = geocode.get_code(
-                        (win_min_x + win_max_x) / 2.0,
-                        (win_min_y + win_max_y) / 2.0, precision)?;
+                // compute geohash window boundaries for dataset
+                let epsg_code = geocode.get_epsg_code();
+                let (x_interval, y_interval) =
+                    geocode.get_intervals(precision);
+
+                let (image_min_cx, image_max_cx, image_min_cy, image_max_cy) =
+                    st_image::coordinate::get_bounds(&dataset, epsg_code)?;
+
+                let window_bounds = st_image::coordinate::get_windows(
+                    image_min_cx, image_max_cx, image_min_cy, image_max_cy,
+                    x_interval, y_interval);
+
+                // iterate over window bounds
+                for (min_cx, max_cx, min_cy, max_cy) in window_bounds {
+                    // perform dataset split
+                    let split_dataset = match 
+                            st_image::transform::split(&dataset, min_cx,
+                                max_cx, min_cy, max_cy, epsg_code) {
+                        Ok(split_dataset) => split_dataset,
+                        Err(e) => {
+                            error!("failed to split dataset: {}", e);
+                            continue
+                        },
+                    };
+
+                    let split_geocode = geocode.encode(
+                        (min_cx + max_cx) / 2.0,
+                        (min_cy + max_cy) / 2.0, precision)?;
 
                     // skip if geocode is not in split geocodes
                     if !split_geocodes.contains(&split_geocode) {
                         continue; 
                     }
 
-                    // perform dataset split
-                    let dataset = dataset_split.dataset()?;
-
                     // if image has 0.0 coverage -> don't process
-                    let pixel_coverage = st_image::coverage(&dataset)?;
+                    let pixel_coverage =
+                        st_image::get_coverage(&split_dataset)?;
                     if pixel_coverage == 0f64 {
                         continue;
                     }
@@ -132,7 +148,7 @@ impl Task<(Image, Vec<StFile>, HashSet<String>)> for CoalesceTask {
 
                     // send image to new host
                     if let Err(e) = crate::transfer::send_image(&addr,
-                            &album_id, &dataset, &split_geocode, file.1,
+                            &album_id, &split_dataset, &split_geocode, file.1,
                             &image.2, SPLIT_SOURCE, file.2, &image.4, image.5) {
                         warn!("failed to write image to node {}: {}", addr, e);
                     }

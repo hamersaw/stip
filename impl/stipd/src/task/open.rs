@@ -1,6 +1,4 @@
-use failure::ResultExt;
-use gdal::metadata::Metadata;
-use gdal::raster::Dataset;
+use gdal::{Dataset, Metadata};
 
 use crate::album::Album;
 use crate::task::Task;
@@ -29,7 +27,7 @@ impl OpenTask {
 #[tonic::async_trait]
 impl Task<PathBuf> for OpenTask {
     fn process(&self, record: &PathBuf) -> Result<(), Box<dyn Error>> {
-        let dataset = Dataset::open(&record).compat()?;
+        let dataset = Dataset::open(&record)?;
 
         let cloud_coverage =
                 match dataset.metadata_item("CLOUD_COVERAGE", "STIP") {

@@ -1,5 +1,4 @@
-use failure::ResultExt;
-use gdal::raster::Dataset;
+use gdal::Dataset;
 
 use crate::{Image, StFile, FILLED_SOURCE};
 use crate::album::Album;
@@ -74,13 +73,13 @@ impl Task<Vec<(Image, StFile)>> for FillTask {
             }
 
             // open image
-            let dataset = Dataset::open(&path).compat()?;
+            let dataset = Dataset::open(&path)?;
             datasets.push(dataset);
         }
 
         // perform fill
-        let mut dataset = st_image::prelude::fill(&datasets)?;
-        let pixel_coverage = st_image::coverage(&dataset)?;
+        let mut dataset = st_image::fill(&datasets)?;
+        let pixel_coverage = st_image::get_coverage(&dataset)?;
 
         // check if pixel coverage is more than previous highest
         let mut max_pixel_coverage = 0f64;

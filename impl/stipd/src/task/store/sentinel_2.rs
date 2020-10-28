@@ -1,7 +1,5 @@
 use chrono::prelude::{DateTime, Utc};
-use failure::ResultExt;
-use gdal::metadata::Metadata;
-use gdal::raster::Dataset;
+use gdal::{Dataset, Metadata};
 use swarm::prelude::Dht;
 use zip::ZipArchive;
 
@@ -56,7 +54,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let metadata_filename = format!("/vsizip/{}/{}",
         record.to_string_lossy(), zip_metadata);
     let metadata_path = PathBuf::from(&metadata_filename);
-    let dataset = Dataset::open(&metadata_path).compat()?;
+    let dataset = Dataset::open(&metadata_path)?;
 
     // parse metadata
     let timestamp = match dataset.metadata_item("PRODUCT_START_TIME", "") {
@@ -65,9 +63,14 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     };
 
     // populate subdatasets collection
+    let metadata = match dataset.metadata_domain("SUBDATASETS") {
+        Some(metadata) => metadata,
+        None => return Err(format!(
+            "failed to find subdatasets for '{:?}'", &record).into()),
+    };
+
     let mut subdatasets: Vec<(&str, &str)> = Vec::new();
     let mut count = 0;
-    let metadata = dataset.metadata("SUBDATASETS");
     loop {
         if count + 1 >= metadata.len() {
             break;
@@ -89,23 +92,37 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     for (i, (name, _)) in subdatasets.iter().enumerate() {
         // open dataset
         let path = PathBuf::from(name);
-        let dataset = Dataset::open(&path).compat()?;
+        let dataset = Dataset::open(&path)?;
 
-        // split image with geocode precision
-        for dataset_split in st_image::prelude::split(
-                &dataset, geocode, precision)? {
-            // calculate split dataset geocode
-            let (win_min_x, win_max_x, win_min_y, win_max_y) =
-                dataset_split.coordinates();
-            let split_geocode = geocode.get_code(
-                (win_min_x + win_max_x) / 2.0,
-                (win_min_y + win_max_y) / 2.0, precision)?;
+        // compute geohash window boundaries for dataset
+        let epsg_code = geocode.get_epsg_code();
+        let (x_interval, y_interval) = geocode.get_intervals(precision);
 
+        let (image_min_cx, image_max_cx, image_min_cy, image_max_cy) =
+            st_image::coordinate::get_bounds(&dataset, epsg_code)?;
+
+        let window_bounds = st_image::coordinate::get_windows(
+            image_min_cx, image_max_cx, image_min_cy, image_max_cy,
+            x_interval, y_interval);
+
+        // iterate over window bounds
+        for (min_cx, max_cx, min_cy, max_cy) in window_bounds {
             // perform dataset split
-            let dataset = dataset_split.dataset()?;
+            let split_dataset = match st_image::transform::split(&dataset,
+                    min_cx, max_cx, min_cy, max_cy, epsg_code) {
+                Ok(split_dataset) => split_dataset,
+                Err(e) => {
+                    error!("failed to split dataset: {}", e);
+                    continue
+                },
+            };
+
+            let split_geocode = geocode.encode((min_cx + max_cx) / 2.0,
+                (min_cy + max_cy) / 2.0, precision)?;
 
             // if image has 0.0 coverage -> don't process
-            let pixel_coverage = st_image::coverage(&dataset)?;
+            let pixel_coverage = 
+                st_image::get_coverage(&split_dataset)?;
             if pixel_coverage == 0f64 {
                 continue;
             }
@@ -121,8 +138,9 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
             };
 
             // send image to new host
-            if let Err(e) = crate::transfer::send_image(&addr, &album_id,
-                    &dataset, &split_geocode, pixel_coverage, "Sentinel-2",
+            if let Err(e) = crate::transfer::send_image(&addr,
+                    &album_id, &split_dataset, &split_geocode,
+                    pixel_coverage, "Sentinel-2",
                     &RAW_SOURCE, i as u8, &tile, timestamp) {
                 warn!("failed to write image to node {}: {}", addr, e);
             }

@@ -1,8 +1,6 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use failure::ResultExt;
-use gdal::metadata::Metadata;
-use gdal::raster::{Dataset, Driver};
-use st_image::prelude::Geocode;
+use gdal::{Dataset, Driver, Metadata};
+use geocode::Geocode;
 
 use crate::{Extent, Image, StFile};
 use crate::index::AlbumIndex;
@@ -10,7 +8,7 @@ use crate::index::AlbumIndex;
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::error::Error;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -248,9 +246,9 @@ impl Album {
         }
 
         // open GeoTiff driver
-        let driver = Driver::get("GTiff").compat()?;
+        let driver = Driver::get("GTiff")?;
 
-        // copy image to GeoTiff format
+        /*// copy image to GeoTiff format
         let mut c_options = vec![
             CString::new("COMPRESS=LZW")?.into_raw(),
             std::ptr::null_mut()
@@ -258,7 +256,7 @@ impl Album {
 
         let path_str = path.to_string_lossy();
         let mut dataset_copy = dataset.create_copy(&driver,
-            &path_str, Some(c_options.as_mut_ptr())).compat()?;
+            &path_str, Some(c_options.as_mut_ptr()))?;
 
         // clean up potential memory leaks
         unsafe {
@@ -267,6 +265,45 @@ impl Album {
                     let _ = CString::from_raw(ptr);
                 }
             }
+        }*/
+        // intialize copy arguments
+        let path_str = path.to_string_lossy().to_string();
+        let c_filename = CString::new(path_str)?;
+
+        let c_compress_str = CString::new("COMPRESS=LZW")?;
+        let c_compress_ptr = c_compress_str.into_raw();
+        let mut c_options = vec![
+            c_compress_ptr,
+            std::ptr::null_mut()
+        ];
+
+        // copy dataset using driver
+        let c_dataset = unsafe {
+            gdal_sys::GDALCreateCopy(driver.c_driver(),
+                c_filename.as_ptr(), dataset.c_dataset(), 0,
+                c_options.as_mut_ptr(), None, std::ptr::null_mut())
+        };
+
+        // check for error
+        if c_dataset.is_null() {
+            let err_msg = unsafe {
+                let c_ptr = gdal_sys::CPLGetLastErrorMsg();
+                let c_str = CStr::from_ptr(c_ptr);
+                c_str.to_string_lossy().into_owned()
+            };
+
+            unsafe { gdal_sys::CPLErrorReset() };
+            return Err(format!(
+                "failed to copy dataset: {}", err_msg).into())
+        }
+
+        let mut dataset_copy = unsafe {
+            Dataset::from_c_dataset(c_dataset)
+        };
+
+        // clean up c memory to mitigate leaks
+        unsafe {
+            let _ = CString::from_raw(c_compress_ptr);
         }
 
         // set image permissions
@@ -275,19 +312,16 @@ impl Album {
         std::fs::set_permissions(&path, permissions)?;
 
         // set dataset metadata attributes
-        dataset_copy.set_metadata_item("GEOCODE",
-            geocode, "STIP").compat()?;
+        dataset_copy.set_metadata_item("GEOCODE", geocode, "STIP")?;
         dataset_copy.set_metadata_item("PIXEL_COVERAGE",
-            &pixel_coverage.to_string(), "STIP").compat()?;
-        dataset_copy.set_metadata_item("PLATFORM",
-            platform, "STIP").compat()?;
-        dataset_copy.set_metadata_item("SOURCE",
-            source, "STIP").compat()?;
+            &pixel_coverage.to_string(), "STIP")?;
+        dataset_copy.set_metadata_item("PLATFORM", platform, "STIP")?;
+        dataset_copy.set_metadata_item("SOURCE", source, "STIP")?;
         dataset_copy.set_metadata_item("SUBDATASET",
-            &subdataset.to_string(), "STIP").compat()?;
-        dataset_copy.set_metadata_item("TILE", tile, "STIP").compat()?;
+            &subdataset.to_string(), "STIP")?;
+        dataset_copy.set_metadata_item("TILE", tile, "STIP")?;
         dataset_copy.set_metadata_item("TIMESTAMP",
-            &timestamp.to_string(), "STIP").compat()?;
+            &timestamp.to_string(), "STIP")?;
 
         // if album is open -> load data
         if let Some(_) = self.index {

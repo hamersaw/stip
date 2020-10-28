@@ -1,6 +1,5 @@
 use chrono::prelude::{TimeZone, Utc};
-use failure::ResultExt;
-use gdal::raster::Dataset;
+use gdal::Dataset;
 use swarm::prelude::Dht;
 
 use crate::RAW_SOURCE;
@@ -21,7 +20,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     };
 
     // open file
-    let dataset = Dataset::open(record).compat()?;
+    let dataset = Dataset::open(record)?;
     let filename = record.file_name().unwrap()
         .to_string_lossy().to_lowercase();
 
@@ -36,21 +35,34 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    // split image with geocode precision
-    for dataset_split in st_image::prelude::split(
-            &dataset, geocode, precision)? {
-        // calculate split dataset geocode
-        let (win_min_x, win_max_x, win_min_y, win_max_y) =
-            dataset_split.coordinates();
-        let split_geocode = geocode.get_code(
-            (win_min_x + win_max_x) / 2.0,
-            (win_min_y + win_max_y) / 2.0, precision)?;
+    // compute geohash window boundaries for dataset
+    let epsg_code = geocode.get_epsg_code();
+    let (x_interval, y_interval) = geocode.get_intervals(precision);
 
+    let (image_min_cx, image_max_cx, image_min_cy, image_max_cy) =
+        st_image::coordinate::get_bounds(&dataset, epsg_code)?;
+
+    let window_bounds = st_image::coordinate::get_windows(
+        image_min_cx, image_max_cx, image_min_cy, image_max_cy,
+        x_interval, y_interval);
+
+    // iterate over window bounds
+    for (min_cx, max_cx, min_cy, max_cy) in window_bounds {
         // perform dataset split
-        let dataset = dataset_split.dataset()?;
+        let split_dataset = match st_image::transform::split(&dataset,
+                min_cx, max_cx, min_cy, max_cy, epsg_code) {
+            Ok(split_dataset) => split_dataset,
+            Err(e) => {
+                error!("failed to split dataset: {}", e);
+                continue
+            },
+        };
+
+        let split_geocode = geocode.encode((min_cx + max_cx) / 2.0,
+            (min_cy + max_cy) / 2.0, precision)?;
 
         // if image has 0.0 coverage -> don't process
-        let pixel_coverage = st_image::coverage(&dataset)?;
+        let pixel_coverage = st_image::get_coverage(&split_dataset)?;
         if pixel_coverage == 0f64 {
             continue;
         }
@@ -67,7 +79,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image(&addr, &album_id,
-                &dataset, &split_geocode, pixel_coverage, "NLCD",
+                &split_dataset, &split_geocode, pixel_coverage, "NLCD",
                 &RAW_SOURCE, 0, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
