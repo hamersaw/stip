@@ -214,6 +214,9 @@ impl AlbumManagement for AlbumManagementImpl {
                 let geocode = match album.get_geocode() {
                     Geocode::Geohash => protobuf::Geocode::Geohash,
                     Geocode::QuadTile => protobuf::Geocode::Quadtile,
+                    _ => return Err(Status::new(Code::Unknown,
+                        format!("unsupported geocode: {:?}",
+                            album.get_geocode()))),
                 };
 
                 let status = match album.get_index() {

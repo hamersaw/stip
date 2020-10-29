@@ -85,6 +85,8 @@ impl AlbumManager {
         match geocode {
             Geocode::Geohash => file.write_u8(0)?,
             Geocode::QuadTile => file.write_u8(1)?,
+            _ => return Err(format!(
+                "unsupported geocode: {:?}", geocode).into()),
         }
         path.pop();
 
