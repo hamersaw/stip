@@ -31,6 +31,12 @@ NAIP is retreived using the 'Aerial Imagery/NAIP' Earth Engine dataset. It is in
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 1m         | u8        | Red, Green, Blue, NIR
+#### NLCD
+The National Land Cover Database dataset is retrieved from https://www.mrlc.gov/. It is loaded using an IMG formated image.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | 30m        | u8        | Pixel Classification
 #### Sentinel-2
 Sentinel-2 data is loaded using the SAFE format downloaded using the Earth Engine 'Sentinel/Sentinel-2' dataset. The resulting subdatasets within STIP are provided below.
 
@@ -150,5 +156,4 @@ Typically image datasets partition data into many tiles. The inherit tile bounds
 
 ## TODO
 - clean up documentation
-    - add NLCD dataset 
 - improve node logging
