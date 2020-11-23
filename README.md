@@ -4,13 +4,27 @@ A distributed spatiotemporal image management framework.
 
 ## DATASETS
 All datasets are retrieved using the [USGS Earth Explorer](https://earthexplorer.usgs.gov/).
-#### MODIS
+#### MCD43A4
 STIP processes the MCD43A4 MODIS dataset located at 'NASA/LPDAAC Collections/MODIS BRDF and Albedo - V6/MCD43A4 V6' in the Earth Engine datasets. The file format is hdf. Below is a table outlining the resulting subdatasets produced.
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
-0          | ~500m      | u8        | Quality 1, 2, 3, 4, 5, 6, 7
-1          | ~500m      | int16     | Reflectance 1, 2, 3, 4, 5, 6, 7
+0          | ~500m      | u8        | BRDF Albedo Quality 1, 2, 3, 4, 5, 6, 7
+1          | ~500m      | int16     | NADIR Reflectance 1, 2, 3, 4, 5, 6, 7
+#### MOD11A1
+The MOD11A1 is found under the MODIS dataset located at 'NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A1 V6' in the Earth Engine datasets. The file format is hdf. Below is a table outlining the resulting subdatasets produced.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | 1km        | u8        | Day LST Quality, Day View Time, Day View Angle, Night LST Quality, Night View Time, Night View Angle, Band 31 Emissivity, Band 32 Imissivity
+1          | 1km        | uint16    | Day LST, Night LST, Day Clear Sky-Coverage, Night Clear Sky-Coverage
+#### MOD11A2
+STIP processes the hdf formatted MOD11A2 MODIS dataset located at 'NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A1 V6' in the Earth Engine datasets. Below is a table outlining the resulting subdatasets produced.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | 1km        | u8        | Day LST Quality, Day View Time, Day View Angle, Night LST Quality, Night View Time, Night View Angle, Band 31 Emissivity, Band 32 Imissivity, Day Clear Sky-Coverage, Night Clear Sky-Coverage
+1          | 1km        | uint16    | Day LST, Night LST
 #### NAIP
 NAIP is retreived using the 'Aerial Imagery/NAIP' Earth Engine dataset. It is in a ZIP format (internally a single GeoTiff image). The STIP subdatasets are provided below.
 
@@ -22,9 +36,9 @@ Sentinel-2 data is loaded using the SAFE format downloaded using the Earth Engin
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
-0          | 10m        | uint16    | B02, B03, B04, B08
-1          | 20m        | uint16    | B05, B06, B07, B8A, B11, B12
-2          | 60m        | uint16    | B01, B09, B10
+0          | 10m        | uint16    | Blue, Green, Red, NIR
+1          | 20m        | uint16    | Vegetation Red Index 1 & 2 & 3, Narrow NIR, SWIR 1 & 2
+2          | 60m        | uint16    | Coastal Aerosol, Water Vapour, SWIR-Cirrus
 3          | 10m        | u8        | TCI-R, TCI-G, TCI-B
 
 ## WORKSPACE
@@ -96,14 +110,14 @@ Albums may be open and closed. Internally, the difference defines whether a in-m
 Image tore tasks are initialized on a per-node basis, meaning each node ony processes local data. Therefore, data is typically distributed among cluster nodes to enable distributed processing. As such, a separate task must be manually started on each node to load the local data.
 
     # store a single modis file into the test album at geohash length 3
-    ./stip image store test '~/Downloads/earth-explorer/modis/MCD43A4.A2020100.h08v05.006.2020109032339.hdf' modis -t 1 -l 3
+    ./stip image store test '~/Downloads/earth-explorer/modis/MCD43A4.A2020100.h08v05.006.2020109032339.hdf' mcd43a4 -t 1 -l 3
 
     # store images for the given glob with 4 threads at geohash length 6
     ./stip image store test2 '~/Downloads/earth-explorer/naip/test/*' naip -t 4 -l 6
 
     # store sentinel data for files with the provided glob at geohash
     #   length 5 using 2 threads and setting the task id as 1000
-    ./stip -i $(curl ifconfig.me) image store test3 "/s/$(hostname)/a/nobackup/galileo/usgs-earth-explorer/sentinel-2/foco-20km/*T13TEE*" sentinel -t 2 -l 5 -d 1000
+    ./stip -i $(curl ifconfig.me) image store test3 "/s/$(hostname)/a/nobackup/galileo/usgs-earth-explorer/sentinel-2/foco-20km/*T13TEE*" sentinel2 -t 2 -l 5 -d 1000
 #### IMAGE LIST / SEARCH
 These commands enable searching the system for images using the metadata provided. 'image search' provides an agglomerated data representation, presenting image geohash precision counts satisfying the query. It is useful for gaining understanding of the dataspace. With an understanding of interesting data the 'image list' command returns all metadata for images satisfying the provided filtering criteria.
 
