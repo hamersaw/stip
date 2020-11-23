@@ -3,7 +3,7 @@ use swarm::prelude::Dht;
 mod modis;
 mod naip;
 mod nlcd;
-mod sentinel_2;
+mod sentinel2;
 
 use crate::album::Album;
 use crate::task::Task;
@@ -14,10 +14,12 @@ use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Debug)]
 pub enum ImageFormat {
-    MODIS,
+    MCD43A4,
+    MOD11A1,
+    MOD11A2,
     NAIP,
     NLCD,
-    Sentinel,
+    Sentinel2,
 }
 
 pub struct StoreEarthExplorerTask {
@@ -52,13 +54,17 @@ impl StoreEarthExplorerTask {
 impl Task<PathBuf> for StoreEarthExplorerTask {
     fn process(&self, record: &PathBuf) -> Result<(), Box<dyn Error>> {
         match self.format {
-            ImageFormat::MODIS => modis::process(
-                &self.album, &self.dht, self.precision, &record),
+            ImageFormat::MCD43A4 => modis::process(&self.album,
+                "MCD43A4", &self.dht, self.precision, &record),
+            ImageFormat::MOD11A1 => modis::process(&self.album,
+                "MOD11A1", &self.dht, self.precision, &record),
+            ImageFormat::MOD11A2 => modis::process(&self.album,
+                "MOD11A2", &self.dht, self.precision, &record),
             ImageFormat::NAIP => naip::process(
                 &self.album, &self.dht, self.precision, &record),
             ImageFormat::NLCD => nlcd::process(
                 &self.album, &self.dht, self.precision, &record),
-            ImageFormat::Sentinel => sentinel_2::process(
+            ImageFormat::Sentinel2 => sentinel2::process(
                 &self.album, &self.dht, self.precision, &record),
         }
     }

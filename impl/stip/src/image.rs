@@ -220,10 +220,12 @@ async fn store(matches: &ArgMatches, _: &ArgMatches,
 
     // parse load format
     let format = match store_matches.value_of("FORMAT") {
-        Some("modis") => ImageFormat::Modis as i32,
+        Some("mcd43a4") => ImageFormat::Mcd43a4 as i32,
+        Some("mod11a1") => ImageFormat::Mod11a1 as i32,
+        Some("mod11a2") => ImageFormat::Mod11a2 as i32,
         Some("naip") => ImageFormat::Naip as i32,
         Some("nlcd") => ImageFormat::Nlcd as i32,
-        Some("sentinel") => ImageFormat::Sentinel as i32,
+        Some("sentinel2") => ImageFormat::Sentinel2 as i32,
         _ => unimplemented!(),
     };
 

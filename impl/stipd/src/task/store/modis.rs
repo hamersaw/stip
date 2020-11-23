@@ -1,20 +1,22 @@
 use chrono::prelude::NaiveDate;
 use gdal::{Dataset, Driver, Metadata};
 use gdal::raster::GdalType;
+use gdal_sys::GDALDataType;
 use geocode::Geocode;
 use swarm::prelude::Dht;
 
 use crate::RAW_SOURCE;
 use crate::album::Album;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
-        precision: usize, record: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &Arc<RwLock<Album>>, dataset_name: &str,
+        dht: &Arc<Dht>, precision: usize, 
+        record: &PathBuf) -> Result<(), Box<dyn Error>> {
     // retrieve album metadata
     let (album_id, dht_key_length, geocode) = {
         let album = album.read().unwrap();
@@ -36,7 +38,65 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
 
     let timestamp = start_date.and_hms(0, 0, 0).timestamp();
 
-    // populate subdataset vectors
+    // classify subdatasets
+    let mut subdatasets = BTreeMap::new();
+
+    let metadata = match dataset.metadata_domain("SUBDATASETS") {
+        Some(metadata) => metadata,
+        None => return Err(format!(
+            "failed to find subdatasets for '{:?}'", &record).into()),
+    };
+
+    for i in (0..metadata.len()).step_by(2) {
+        // parse subdataset name
+        let name_fields: Vec<&str> =
+            metadata[i].split("=").collect();
+
+        // parse subdataset description
+        let desc_fields: Vec<&str> =
+            metadata[i+1].split("=").collect();
+
+        // identify subdataset data type
+        let indices: Vec<_> =
+            desc_fields[1].match_indices("(").collect();
+
+        let start_index = indices.last().unwrap_or(&(0,"")).0 + 1;
+        let end_index = desc_fields[1].len()-1;
+
+        let type_desc = &desc_fields[1][start_index..end_index];
+
+        let data_type = match type_desc {
+            "8-bit unsigned integer" => GDALDataType::GDT_Byte,
+            "16-bit integer" => GDALDataType::GDT_Int16,
+            "16-bit unsigned integer" => GDALDataType::GDT_UInt16,
+            _ => return Err(format!(
+                "unsupported data type: '{}'", type_desc).into()),
+        };
+
+        // append to data type vector
+        let vec = subdatasets.entry(data_type).or_insert(Vec::new());
+        vec.push((name_fields[1], desc_fields[1]));
+    }
+
+    // process subdatasets
+    for (i, (data_type, subdatasets)) in 
+            subdatasets.into_iter().enumerate() {
+        // split datasets
+        let datasets = match data_type {
+            GDALDataType::GDT_Byte => split_subdatasets::<u8>(
+                geocode, precision, subdatasets)?,
+            GDALDataType::GDT_Int16 => split_subdatasets::<i16>(
+                geocode, precision, subdatasets)?,
+            GDALDataType::GDT_UInt16 => split_subdatasets::<u16>(
+                geocode, precision, subdatasets)?,
+            _ => unreachable!(),
+        };
+
+        process_splits(&album_id, &datasets, &dataset_name, 
+            &dht, dht_key_length, i as u8, &tile, timestamp)?;
+    }
+
+    /*// populate subdataset vectors
     let metadata = match dataset.metadata_domain("SUBDATASETS") {
         Some(metadata) => metadata,
         None => return Err(format!(
@@ -74,12 +134,13 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let reflectance_datasets = split_subdatasets::<i16>(geocode,
         precision, reflectance_subdatasets)?;
     process_splits(&album_id, &reflectance_datasets,
-        &dht, dht_key_length, 1, &tile, timestamp)?;
+        &dht, dht_key_length, 1, &tile, timestamp)?;*/
 
     Ok(())
 }
 
-fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
+fn process_splits(album_id: &str,
+        datasets: &HashMap<String, Dataset>, dataset_name: &str, 
         dht: &Arc<Dht>, dht_key_length: i8, subdataset: u8, 
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geocode, dataset) in datasets.iter() {
@@ -101,7 +162,7 @@ fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image(&addr, album_id,
-                &dataset, &geocode, pixel_coverage, "MODIS",
+                &dataset, &geocode, pixel_coverage, dataset_name,
                 &RAW_SOURCE, subdataset, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }
@@ -137,7 +198,7 @@ fn split_subdatasets<T: GdalType>(geocode: Geocode,
                     min_cx, max_cx, min_cy, max_cy, epsg_code) {
                 Ok(split_dataset) => split_dataset,
                 Err(e) => {
-                    error!("failed to split dataset: {}", e);
+                    warn!("failed to split dataset: {}", e);
                     continue
                 },
             };

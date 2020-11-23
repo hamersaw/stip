@@ -350,10 +350,12 @@ subcommands:
                         index: 3
                         required: true
                         possible_values: 
-                            - modis
+                            - mcd43a4
+                            - mod11a1
+                            - mod11a2
                             - naip
                             - nlcd
-                            - sentinel
+                            - sentinel2
                         help: dataset image format
                     - precision:
                         help: geocode precision
