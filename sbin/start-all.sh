@@ -62,4 +62,6 @@ while read line; do
 
     # increment node id
     (( nodeid += 1 ))
+
+    sleep 1s
 done <$hostfile
