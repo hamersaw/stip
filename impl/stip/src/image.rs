@@ -226,6 +226,7 @@ async fn store(matches: &ArgMatches, _: &ArgMatches,
         Some("naip") => ImageFormat::Naip as i32,
         Some("nlcd") => ImageFormat::Nlcd as i32,
         Some("sentinel2") => ImageFormat::Sentinel2 as i32,
+        Some("vnp21v001") => ImageFormat::Vnp21v001 as i32,
         _ => unimplemented!(),
     };
 

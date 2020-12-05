@@ -385,6 +385,7 @@ impl ImageManagement for ImageManagementImpl {
             ProtoImageFormat::Naip => ImageFormat::NAIP,
             ProtoImageFormat::Nlcd => ImageFormat::NLCD,
             ProtoImageFormat::Sentinel2 => ImageFormat::Sentinel2,
+            ProtoImageFormat::Vnp21v001 => ImageFormat::VNP21V001,
         };
 
         let task = Arc::new(StoreEarthExplorerTask::new(

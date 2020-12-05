@@ -356,6 +356,7 @@ subcommands:
                             - naip
                             - nlcd
                             - sentinel2
+                            - vnp21v001
                         help: dataset image format
                     - precision:
                         help: geocode precision

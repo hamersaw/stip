@@ -14,9 +14,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &Arc<RwLock<Album>>, dataset_name: &str,
-        dht: &Arc<Dht>, precision: usize, 
-        record: &PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>, 
+        precision: usize, record: &PathBuf) 
+        -> Result<(), Box<dyn Error>> {
     // retrieve album metadata
     let (album_id, dht_key_length, geocode) = {
         let album = album.read().unwrap();
@@ -31,7 +31,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dataset_name: &str,
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    let start_date = match dataset.metadata_item("RANGEBEGINNINGDATE", "") {
+    let start_date = match dataset.metadata_item("RangeBeginningDate", "") {
         Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
         None => panic!("start date metadata not found"),
     };
@@ -66,9 +66,9 @@ pub fn process(album: &Arc<RwLock<Album>>, dataset_name: &str,
         let type_desc = &desc_fields[1][start_index..end_index];
 
         let data_type = match type_desc {
-            "8-bit unsigned integer" => GDALDataType::GDT_Byte,
-            "16-bit integer" => GDALDataType::GDT_Int16,
+            "8-bit unsigned character" => GDALDataType::GDT_Byte,
             "16-bit unsigned integer" => GDALDataType::GDT_UInt16,
+            "32-bit floating-point" => continue,
             _ => return Err(format!(
                 "unsupported data type: '{}'", type_desc).into()),
         };
@@ -85,22 +85,19 @@ pub fn process(album: &Arc<RwLock<Album>>, dataset_name: &str,
         let datasets = match data_type {
             GDALDataType::GDT_Byte => split_subdatasets::<u8>(
                 geocode, precision, subdatasets)?,
-            GDALDataType::GDT_Int16 => split_subdatasets::<i16>(
-                geocode, precision, subdatasets)?,
             GDALDataType::GDT_UInt16 => split_subdatasets::<u16>(
                 geocode, precision, subdatasets)?,
             _ => unreachable!(),
         };
 
-        process_splits(&album_id, &datasets, &dataset_name, 
-            &dht, dht_key_length, i as u8, &tile, timestamp)?;
+        process_splits(&album_id, &datasets, &dht,
+            dht_key_length, i as u8, &tile, timestamp)?;
     }
 
     Ok(())
 }
 
-fn process_splits(album_id: &str,
-        datasets: &HashMap<String, Dataset>, dataset_name: &str, 
+fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
         dht: &Arc<Dht>, dht_key_length: i8, subdataset: u8, 
         tile: &str, timestamp: i64) -> Result<(), Box<dyn Error>> {
     for (geocode, dataset) in datasets.iter() {
@@ -122,7 +119,7 @@ fn process_splits(album_id: &str,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image(&addr, album_id,
-                &dataset, &geocode, pixel_coverage, dataset_name,
+                &dataset, &geocode, pixel_coverage, "VNP21V001",
                 &RAW_SOURCE, subdataset, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }

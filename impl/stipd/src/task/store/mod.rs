@@ -4,6 +4,7 @@ mod modis;
 mod naip;
 mod nlcd;
 mod sentinel2;
+mod viirs;
 
 use crate::album::Album;
 use crate::task::Task;
@@ -20,6 +21,7 @@ pub enum ImageFormat {
     NAIP,
     NLCD,
     Sentinel2,
+    VNP21V001,
 }
 
 pub struct StoreEarthExplorerTask {
@@ -65,6 +67,8 @@ impl Task<PathBuf> for StoreEarthExplorerTask {
             ImageFormat::NLCD => nlcd::process(
                 &self.album, &self.dht, self.precision, &record),
             ImageFormat::Sentinel2 => sentinel2::process(
+                &self.album, &self.dht, self.precision, &record),
+            ImageFormat::VNP21V001 => viirs::process(
                 &self.album, &self.dht, self.precision, &record),
         }
     }

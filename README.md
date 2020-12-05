@@ -4,21 +4,21 @@ A distributed spatiotemporal image management framework.
 
 ## DATASETS
 All datasets are retrieved using the [USGS Earth Explorer](https://earthexplorer.usgs.gov/).
-#### MCD43A4
+#### MODIS - MCD43A4
 STIP processes the MCD43A4 MODIS dataset located at 'NASA/LPDAAC Collections/MODIS BRDF and Albedo - V6/MCD43A4 V6' in the Earth Engine datasets. The file format is hdf. Below is a table outlining the resulting subdatasets produced.
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | ~500m      | u8        | BRDF Albedo Quality 1, 2, 3, 4, 5, 6, 7
 1          | ~500m      | int16     | NADIR Reflectance 1, 2, 3, 4, 5, 6, 7
-#### MOD11A1
+#### MODIS - MOD11A1
 The MOD11A1 is found under the MODIS dataset located at 'NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A1 V6' in the Earth Engine datasets. The file format is hdf. Below is a table outlining the resulting subdatasets produced.
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 1km        | u8        | Day LST Quality, Day View Time, Day View Angle, Night LST Quality, Night View Time, Night View Angle, Band 31 Emissivity, Band 32 Imissivity
 1          | 1km        | uint16    | Day LST, Night LST, Day Clear Sky-Coverage, Night Clear Sky-Coverage
-#### MOD11A2
+#### MODIS - MOD11A2
 STIP processes the hdf formatted MOD11A2 MODIS dataset located at 'NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A1 V6' in the Earth Engine datasets. Below is a table outlining the resulting subdatasets produced.
 
 Subdataset | Resolution | Data Type | Bands
@@ -46,6 +46,13 @@ Subdataset | Resolution | Data Type | Bands
 1          | 20m        | uint16    | Vegetation Red Index 1 & 2 & 3, Narrow NIR, SWIR 1 & 2
 2          | 60m        | uint16    | Coastal Aerosol, Water Vapour, SWIR-Cirrus
 3          | 10m        | u8        | TCI-R, TCI-G, TCI-B
+#### VIIRS - VNP21v001
+The VNP21v001 is found under the VIIRS dataset located in the EarthData Search. The file format is nc with embedded hdf. Below is a table outlining the resulting subdatasets produced.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | 750m       | u8        | M14 Emissivity, M15 Emissivity, M16 Emissivity, ASTER GED Emissivity, LST error, VIIRS View Angle, Ocean-land mask
+1          | 750m       | uint16    | M14 Error, M15 Error, M16 Error, Land Surface Temperature, Precipitable Water Vapor, Quality Control
 
 ## WORKSPACE
 The implementation is structured using rust's workspace paradigm within the ./impl directory in the project root.
