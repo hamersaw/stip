@@ -101,12 +101,9 @@ impl Task<(Image, Vec<StFile>)> for SplitTask {
 
                 // perform dataset split
                 let split_dataset = match st_image::transform::split(&dataset,
-                        min_cx, max_cx, min_cy, max_cy, epsg_code) {
-                    Ok(split_dataset) => split_dataset,
-                    Err(e) => {
-                        error!("failed to split dataset: {}", e);
-                        continue
-                    },
+                        min_cx, max_cx, min_cy, max_cy, epsg_code)? {
+                    Some(split_dataset) => split_dataset,
+                    None => continue,
                 };
 
                 // if image has 0.0 coverage -> don't process

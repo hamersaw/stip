@@ -109,12 +109,9 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         for (min_cx, max_cx, min_cy, max_cy) in window_bounds {
             // perform dataset split
             let split_dataset = match st_image::transform::split(&dataset,
-                    min_cx, max_cx, min_cy, max_cy, epsg_code) {
-                Ok(split_dataset) => split_dataset,
-                Err(e) => {
-                    error!("failed to split dataset: {}", e);
-                    continue
-                },
+                    min_cx, max_cx, min_cy, max_cy, epsg_code)? {
+                Some(split_dataset) => split_dataset,
+                None => continue,
             };
 
             let split_geocode = geocode.encode((min_cx + max_cx) / 2.0,
