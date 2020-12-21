@@ -196,13 +196,14 @@ message ImageListRequest {
 
 // Load Messages
 enum ImageFormat {
-    MCD43A4 = 0;
-    MOD11A1 = 1;
-    MOD11A2 = 2;
-    NAIP = 3;
-    NLCD = 4;
-    SENTINEL2 = 5;
-    VNP21V001 = 6;
+    GRIDMET = 0;
+    MCD43A4 = 1;
+    MOD11A1 = 2;
+    MOD11A2 = 3;
+    NAIP = 4;
+    NLCD = 5;
+    SENTINEL2 = 6;
+    VNP21V001 = 7;
 }
 
 message ImageStoreRequest {

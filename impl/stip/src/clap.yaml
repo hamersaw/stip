@@ -350,6 +350,7 @@ subcommands:
                         index: 3
                         required: true
                         possible_values: 
+                            - gridmet
                             - mcd43a4
                             - mod11a1
                             - mod11a2

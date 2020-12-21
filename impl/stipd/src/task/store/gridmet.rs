@@ -1,4 +1,4 @@
-use chrono::prelude::NaiveDate;
+use chrono::prelude::{TimeZone, Utc};
 use gdal::{Dataset, Driver, Metadata};
 use gdal::raster::GdalType;
 use gdal_sys::GDALDataType;
@@ -14,9 +14,8 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>, 
-        precision: usize, record: &PathBuf) 
-        -> Result<(), Box<dyn Error>> {
+pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
+        precision: usize, record: &PathBuf) -> Result<(), Box<dyn Error>> {
     // retrieve album metadata
     let (album_id, dht_key_length, geocode) = {
         let album = album.read().unwrap();
@@ -31,12 +30,14 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    let start_date = match dataset.metadata_item("RangeBeginningDate", "") {
-        Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
-        None => panic!("start date metadata not found"),
-    };
+    let date_string = &tile[tile.len()-8..tile.len()];
+    let year = date_string[0..4].parse::<i32>()?;
+    let month = date_string[4..6].parse::<u32>()?;
+    let day = date_string[6..8].parse::<u32>()?;
+    let datetime = Utc.ymd(year, month, day).and_hms(0, 0, 0);
 
-    let timestamp = start_date.and_hms(0, 0, 0).timestamp();
+    let timestamp = datetime.timestamp();
+    println!("{} {}", date_string, datetime);
 
     // classify subdatasets
     let mut subdatasets = BTreeMap::new();
@@ -66,9 +67,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         let type_desc = &desc_fields[1][start_index..end_index];
 
         let data_type = match type_desc {
-            "8-bit unsigned character" => GDALDataType::GDT_Byte,
-            "16-bit unsigned integer" => GDALDataType::GDT_UInt16,
-            "32-bit floating-point" => continue,
+            "32-bit floating-point" => GDALDataType::GDT_Float32,
             _ => return Err(format!(
                 "unsupported data type: '{}'", type_desc).into()),
         };
@@ -81,11 +80,8 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     // process subdatasets
     for (i, (data_type, subdatasets)) in 
             subdatasets.into_iter().enumerate() {
-        // split datasets
         let datasets = match data_type {
-            GDALDataType::GDT_Byte => split_subdatasets::<u8>(
-                geocode, precision, subdatasets)?,
-            GDALDataType::GDT_UInt16 => split_subdatasets::<u16>(
+            GDALDataType::GDT_Float32 => split_subdatasets::<f32>(
                 geocode, precision, subdatasets)?,
             _ => unreachable!(),
         };
@@ -119,7 +115,7 @@ fn process_splits(album_id: &str, datasets: &HashMap<String, Dataset>,
 
         // send image to new host
         if let Err(e) = crate::transfer::send_image(&addr, album_id,
-                &dataset, &geocode, pixel_coverage, "VNP21V001",
+                &dataset, &geocode, pixel_coverage, "gridMET",
                 &RAW_SOURCE, subdataset, &tile, timestamp) {
             warn!("failed to write image to node {}: {}", addr, e);
         }

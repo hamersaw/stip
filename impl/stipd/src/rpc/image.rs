@@ -379,6 +379,7 @@ impl ImageManagement for ImageManagementImpl {
         // initialize task
         let format = match ProtoImageFormat
                 ::from_i32(request.format).unwrap() {
+            ProtoImageFormat::Gridmet => ImageFormat::GridMET,
             ProtoImageFormat::Mcd43a4 => ImageFormat::MCD43A4,
             ProtoImageFormat::Mod11a1 => ImageFormat::MOD11A1,
             ProtoImageFormat::Mod11a2 => ImageFormat::MOD11A2,

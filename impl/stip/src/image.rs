@@ -220,6 +220,7 @@ async fn store(matches: &ArgMatches, _: &ArgMatches,
 
     // parse load format
     let format = match store_matches.value_of("FORMAT") {
+        Some("gridmet") => ImageFormat::Gridmet as i32,
         Some("mcd43a4") => ImageFormat::Mcd43a4 as i32,
         Some("mod11a1") => ImageFormat::Mod11a1 as i32,
         Some("mod11a2") => ImageFormat::Mod11a2 as i32,
