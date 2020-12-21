@@ -4,6 +4,12 @@ A distributed spatiotemporal image management framework.
 
 ## DATASETS
 All datasets are retrieved using the [USGS Earth Explorer](https://earthexplorer.usgs.gov/).
+#### GRIDMET - gridMET
+GridMET data in NetCDF format is downloaded from https://www.northwestknowledge.net/metdata/data/permanent/. Below is a table outlining the subdatasets provided.
+
+Subdataset | Resolution | Data Type | Bands
+---------- | ---------- | --------- | -----
+0          | ~4km       | f32       | Max Temperature, Min Temperature, Max Humidity, Min Humidity, Specific Humidity, Wind Speed, Precipitation, Wind Direction, Shortwave Flux, Evapotranspiration Grass, Energy Release, Burning Index, Dead Fuel Moisture 100hr, Dead Fuel Moisture 1000hr, Evapotranspiration Alfalfa, Vapor Pressure Deficit
 #### MODIS - MCD43A4
 STIP processes the MCD43A4 MODIS dataset located at 'NASA/LPDAAC Collections/MODIS BRDF and Albedo - V6/MCD43A4 V6' in the Earth Engine datasets. The file format is hdf. Below is a table outlining the resulting subdatasets produced.
 
