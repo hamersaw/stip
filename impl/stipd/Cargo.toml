@@ -12,6 +12,7 @@ chrono = "0.4"
 comm = { path = "../../../comm-rs" }
 crossbeam-channel = "0.4"
 env_logger = "0.6"
+flate2 = "1.0"
 geocode = { path = "../../../geocode-rs" }
 gdal = { path = "../../../gdal" }
 gdal-sys = { path = "../../../gdal/gdal-sys" }
@@ -25,6 +26,7 @@ rusqlite = "0.23"
 st-image = { path = "../../../st-image" }
 structopt = { version = "0.3", default-features = false }
 swarm = { path = "../../../swarm-rs" }
+tar = "0.4"
 tokio = { version = "0.2", features = ["macros"] }
 tonic = "0.1"
 zip = "0.5"

@@ -380,6 +380,7 @@ impl ImageManagement for ImageManagementImpl {
         let format = match ProtoImageFormat
                 ::from_i32(request.format).unwrap() {
             ProtoImageFormat::Gridmet => ImageFormat::GridMET,
+            ProtoImageFormat::Landsat8c1l1 => ImageFormat::Landsat8C1L1,
             ProtoImageFormat::Mcd43a4 => ImageFormat::MCD43A4,
             ProtoImageFormat::Mod11a1 => ImageFormat::MOD11A1,
             ProtoImageFormat::Mod11a2 => ImageFormat::MOD11A2,
