@@ -42,6 +42,12 @@ fn main() {
     // initilaize logger
     env_logger::init();
 
+    unsafe {
+        // disable printing gdal errors to stdout
+        gdal_sys::CPLSetErrorHandler(
+            Some(gdal_sys::CPLQuietErrorHandler));
+    }
+
     // parse arguments
     let opt = Opt::from_args();
 

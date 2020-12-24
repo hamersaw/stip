@@ -37,7 +37,6 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let datetime = Utc.ymd(year, month, day).and_hms(0, 0, 0);
 
     let timestamp = datetime.timestamp();
-    println!("{} {}", date_string, datetime);
 
     // classify subdatasets
     let mut subdatasets = BTreeMap::new();

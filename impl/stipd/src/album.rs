@@ -250,24 +250,6 @@ impl Album {
         // open GeoTiff driver
         let driver = Driver::get("GTiff")?;
 
-        /*// copy image to GeoTiff format
-        let mut c_options = vec![
-            CString::new("COMPRESS=LZW")?.into_raw(),
-            std::ptr::null_mut()
-        ];
-
-        let path_str = path.to_string_lossy();
-        let mut dataset_copy = dataset.create_copy(&driver,
-            &path_str, Some(c_options.as_mut_ptr()))?;
-
-        // clean up potential memory leaks
-        unsafe {
-            for ptr in c_options {
-                if !ptr.is_null() {
-                    let _ = CString::from_raw(ptr);
-                }
-            }
-        }*/
         // intialize copy arguments
         let path_str = path.to_string_lossy().to_string();
         let c_filename = CString::new(path_str)?;
