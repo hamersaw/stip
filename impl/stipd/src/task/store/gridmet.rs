@@ -1,3 +1,4 @@
+use chrono::LocalResult;
 use chrono::prelude::{TimeZone, Utc};
 use gdal::{Dataset, Driver, Metadata};
 use gdal::raster::GdalType;
@@ -34,7 +35,11 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let year = date_string[0..4].parse::<i32>()?;
     let month = date_string[4..6].parse::<u32>()?;
     let day = date_string[6..8].parse::<u32>()?;
-    let datetime = Utc.ymd(year, month, day).and_hms(0, 0, 0);
+    let datetime = match Utc.ymd_opt(year, month, day) {
+        LocalResult::Single(date) => date.and_hms(0, 0, 0),
+        _ => return Err(format!("invalid date {}{}{}",
+            year, month, day).into()),
+    };
 
     let timestamp = datetime.timestamp();
 
