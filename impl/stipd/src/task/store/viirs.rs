@@ -14,6 +14,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
+const DATE_FIELDS: [&str; 2] =
+    ["RangeBeginningDate", "NC_GLOBAL#RangeBeginningDate"];
+
 pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>, 
         precision: usize, record: &PathBuf) 
         -> Result<(), Box<dyn Error>> {
@@ -31,12 +34,20 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    let start_date = match dataset.metadata_item("RangeBeginningDate", "") {
-        Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
-        None => return Err("start date metadata not found".into()),
-    };
+    let mut start_date = None;
+    for date_field in DATE_FIELDS.iter() {
+        if let Some(date) = dataset.metadata_item(date_field, "") {
+            start_date = Some(NaiveDate::parse_from_str(
+                &date, "%Y-%m-%d")?);
+            break;
+        }
+    }
 
-    let timestamp = start_date.and_hms(0, 0, 0).timestamp();
+    if start_date.is_none() {
+        return Err("start date metadata not found".into());
+    }
+
+    let timestamp = start_date.unwrap().and_hms(0, 0, 0).timestamp();
 
     // classify subdatasets
     let mut subdatasets = BTreeMap::new();
