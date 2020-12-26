@@ -33,7 +33,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
 
     let start_date = match dataset.metadata_item("RangeBeginningDate", "") {
         Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
-        None => panic!("start date metadata not found"),
+        None => return Err("start date metadata not found".into()),
     };
 
     let timestamp = start_date.and_hms(0, 0, 0).timestamp();
