@@ -77,7 +77,8 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         let type_desc = &desc_fields[1][start_index..end_index];
 
         let data_type = match type_desc {
-            "8-bit unsigned character" => GDALDataType::GDT_Byte,
+            "8-bit unsigned integer" | "8-bit unsigned character"
+                => GDALDataType::GDT_Byte,
             "16-bit unsigned integer" => GDALDataType::GDT_UInt16,
             "32-bit floating-point" => continue,
             _ => return Err(format!(
