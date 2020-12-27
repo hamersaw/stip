@@ -14,8 +14,7 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-const DATE_FIELDS: [&str; 2] =
-    ["RangeBeginningDate", "NC_GLOBAL#RangeBeginningDate"];
+const TMP_DIR: &str = "/tmp";
 
 pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>, 
         precision: usize, record: &PathBuf) 
@@ -27,27 +26,27 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
             album.get_geocode().clone())
     };
 
-    let dataset = Dataset::open(&record)?;
+    // create symbolic link
+    let mut symbolic_link = PathBuf::from(TMP_DIR);
+    symbolic_link.push(record.file_name().unwrap());
+    symbolic_link.set_extension("h5");
+
+    std::os::unix::fs::symlink(record, &symbolic_link)?;
+
+    // open dataset
+    let dataset = Dataset::open(&symbolic_link)?;
  
     // parse metadata
     let tile_path = record.with_extension("");
     let tile = tile_path.file_name()
         .unwrap_or(OsStr::new("")).to_string_lossy();
 
-    let mut start_date = None;
-    for date_field in DATE_FIELDS.iter() {
-        if let Some(date) = dataset.metadata_item(date_field, "") {
-            start_date = Some(NaiveDate::parse_from_str(
-                &date, "%Y-%m-%d")?);
-            break;
-        }
-    }
+    let start_date = match dataset.metadata_item("RangeBeginningDate", "") {
+        Some(date) => NaiveDate::parse_from_str(&date, "%Y-%m-%d")?,
+        None => return Err("start date metadata not found".into()),
+    };
 
-    if start_date.is_none() {
-        return Err("start date metadata not found".into());
-    }
-
-    let timestamp = start_date.unwrap().and_hms(0, 0, 0).timestamp();
+    let timestamp = start_date.and_hms(0, 0, 0).timestamp();
 
     // classify subdatasets
     let mut subdatasets = BTreeMap::new();
@@ -77,8 +76,7 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         let type_desc = &desc_fields[1][start_index..end_index];
 
         let data_type = match type_desc {
-            "8-bit unsigned integer" | "8-bit unsigned character"
-                => GDALDataType::GDT_Byte,
+            "8-bit unsigned character" => GDALDataType::GDT_Byte,
             "16-bit unsigned integer" => GDALDataType::GDT_UInt16,
             "32-bit floating-point" => continue,
             _ => return Err(format!(
@@ -105,6 +103,9 @@ pub fn process(album: &Arc<RwLock<Album>>, dht: &Arc<Dht>,
         process_splits(&album_id, &datasets, &dht,
             dht_key_length, i as u8, &tile, timestamp)?;
     }
+
+    // delete symbolic link
+    std::fs::remove_file(&symbolic_link)?;
 
     Ok(())
 }
