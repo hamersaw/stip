@@ -352,7 +352,6 @@ subcommands:
                         possible_values: 
                             - generic
                             - gridmet
-                            - landsat8c1l1
                             - mcd43a4
                             - mod11a1
                             - mod11a2
