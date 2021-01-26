@@ -1,5 +1,6 @@
 use swarm::prelude::Dht;
 
+mod generic;
 mod gridmet;
 mod landsat;
 mod modis;
@@ -17,6 +18,7 @@ use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Debug)]
 pub enum ImageFormat {
+    Generic,
     GridMET,
     Landsat8C1L1,
     MCD43A4,
@@ -60,6 +62,8 @@ impl StoreEarthExplorerTask {
 impl Task<PathBuf> for StoreEarthExplorerTask {
     fn process(&self, record: &PathBuf) -> Result<(), Box<dyn Error>> {
         match self.format {
+            ImageFormat::Generic => generic::process(
+                &self.album, &self.dht, self.precision, &record),
             ImageFormat::GridMET => gridmet::process(
                 &self.album, &self.dht, self.precision, &record),
             ImageFormat::Landsat8C1L1 => landsat::process(

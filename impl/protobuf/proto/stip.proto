@@ -196,15 +196,16 @@ message ImageListRequest {
 
 // Load Messages
 enum ImageFormat {
-    GRIDMET = 0;
-    LANDSAT8C1L1 = 1;
-    MCD43A4 = 2;
-    MOD11A1 = 3;
-    MOD11A2 = 4;
-    NAIP = 5;
-    NLCD = 6;
-    SENTINEL2 = 7;
-    VNP21V001 = 8;
+    GENERIC = 0;
+    GRIDMET = 1;
+    LANDSAT8C1L1 = 2;
+    MCD43A4 = 3;
+    MOD11A1 = 4;
+    MOD11A2 = 5;
+    NAIP = 6;
+    NLCD = 7;
+    SENTINEL2 = 8;
+    VNP21V001 = 9;
 }
 
 message ImageStoreRequest {
