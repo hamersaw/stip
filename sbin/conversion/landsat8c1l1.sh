@@ -36,7 +36,7 @@ for filename in "$@"; do
                 mergefilenames="$mergefilenames "
             fi
 
-            mergefilenames+="$tmpdir/$tilename\_B$subdataset.TIF"
+            mergefilenames+="$tmpdir/${tilename}_B$subdataset.TIF"
         done
 
         # merge subdatasets
