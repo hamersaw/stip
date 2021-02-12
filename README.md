@@ -6,7 +6,7 @@ A distributed spatiotemporal image management framework.
 #### NASA Earthdata
 [Earthdata](https://lpdaac.usgs.gov/tools/earthdata-search/) is a data search tool run by NASA. There is a variety of data. Downloading data may be acheived by using the provided download scripts on data searches.
 #### Northwest Knowledge Network
-The [Northwest Knowledge Network](www.northwestknowledge.net) is run by the University of Idaho. Downloading the permanent archive can be done by the command line
+The [Northwest Knowledge Network](https://www.northwestknowledge.net) is run by the University of Idaho. Downloading the permanent archive can be done by the command line
 
     wget --recursive --no-parent https://www.northwestknowledge.net/metdata/data/permanent/
 
@@ -19,41 +19,41 @@ The [Northwest Knowledge Network](www.northwestknowledge.net) is run by the Univ
 
 ## DATASETS
 #### gridMET
-GridMET data in NetCDF format is downloaded from the [Northwest Knowledge Network](#Northwest Knowledge Network).
+GridMET data in NetCDF format is downloaded from the [Northwest Knowledge Network](#Northwest-Knowledge-Network).
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | ~4km       | f32       | Max Temperature, Min Temperature, Max Humidity, Min Humidity, Specific Humidity, Wind Speed, Precipitation, Wind Direction, Shortwave Flux, Evapotranspiration Grass, Energy Release, Burning Index, Dead Fuel Moisture 100hr, Dead Fuel Moisture 1000hr, Evapotranspiration Alfalfa, Vapor Pressure Deficit
 #### LANDSAT8 - Landsat8C1L1
-Collection 1 Level 1 Landsat 8 data is located at 'Landsat/Landsat Collection 1/Landsat Collection 1 Level-1/Landsat 8 OLI/TIRS C1 Level-1' in [Earth Explorer](#USGS Earth Explorer). Loading it requires a pre-processing phase by executing a conversion script located at 'sbin/conversion/landsat8c1l1.sh' in this repository and using the 'generic' data loader in the [image store command](#IMAGE STORE).
+Collection 1 Level 1 Landsat 8 data is located at 'Landsat/Landsat Collection 1/Landsat Collection 1 Level-1/Landsat 8 OLI/TIRS C1 Level-1' in [Earth Explorer](#USGS-Earth-Explorer). Loading it requires a pre-processing phase by executing a conversion script located at 'sbin/conversion/landsat8c1l1.sh' in this repository and using the 'generic' data loader in the [image store command](#IMAGE-STORE).
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 30m        | uint16    | B1, B2, B3, B4, B5, B6, B7 B9, B10, B11, QA
 1          | 15m        | uint16    | B8
 #### MODIS - MCD43A4
-MCD43A4 is a MODIS product presented in hdf format located at 'NASA/LPDAAC Collections/MODIS BRDF and Albedo - V6/MCD43A4 V6' in [Earth Explorer](#USGS Earth Explorer).
+MCD43A4 is a MODIS product presented in hdf format located at 'NASA/LPDAAC Collections/MODIS BRDF and Albedo - V6/MCD43A4 V6' in [Earth Explorer](#USGS-Earth-Explorer).
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | ~500m      | u8        | BRDF Albedo Quality 1, 2, 3, 4, 5, 6, 7
 1          | ~500m      | int16     | NADIR Reflectance 1, 2, 3, 4, 5, 6, 7
 #### MODIS - MOD11A1
-The MODIS MOD11A1 in hdf format is located at 'NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A1 V6' in [Earth Explorer](#USGS Earth Explorer). 
+The MODIS MOD11A1 in hdf format is located at 'NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A1 V6' in [Earth Explorer](#USGS-Earth-Explorer). 
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 1km        | u8        | Day LST Quality, Day View Time, Day View Angle, Night LST Quality, Night View Time, Night View Angle, Band 31 Emissivity, Band 32 Imissivity
 1          | 1km        | uint16    | Day LST, Night LST, Day Clear Sky-Coverage, Night Clear Sky-Coverage
 #### MODIS - MOD11A2
-MCD43A4 is a MODIS product presented in hdf format located at ''NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A2 V6'' in [Earth Explorer](#USGS Earth Explorer).
+MCD43A4 is a MODIS product presented in hdf format located at ''NASA/LPDAAC Collections/MODIS Land Surface Temp and Emiss - V6/MODIS MOD11A2 V6'' in [Earth Explorer](#USGS-Earth-Explorer).
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 1km        | u8        | Day LST Quality, Day View Time, Day View Angle, Night LST Quality, Night View Time, Night View Angle, Band 31 Emissivity, Band 32 Imissivity, Day Clear Sky-Coverage, Night Clear Sky-Coverage
 1          | 1km        | uint16    | Day LST, Night LST
 #### NAIP
-NAIP in ZIP format (internally a single GeoTIFF image) is retreived using the 'Aerial Imagery/NAIP' in [Earth Explorer](#USGS Earth Explorer).
+NAIP in ZIP format (internally a single GeoTIFF image) is retreived using the 'Aerial Imagery/NAIP' in [Earth Explorer](#USGS-Earth-Explorer).
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
@@ -65,7 +65,7 @@ Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
 0          | 30m        | u8        | Pixel Classification
 #### Sentinel-2
-Sentinel-2 data is processed using the SAFE format located at 'Sentinel/Sentinel-2' in [Earth Explorer](#USGS Earth Explorer).
+Sentinel-2 data is processed using the SAFE format located at 'Sentinel/Sentinel-2' in [Earth Explorer](#USGS-Earth-Explorer).
 
 Subdataset | Resolution | Data Type | Bands
 ---------- | ---------- | --------- | -----
